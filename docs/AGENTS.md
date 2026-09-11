@@ -15,6 +15,7 @@ customization repository.
 - `lsp.md` owns repository language-server tooling and OMO configuration.
 - `authoring-extensions.md` owns modular individually installable extension packaging guidance.
 - `customizations.md` owns the customization catalog, global OMO instruction guidance, and detail-doc routing.
+- `upstream-validation.md` owns authority sources, timestamped runtime-evidence records, and revalidation triggers.
 
 ## Local Contracts
 
@@ -39,3 +40,4 @@ No child `AGENTS.md` boundaries exist.
 - `lsp.md` — mise-managed language-server setup and verification.
 - `authoring-extensions.md` — modular extension layout, package manifest, tool, skill, and verification guidance.
 - `customizations.md` — customization catalog, global OMO instruction setup, and deferred-domain discovery map.
+- `upstream-validation.md` — OMO/Senpi authority registry and version-sensitive evidence format.

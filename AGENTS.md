@@ -134,6 +134,24 @@ never commit credentials or endpoint secrets.
   `git worktree` commands.
 - OMO compatibility targets the exact Senpi version pinned in `package.json`.
 
+## Upstream Validation Contract
+
+Before changing customization behavior, verify the installed pinned runtime and
+its owning upstream source. Fetch current upstream evidence; do not rely on
+memory or stale documentation.
+
+- OMO wrapper, configuration, rules, and bundled extensions:
+  `https://github.com/code-yeongyu/oh-my-openagent`
+- Senpi runtime, prompt assembly, presets, and extension lifecycle:
+  `https://github.com/code-yeongyu/senpi`
+
+A boundary-crossing customization must verify both sources. A single-layer
+change verifies its owner and records why the other source did not apply.
+Every version-sensitive customization must follow
+[`docs/upstream-validation.md`](docs/upstream-validation.md): timestamp,
+local runtime versions, exact upstream evidence, local proof, and revalidation
+trigger.
+
 ## Child DOX Index
 
 - `.config/` — shared Worktrunk project configuration.
@@ -141,7 +159,7 @@ never commit credentials or endpoint secrets.
   ignored.
 - `.qlty/` — committed Qlty configuration.
 - `templates/` — portable, merge-safe OMO user-preference templates.
-- `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, and customization guidance. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
+- `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, customization, and upstream-validation guidance. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/upstream-validation.md`](docs/upstream-validation.md) before relying on OMO or Senpi runtime behavior; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
 - `extensions/` — extension package ownership boundary.
 - `extensions/better-custom/` — native Senpi port of upstream provider/model
   customization.

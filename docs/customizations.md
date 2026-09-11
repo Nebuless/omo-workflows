@@ -2,6 +2,7 @@
 
 This catalog names supported customization boundaries. It links to current
 implementation guidance and reserves detail pages for areas explored later.
+Runtime-dependent claims follow the [upstream validation contract](upstream-validation.md).
 
 ## Current packages
 
@@ -14,11 +15,32 @@ implementation guidance and reserves detail pages for areas explored later.
 | Runtime repairs | Repair known OMO runtime gaps | `scripts/` | [Runtime repairs](runtime-repairs.md) |
 | Global agent instructions | Apply durable instructions to every OMO session | `~/.omo/rules/*.md` | [Global instructions](#global-agent-instructions) |
 | Model routing | Select workstation model families | OMO model configuration | [Model routing](model-routing.md) |
+| Upstream validation | Verify runtime-dependent customization claims | OMO and Senpi authority sources | [Validation contract](upstream-validation.md) |
 
 ## Global agent instructions
 
+This is a boundary-crossing customization. Its current evidence record follows
+[the upstream validation contract](upstream-validation.md#existing-validation-records).
+
 Use a global OMO rule file for durable instructions. This keeps OMO's generated,
 model-specific system prompt, tools, skills, and orchestration active.
+
+### Verified runtime contract
+
+**Verified 2026-09-11** against OMO `5.0.0-0.beta.53`, Senpi
+`2026.9.10-2`, and Bun `1.3.14`:
+
+- `~/.omo/rules/*.md` is OMO's durable global instruction surface.
+- `--append-system-prompt` adds instructions without replacing the selected
+  model preset; live noninteractive check returned the appended `overlay-ok`
+  directive with exit `0`.
+- `--system-prompt` replaces the base prompt. Senpi detects this as a custom
+  prompt and does not apply a model prompt preset.
+- OMO's Bun launcher is `/home/egsox/.bun/bin/omo`; it uses Bun unless
+  `OMO_RUNTIME=node` is set.
+
+Recheck this section after every OMO or Senpi upgrade. Prompt assembly and rule
+loading are upstream runtime behavior, not a stable repository guarantee.
 
 ```sh
 mkdir -p ~/.omo/rules
