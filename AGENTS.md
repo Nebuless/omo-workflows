@@ -140,12 +140,15 @@ never commit credentials or endpoint secrets.
 - `.omo/` — project-local OMO package settings; runtime task state remains
   ignored.
 - `.qlty/` — committed Qlty configuration.
-- `docs/` — durable compatibility, packaging, release, repair, routing, and LSP guidance.
+- `templates/` — portable, merge-safe OMO user-preference templates.
+- `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, and customization guidance. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
 - `extensions/` — extension package ownership boundary.
 - `extensions/better-custom/` — native Senpi port of upstream provider/model
   customization.
 - `extensions/better-custom/src/` — runtime implementation guidance.
-- `extensions/better-custom/test/` — extension regression test guidance.
+- `extensions/better-custom/test/` — provider/model extension regression guidance.
+- `extensions/herdr/` — standalone OMO lifecycle integration, skills, and safe CLI tools for Herdr.
+- `extensions/test/` — standalone extension regression coverage.
 - `scripts/` — validation and portable runtime-repair scripts.
 - `test/` — OMO/Senpi boundary regression tests.
 

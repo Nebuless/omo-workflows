@@ -2,12 +2,11 @@
 
 ## Purpose
 
-Own regression coverage for provider configuration, host registration, and reporting behavior.
+Own regression coverage for provider configuration, host registration, and model presentation.
 
 ## Ownership
 
 - `config.test.ts` owns persistence behavior.
-- `herdr.test.ts` owns reporting behavior.
 - `model-entry.test.ts` owns model metadata behavior.
 
 ## Local Contracts

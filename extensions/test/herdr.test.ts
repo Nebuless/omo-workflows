@@ -8,12 +8,16 @@ import {
   HERDR_AGENT,
   HERDR_SOURCE,
   resetHerdrSeq,
-} from "../src/herdr.ts";
-import type { HerdrEnv } from "../src/herdr.ts";
+} from "../herdr/index.ts";
+import type { HerdrEnv } from "../herdr/index.ts";
 
 const env: HerdrEnv = { bin: "/bin/herdr", paneId: "w1:p3" };
 
 describe("herdr reporter", () => {
+  test("identifies lifecycle authority as OMO", () => {
+    expect(HERDR_AGENT).toBe("omo");
+  });
+
   test("captures Herdr context only when HERDR_ENV=1 with a pane id", () => {
     expect(
       captureHerdrEnv({
@@ -219,12 +223,11 @@ describe("herdr reporter", () => {
   test("serial runner preserves argv order across async sends", async () => {
     const order: string[] = [];
     let resolve!: () => void;
-    const promise = new Promise<void>((r) => {
-      resolve = r;
+    const promise = new Promise<void>((resolvePromise) => {
+      resolve = resolvePromise;
     });
     let done = 0;
     const run = createSerialRunner(async (argv) => {
-      // Simulate out-of-order completion: the first send finishes last.
       if (argv[0] === "slow") await Promise.resolve();
       else await Promise.resolve().then(() => Promise.resolve());
       order.push(argv[0]);

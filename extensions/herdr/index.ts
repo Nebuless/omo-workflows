@@ -1,16 +1,18 @@
 import { spawn } from "node:child_process";
+import type { ExtensionAPI } from "@code-yeongyu/senpi";
+import { herdrSkillPaths } from "./skills.ts";
+import { registerHerdrTools } from "./tools.ts";
 
 export type HerdrState = "idle" | "working" | "blocked" | "unknown";
 
 export const HERDR_SOURCE = "custom:omo-workflows";
-export const HERDR_AGENT = "atomic";
+export const HERDR_AGENT = "omo";
 
 export interface HerdrEnv {
-  bin: string;
-  paneId: string;
+  readonly bin: string;
+  readonly paneId: string;
 }
 
-/** Capture Herdr context once at factory invocation. Null outside Herdr. */
 export function captureHerdrEnv(env: NodeJS.ProcessEnv): HerdrEnv | null {
   if (env.HERDR_ENV !== "1") return null;
   const paneId = env.HERDR_PANE_ID;
@@ -65,15 +67,12 @@ export interface HerdrReporter {
 }
 
 export interface HerdrReporterOptions {
-  env: HerdrEnv | null;
-  /** argv runner; defaults to a bounded, non-blocking serialized spawn. */
-  run?: (argv: string[]) => void;
+  readonly env: HerdrEnv | null;
+  readonly run?: (argv: string[]) => void;
 }
 
-/** Monotonic per-process sequence; survives reporter recreation on reload. */
 let seq = 0;
 
-/** Test seam: reset the process-global sequence counter. */
 export function resetHerdrSeq(): void {
   seq = 0;
 }
@@ -94,7 +93,6 @@ export function createHerdrReporter(
 
   return {
     onSessionStart(): void {
-      // Re-arm after a session switch; only a quit releases the agent.
       released = false;
       active = false;
       report("idle");
@@ -117,8 +115,6 @@ export function createHerdrReporter(
       report("idle");
     },
     onSessionShutdown(reason?: string): void {
-      // Only a real quit ends the agent; session switches and reloads keep
-      // the authority so Herdr does not reclaim a live agent.
       if (!env || released || reason !== "quit") return;
       released = true;
       seq += 1;
@@ -129,7 +125,6 @@ export function createHerdrReporter(
 
 const SPAWN_TIMEOUT_MS = 5_000;
 
-/** Serialize argv sends so a release can never overtake an earlier report. */
 export function createSerialRunner(
   runOne: (argv: string[]) => void | Promise<void>,
 ): (argv: string[]) => void {
@@ -156,5 +151,18 @@ function spawnOnce(argv: string[]): Promise<void> {
   });
 }
 
-/** Fire-and-forget argv spawn: failures to contact Herdr never break OMO. */
 const defaultRun = createSerialRunner(spawnOnce);
+
+export default function herdrIntegration(pi: ExtensionAPI): void {
+  registerHerdrTools(pi);
+  pi.on("resources_discover", () => ({ skillPaths: herdrSkillPaths() }));
+  const reporter = createHerdrReporter({ env: captureHerdrEnv(process.env) });
+  pi.on("session_start", () => reporter.onSessionStart());
+  pi.on("agent_start", () => reporter.onAgentStart());
+  pi.on("ui_prompt_start", (event) => reporter.onUIPromptStart(event.title));
+  pi.on("ui_prompt_end", () => reporter.onUIPromptEnd());
+  pi.on("agent_settled", () => reporter.onAgentSettled());
+  pi.on("session_shutdown", (event) =>
+    reporter.onSessionShutdown(event.reason),
+  );
+}

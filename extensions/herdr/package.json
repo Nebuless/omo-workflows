@@ -1,0 +1,12 @@
+{
+  "name": "@omo-workflows/herdr",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Native OMO skills and CLI tools for Herdr.",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

@@ -10,9 +10,11 @@ customization repository.
 - `compatibility.md` owns the OMO/Senpi runtime boundary and upstream import
   provenance.
 - `releasing.md` owns Conventional Commit, SemVer, and changelog procedure.
-- `runtime-repairs.md` owns supported OMO runtime repair procedures.
+- `runtime-repairs.md` owns supported OMO runtime repair and user-preference procedures.
 - `model-routing.md` owns non-secret local model-routing policy.
 - `lsp.md` owns repository language-server tooling and OMO configuration.
+- `authoring-extensions.md` owns modular individually installable extension packaging guidance.
+- `customizations.md` owns the customization catalog, global OMO instruction guidance, and detail-doc routing.
 
 ## Local Contracts
 
@@ -32,6 +34,8 @@ installed OMO/Senpi runtime, and release-tool command behavior.
 No child `AGENTS.md` boundaries exist.
 
 - `releasing.md` — release and versioning procedure.
-- `runtime-repairs.md` — portable runtime repair procedures.
+- `runtime-repairs.md` — portable runtime repair, OMO preference, and obsolete-config cleanup procedures.
 - `model-routing.md` — installed-model routing policy.
 - `lsp.md` — mise-managed language-server setup and verification.
+- `authoring-extensions.md` — modular extension layout, package manifest, tool, skill, and verification guidance.
+- `customizations.md` — customization catalog, global OMO instruction setup, and deferred-domain discovery map.

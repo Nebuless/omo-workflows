@@ -18,7 +18,6 @@ import {
   switchToModel,
 } from "./model-browser.ts";
 import type { UnifiedViewSource } from "./model-browser.ts";
-import { captureHerdrEnv, createHerdrReporter } from "./herdr.ts";
 
 type CustomProviderAction = "add" | "edit" | "delete";
 type ProviderFlow = (ctx: CommandContext) => Promise<boolean>;
@@ -187,16 +186,6 @@ function createBetterModelsHandler(): (
 }
 
 export default function customProviderWizard(pi: ExtensionAPI): void {
-  // Report Atomic's lifecycle to Herdr when running inside a Herdr pane.
-  // Captured once at factory invocation; no-ops outside Herdr.
-  const herdr = createHerdrReporter({ env: captureHerdrEnv(process.env) });
-  pi.on("session_start", () => herdr.onSessionStart());
-  pi.on("agent_start", () => herdr.onAgentStart());
-  pi.on("ui_prompt_start", (event) => herdr.onUIPromptStart(event.title));
-  pi.on("ui_prompt_end", () => herdr.onUIPromptEnd());
-  pi.on("agent_settled", () => herdr.onAgentSettled());
-  pi.on("session_shutdown", (event) => herdr.onSessionShutdown(event.reason));
-
   // Make persisted custom providers visible to native /model immediately, and
   // capture the host seams used by the unified models browser.
   try {

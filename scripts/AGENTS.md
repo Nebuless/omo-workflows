@@ -7,6 +7,7 @@ Own executable validation and portable runtime-repair scripts.
 ## Ownership
 
 - `validate-package.ts` validates the public package contract.
+- `omo-preferences.ts` merges portable global OMO preferences.
 - `repair-omo-comment-checker.ts` repairs OMO's omitted global runtime dependency.
 
 ## Local Contracts
@@ -18,11 +19,12 @@ Own executable validation and portable runtime-repair scripts.
 ## Work Guidance
 
 - Keep scripts Bun-native; add no shell wrapper when Bun APIs suffice.
-- Update package scripts, mise tasks, docs, and this file together when adding a repair.
+- Update package scripts, mise tasks, docs, tests, templates, and this file together when adding a repair.
 
 ## Verification
 
 - `bun run validate:package`
+- `bun test test/omo-preferences.test.ts`
 - Run a repair only when its documented runtime failure exists.
 
 ## Child DOX Index

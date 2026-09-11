@@ -22,7 +22,7 @@ run = "bun test"
 
 [tasks.build]
 description = "Bundle the OMO extension with Bun"
-run = "bun build extensions/better-custom/src/index.ts --outdir .build-check --target bun && rm -rf .build-check"
+run = "bun build extensions/better-custom/src/index.ts extensions/herdr/index.ts --outdir .build-check --target bun && rm -rf .build-check"
 
 [tasks.quality]
 description = "Validate sources with Biome and run Qlty checks"
@@ -39,6 +39,10 @@ run = "bun run version:recommend"
 [tasks.changelog]
 description = "Update release history from Conventional Commits"
 run = "bun run changelog"
+
+[tasks.configure-omo-preferences]
+description = "Apply portable OMO user preferences without overwriting settings"
+run = "bun run configure:omo-preferences"
 
 [tasks.repair-omo-comment-checker]
 description = "Install OMO's missing global comment-checker dependency"

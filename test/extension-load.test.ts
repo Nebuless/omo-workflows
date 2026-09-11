@@ -14,12 +14,9 @@ describe("OMO extension boundary", () => {
     process.env.OMO_CODING_AGENT_DIR = agentDir;
 
     const commands = new Map<string, unknown>();
-    const events = new Map<string, unknown>();
     const providers = new Map<string, unknown>();
-    const host = {
-      on(name: string, handler: unknown) {
-        events.set(name, handler);
-      },
+    const providerHost = {
+      on() {},
       registerCommand(name: string, definition: unknown) {
         commands.set(name, definition);
       },
@@ -32,12 +29,31 @@ describe("OMO extension boundary", () => {
       setModel: async () => true,
     };
 
-    const extension = await import("../extensions/better-custom/src/index.ts");
-    extension.default(host as never);
+    const providerExtension = await import(
+      "../extensions/better-custom/src/index.ts"
+    );
+    providerExtension.default(providerHost as never);
 
     expect(commands.has("better-models")).toBe(true);
     expect(commands.has("custom-provider")).toBe(true);
-    expect(events.has("session_start")).toBe(true);
     expect(providers.size).toBe(0);
+
+    const events = new Map<string, unknown>();
+    const tools = new Map<string, unknown>();
+    const herdrHost = {
+      on(name: string, handler: unknown) {
+        events.set(name, handler);
+      },
+      registerTool(definition: { name: string }) {
+        tools.set(definition.name, definition);
+      },
+    };
+    const herdrExtension = await import("../extensions/herdr/index.ts");
+    herdrExtension.default(herdrHost as never);
+
+    expect(events.has("session_start")).toBe(true);
+    expect(events.has("resources_discover")).toBe(true);
+    expect(tools.has("herdr_inspect")).toBe(true);
+    expect(tools.has("herdr_control")).toBe(true);
   });
 });

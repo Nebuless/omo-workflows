@@ -8,8 +8,7 @@ models.
 ## Ownership
 
 - `src/` owns the extension implementation and Senpi host adapter.
-- `test/` owns behavior tests for config persistence, model presentation, and
-  Herdr reporting.
+- `test/` owns behavior tests for config persistence and model presentation.
 - `LICENSE` preserves the upstream MIT attribution.
 
 ## Local Contracts
@@ -40,4 +39,4 @@ models.
 ## Child DOX Index
 
 - `src/` — extension runtime, host adaptation, and focused source folders.
-- `test/` — extension regression tests.
+- `test/` — extension regression tests; Herdr coverage lives in `extensions/test/`.

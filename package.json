@@ -10,12 +10,13 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build extensions/better-custom/src/index.ts --outdir .build-check --target bun && rm -rf .build-check",
+    "build": "bun build extensions/better-custom/src/index.ts extensions/herdr/index.ts --outdir .build-check --target bun && rm -rf .build-check",
     "validate": "bun run validate:package && bun run typecheck && bun test",
     "validate:package": "bun scripts/validate-package.ts",
     "lint:commit": "commitlint --edit",
     "version:recommend": "conventional-recommended-bump -p conventionalcommits -v",
     "changelog": "conventional-changelog -p conventionalcommits -i CHANGELOG.md",
+    "configure:omo-preferences": "bun scripts/omo-preferences.ts",
     "repair:omo-comment-checker": "bun scripts/repair-omo-comment-checker.ts"
   },
   "dependencies": {
@@ -36,7 +37,8 @@
   },
   "pi": {
     "extensions": [
-      "./extensions/better-custom/src/index.ts"
+      "./extensions/better-custom/src/index.ts",
+      "./extensions/herdr/index.ts"
     ]
   }
 }
