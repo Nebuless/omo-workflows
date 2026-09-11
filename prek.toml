@@ -1,0 +1,29 @@
+default_install_hook_types = ["commit-msg", "pre-commit", "pre-push"]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "qlty-fmt"
+name = "Qlty format"
+language = "system"
+entry = "qlty fmt --all --trigger pre-commit"
+stages = ["pre-commit"]
+always_run = true
+pass_filenames = false
+
+[[repos.hooks]]
+id = "conventional-commit"
+name = "Conventional Commit"
+language = "system"
+entry = "mise exec -- bunx --no-install commitlint --edit"
+stages = ["commit-msg"]
+
+[[repos.hooks]]
+id = "ci"
+name = "mise ci"
+language = "system"
+entry = "mise run ci"
+stages = ["pre-push"]
+always_run = true
+pass_filenames = false

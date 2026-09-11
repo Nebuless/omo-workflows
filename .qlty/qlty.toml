@@ -1,0 +1,30 @@
+config_version = "0"
+
+exclude_patterns = [
+  "**/node_modules/**",
+  "**/.build-check/**",
+  "**/.omo/senpi-task/**",
+  "**/*.d.ts",
+]
+
+[[exclude]]
+plugins = ["biome"]
+file_patterns = [".omo/settings.json"]
+
+[[source]]
+name = "default"
+default = true
+
+[[plugin]]
+name = "biome"
+
+[[plugin]]
+name = "shellcheck"
+
+# The upstream extension intentionally preserves its source style. Keep Qlty
+# blocking on correctness and formatting while documenting this low-risk
+# style exception until the next deliberate upstream refresh.
+[[triage]]
+match.rules = ["biome:lint/style/useTemplate"]
+match.file_patterns = ["extensions/better-custom/**"]
+set.ignored = true

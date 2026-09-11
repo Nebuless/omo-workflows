@@ -1,0 +1,6 @@
+[commit.generation]
+template-append = """
+- Use Conventional Commits: type(scope)!: imperative summary.
+- Match semantic intent: feat for new public behavior, fix for corrections, and ! or BREAKING CHANGE for incompatible changes.
+- Do not create version tags or publish releases unless the user explicitly requests it.
+"""
