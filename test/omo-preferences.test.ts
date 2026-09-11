@@ -8,6 +8,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { configureOmoPreferences } from "../scripts/omo-preferences.ts";
 
@@ -47,5 +48,23 @@ describe("OMO preferences bootstrap", () => {
     expect(JSON.parse(readFileSync(settingsPath, "utf8"))).toEqual({
       tips: false,
     });
+  });
+
+  test("disables reflection sandboxing in portable routing templates", () => {
+    const templatesDir = join(
+      fileURLToPath(new URL("..", import.meta.url)),
+      "templates",
+    );
+
+    for (const template of ["omo.jsonc.balanced", "omo.jsonc.gpt-heavy"]) {
+      const config = JSON.parse(
+        readFileSync(join(templatesDir, template), "utf8").replace(
+          /^\/\/.*\n/,
+          "",
+        ),
+      ) as { memory?: { reflection?: { sandbox?: unknown } } };
+
+      expect(config.memory?.reflection?.sandbox).toBe("off");
+    }
   });
 });

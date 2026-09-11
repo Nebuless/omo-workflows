@@ -16,6 +16,7 @@ Store portable, merge-safe OMO configuration templates.
 - Routing templates contain only canonical model IDs verified by `omo --list-models 9router`.
 - `omo-agent-settings.json` keeps native Senpi startup and working tips disabled.
 - Routing templates are complete replacement profiles, not additive JSON fragments.
+- Both routing templates disable reflection sandboxing until upstream merges a fix for missing `runtime/reflection-sessions`; see `docs/issues.md`.
 
 ## Work Guidance
 

@@ -138,6 +138,14 @@ commit credentials or endpoint secrets.
   `git worktree` commands.
 - OMO compatibility targets the exact Senpi version pinned in `package.json`.
 
+## User-Reported OMO Issues
+
+When a user reports an OMO or Senpi problem, log it in
+[`docs/issues.md`](docs/issues.md) in the same change. Include UTC timestamp,
+observed symptom, affected local version or runtime, current resolution, and a
+relevant upstream issue, pull request, or source URL. If upstream has no match,
+state that clearly and document the local workaround as invented.
+
 ## Upstream Validation Contract
 
 Before changing customization behavior, verify the installed pinned runtime and
@@ -165,7 +173,7 @@ trigger.
 - `templates/` — portable OMO preference templates plus complete balanced and GPT-heavy `9router` routing profiles.
 - `README.md` — concise native OMO, LLM handoff, and extension installation entrypoint; routes to complete local and upstream documentation.
 - `customizations/` — policy-only scaffolds for OMO and Senpi capability domains; runnable behavior belongs in `extensions/`. Read [`customizations/AGENTS.md`](customizations/AGENTS.md) and [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) before creating a new customization.
-- `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, customization, and upstream-validation guidance. `docs/model-matrix.md` owns model pricing, benchmark evidence, and profile mappings; `docs/model-routing.md` owns active routing policy. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) for the upstream-backed capability map and creation rules; read [`docs/upstream-validation.md`](docs/upstream-validation.md) before relying on OMO or Senpi runtime behavior; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
+- `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, customization, upstream-validation, and user-reported issue guidance. `docs/issues.md` is timestamped register for OMO/Senpi user reports and upstream references. `docs/model-matrix.md` owns model pricing, benchmark evidence, and profile mappings; `docs/model-routing.md` owns active routing policy. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) for the upstream-backed capability map and creation rules; read [`docs/upstream-validation.md`](docs/upstream-validation.md) before relying on OMO or Senpi runtime behavior; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
 - `extensions/` — extension package ownership boundary.
 - `extensions/better-custom/` — native Senpi port of upstream provider/model
   customization.

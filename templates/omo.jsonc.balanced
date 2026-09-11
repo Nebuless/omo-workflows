@@ -24,5 +24,10 @@
       "unspecified-high": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
       "writing": { "models": [{ "model": "9router/ollama-cloud/kimi-k2.7-code", "reasoning": "medium" }, { "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }] }
     }
+  },
+  "memory": {
+    "reflection": {
+      "sandbox": "off"
+    }
   }
 }
