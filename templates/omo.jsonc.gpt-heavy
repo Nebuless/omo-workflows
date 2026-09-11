@@ -1,0 +1,28 @@
+// GPT-heavy OMO task routing: use CX models first; Ollama Cloud is fallback only.
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/omo.schema.json",
+  "[opencode]": {
+    "agents": {
+      "hephaestus": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
+      "oracle": { "models": [{ "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
+      "librarian": { "models": [{ "model": "9router/cx/gpt-5.6-luna", "reasoning": "low" }, { "model": "9router/ollama-cloud/deepseek-v4-flash:0731", "reasoning": "low" }] },
+      "explore": { "models": [{ "model": "9router/cx/gpt-5.6-luna", "reasoning": "low" }, { "model": "9router/ollama-cloud/deepseek-v4-flash:0731", "reasoning": "low" }] },
+      "multimodal-looker": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "medium" }, { "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }] },
+      "prometheus": { "models": [{ "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" }, { "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }] },
+      "metis": { "models": [{ "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" }, { "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }] },
+      "momus": { "models": [{ "model": "9router/cx/gpt-5.3-codex-spark-review", "reasoning": "high" }, { "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }] },
+      "atlas": { "models": [{ "model": "9router/cx/gpt-5.3-codex-spark", "reasoning": "high" }, { "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }] },
+      "sisyphus-junior": { "models": [{ "model": "9router/cx/gpt-5.3-codex-spark", "reasoning": "high" }, { "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }] }
+    },
+    "categories": {
+      "visual-engineering": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "medium" }, { "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }] },
+      "ultrabrain": { "models": [{ "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" }, { "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }] },
+      "deep": { "models": [{ "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" }, { "model": "9router/ollama-cloud/deepseek-v4-pro:0813", "reasoning": "high" }] },
+      "artistry": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "medium" }, { "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }] },
+      "quick": { "models": [{ "model": "9router/cx/gpt-5.6-luna", "reasoning": "low" }, { "model": "9router/ollama-cloud/deepseek-v4-flash:0731", "reasoning": "low" }] },
+      "unspecified-low": { "models": [{ "model": "9router/cx/gpt-5.6-luna", "reasoning": "low" }, { "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "low" }] },
+      "unspecified-high": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
+      "writing": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "medium" }, { "model": "9router/ollama-cloud/kimi-k2.7-code", "reasoning": "medium" }] }
+    }
+  }
+}

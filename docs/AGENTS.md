@@ -12,9 +12,11 @@ customization repository.
 - `releasing.md` owns Conventional Commit, SemVer, and changelog procedure.
 - `runtime-repairs.md` owns supported OMO runtime repair and user-preference procedures.
 - `model-routing.md` owns non-secret local model-routing policy.
+- `model-matrix.md` owns sourced model price, capability, benchmark evidence, and portable profile mappings.
 - `lsp.md` owns repository language-server tooling and OMO configuration.
 - `authoring-extensions.md` owns modular individually installable extension packaging guidance.
 - `customizations.md` owns the customization catalog, global OMO instruction guidance, and detail-doc routing.
+- `customization-scaffolding.md` owns upstream-backed capability mapping and policy-scaffold creation guidance.
 - `upstream-validation.md` owns authority sources, timestamped runtime-evidence records, and revalidation triggers.
 
 ## Local Contracts
@@ -37,7 +39,9 @@ No child `AGENTS.md` boundaries exist.
 - `releasing.md` — release and versioning procedure.
 - `runtime-repairs.md` — portable runtime repair, OMO preference, and obsolete-config cleanup procedures.
 - `model-routing.md` — installed-model routing policy.
+- `model-matrix.md` — model evidence and balanced/GPT-heavy routing profiles.
 - `lsp.md` — mise-managed language-server setup and verification.
 - `authoring-extensions.md` — modular extension layout, package manifest, tool, skill, and verification guidance.
-- `customizations.md` — customization catalog, global OMO instruction setup, and deferred-domain discovery map.
+- `customizations.md` — customization catalog and global OMO instruction setup.
+- `customization-scaffolding.md` — capability map, policy scaffolds, and upstream-backed creation rules.
 - `upstream-validation.md` — OMO/Senpi authority registry and version-sensitive evidence format.

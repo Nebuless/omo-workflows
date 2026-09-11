@@ -1,135 +1,110 @@
 # OMO Workflows
 
-Portable customizations for the OMO native agent.
+Portable OMO/Senpi customizations. Install native OMO first, then install this
+repository or one extension package.
 
-This repository packages a native Senpi extension adapted from
-`expi.tngl.sh/solu-atomic`'s `better-custom` extension. The upstream extension
-targets Atomic and imports `@bastani/atomic`; this port targets the exact
-Senpi engine pinned by the installed OMO beta package:
+- Native OMO: [`omo-ai`](https://www.npmjs.com/package/omo-ai) beta
+- Runtime pin: OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`
+- Included packages: [`better-custom`](extensions/better-custom/AGENTS.md) and
+  [`herdr`](extensions/herdr/AGENTS.md)
 
-- `omo-ai`: `5.0.0-0.beta.53`
-- `@code-yeongyu/senpi`: `2026.9.10-2`
-- upstream source revision: `bf3589e402f80535afd3543344c01c937b4b4412`
+## Install with an LLM handoff
 
-## Customization catalog
+Paste this into coding agent:
 
-See [`docs/customizations.md`](docs/customizations.md) for current packages and
-planned customization domains. See
-[`docs/authoring-extensions.md`](docs/authoring-extensions.md) for modular,
-individually installable extension rules.
+```text
+Install native OMO and Nebuless/omo-workflows.
 
-## Included customizations
+1. Read official OMO install guide end to end:
+   https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/refs/heads/dev/docs/guide/installation.md
+2. Install native Senpi OMO exactly as guide says:
+   npm i -g omo-ai@beta
+   omo setup
+3. Ask me before provider login, credential import, permission changes, or any
+   external write the guide requires.
+4. Clone https://github.com/Nebuless/omo-workflows.git, run its documented
+   local checks, then install only package I select. Use `omo install -l .` for
+   all repository extensions or `omo install -l ./extensions/<name>` for one.
+5. Verify extension discovery in a live OMO session. Read repository docs:
+   https://github.com/Nebuless/omo-workflows/blob/main/README.md
+   https://github.com/Nebuless/omo-workflows/blob/main/docs/customization-scaffolding.md
+   https://github.com/Nebuless/omo-workflows/blob/main/docs/authoring-extensions.md
+```
 
-`extensions/better-custom` provides:
+Guide requires `@beta`. Do not install unrelated npm package named `omo`.
 
-- `/custom-provider` to add, edit, and delete custom providers in the active
-  `models.json`;
-- `/better-models` to browse native and custom models and switch models;
-- atomic config writes, API-key reference handling, endpoint probing, and
-  model metadata discovery.
+## Install manually
 
-The extension uses Senpi's `getAgentDir()` boundary. When launched through
-`omo`, the launcher sets `SENPI_CODING_AGENT_DIR` to OMO's canonical
-`~/.omo/agent` directory, so the extension reads and writes the same
-`models.json` used by OMO.
+### 1. Install native OMO
 
-`extensions/herdr` is an independent lifecycle integration for OMO running in
-Herdr. It reports semantic `working`, `idle`, and `blocked` states to the
-containing pane, labels the agent as `omo`, and releases authority when OMO
-quits. It activates only when Herdr supplies `HERDR_ENV=1` and
-`HERDR_PANE_ID`; outside Herdr it is a no-op.
-
-The extension also contributes native Herdr skills for core resources, one
-agent, ownership handoff, multi-agent orchestration, and administration. Its
-LLM tools are `herdr_inspect` for read-only CLI argv and `herdr_control` for
-explicit control from a Herdr pane. Both accept argv only, not shell text;
-`herdr_control` requires confirmed Herdr context and instructions require
-readback before mutation. Destructive or privileged actions still require user
-intent. Current Herdr releases do not provide OMO session restoration, so this
-extension does not claim resume support.
-
-## Local development
-
-mise owns the repository toolchain and task runner. Bun remains the JavaScript
-package installer because mise manages tools and tasks, not package manifests.
+Follow upstream [Senpi edition guide](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/installation.md#senpi-edition-beta-omo-via-npm-omo-ai):
 
 ```sh
+npm i -g omo-ai@beta
+omo setup
+```
+
+`omo setup` detects existing provider credentials and asks before importing
+supported API keys. See upstream [setup details](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/installation.md#first-run-omo-setup).
+
+### 2. Get this repository
+
+```sh
+git clone https://github.com/Nebuless/omo-workflows.git
+cd omo-workflows
 mise bootstrap
 mise install
 bun install --frozen-lockfile
 mise ci
 ```
 
-The CI task runs package validation, TypeScript checks, tests, and the native
-Senpi bundle build. `mise ci` is the local source of truth; do not add a
-second task runner for aliases.
-
-## Install into OMO
-
-For a one-run smoke test:
+### 3. Install extensions
 
 ```sh
-omo -e .
-```
-
-For a project-local package installation:
-
-```sh
+# All extensions in this repository
 omo install -l .
-```
 
-Install only the Herdr integration:
-
-```sh
+# One extension only
+omo install -l ./extensions/better-custom
 omo install -l ./extensions/herdr
 ```
 
-Use `/reload` after installation inside an interactive OMO session. Each
-individually installable extension has its own manifest using Senpi's standard
-`pi.extensions` resource key. See
-[`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding
-an extension package.
+Restart OMO or run `/reload` in interactive OMO. Test one safe command after
+installation. See [extension authoring and verification](docs/authoring-extensions.md).
 
-## Apply portable preferences
+## Choose customization path
 
-This repository ships a merge-safe global OMO settings template that disables
-all native `Tip:` widgets. Apply it after cloning or installing OMO:
+| Need | Start here |
+|---|---|
+| Find available OMO/Senpi customization boundaries | [Customization catalog](docs/customizations.md) |
+| Choose folder, policy, and runtime owner | [Customization scaffolding](docs/customization-scaffolding.md) |
+| Add one installable extension | [Authoring extensions](docs/authoring-extensions.md) |
+| Configure global rules and prompt overlays | [Global instructions](docs/customizations.md#global-agent-instructions) |
+| Configure providers and model routing | [Model matrix and profiles](docs/model-matrix.md) |
+| Configure OMO preferences or repair runtime gaps | [Runtime repairs](docs/runtime-repairs.md) |
+| Check OMO/Senpi version-sensitive claims | [Upstream validation](docs/upstream-validation.md) |
+| Review native OMO configuration | [OMO configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md) |
+| Build Senpi extension behavior | [Senpi extension guide](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/extensions.md) |
 
-```sh
-mise run configure-omo-preferences
-```
+## Included packages
 
-The task merges [`templates/omo-agent-settings.json`](templates/omo-agent-settings.json)
-into `~/.omo/agent/settings.json`; existing settings remain intact. Restart OMO
-after it finishes. See [`docs/runtime-repairs.md`](docs/runtime-repairs.md) for
-the obsolete `codegraph` config cleanup.
+- [`extensions/better-custom`](extensions/better-custom/AGENTS.md): custom
+  provider CRUD and model browser commands.
+- [`extensions/herdr`](extensions/herdr/AGENTS.md): Herdr lifecycle reporting,
+  skills, and argv-only resource tools. No-op outside Herdr.
 
-## Quality gates
+## Repository operations
 
-- `mise ci` is the complete local CI gate.
-- `prek` owns `commit-msg`, `pre-commit`, and `pre-push` shims.
-- `qlty` performs formatting and quality checks.
-- Conventional Commits drive SemVer recommendations and generated
-  `CHANGELOG.md` history. Run `mise run version-recommend` before release
-  review and `mise run changelog` after choosing a version.
-- `mise run repair-omo-comment-checker` repairs OMO's missing global checker
-  dependency when its bundled extension cannot resolve it.
-- mise installs pinned TypeScript and TOML LSP tools; see
-  [`docs/lsp.md`](docs/lsp.md) for OMO configuration and verification.
-- `mise run configure-omo-preferences` merges the portable
-  [`tips: false`](templates/omo-agent-settings.json) setting into global OMO
-  preferences. See [`docs/runtime-repairs.md`](docs/runtime-repairs.md).
-- Worktrees are managed only with `wt`; raw `git worktree` commands are not
-  part of the repository workflow.
+- [Compatibility and upstream provenance](docs/compatibility.md)
+- [LSP setup](docs/lsp.md)
+- [Model routing policy](docs/model-routing.md)
+- [Model matrix and portable profiles](docs/model-matrix.md)
+- [Release procedure](docs/releasing.md)
+- [Customization policies](customizations/AGENTS.md)
+- [Root repository contract](AGENTS.md)
 
-## Runtime model routing
+`mise ci` is complete local validation. `mise run configure-omo-preferences`
+merges portable preferences without overwriting existing settings. See
+[template contract](templates/AGENTS.md).
 
-This workstation routes main and heavy OMO work to installed `9router/cx/*`
-models. Light work and fallbacks use installed `9router/ollama-cloud/*` models.
-See [`docs/model-routing.md`](docs/model-routing.md). Credentials and provider
-endpoints remain outside this repository.
-
-## Attribution
-
-The adapted extension retains the upstream MIT license and attribution in
-`extensions/better-custom/LICENSE`.
+Upstream source: [Oh My OpenAgent](https://github.com/code-yeongyu/oh-my-openagent).

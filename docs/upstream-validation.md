@@ -49,3 +49,5 @@ verification date.
 
 - [Global OMO instructions](customizations.md#verified-runtime-contract) —
   verified 2026-09-11; boundary-crossing prompt overlay behavior.
+- [Customization scaffolding](customization-scaffolding.md#upstream-evidence) —
+  verified 2026-09-11; OMO configuration and Senpi extension capability map.

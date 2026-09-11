@@ -89,10 +89,13 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Model Routing Preference
 
-For OMO routing on this workstation, use installed `9router/cx/*` models for
-main/heavy work. Use `9router/ollama-cloud/*` models for light work and
-fallbacks. Record machine-specific model availability in `docs/model-routing.md`;
-never commit credentials or endpoint secrets.
+For OMO routing on this workstation, `templates/omo.jsonc.gpt-heavy` is the
+global default: installed `9router/cx/*` models lead every route; targeted
+`9router/ollama-cloud/*` models provide fallbacks. Keep
+`templates/omo.jsonc.balanced` as cost/capability alternative. Record model
+availability, cost, benchmark evidence, and routing rationale in
+`docs/model-matrix.md` and active policy in `docs/model-routing.md`; never
+commit credentials or endpoint secrets.
 
 ## Repository Hygiene Policy
 
@@ -123,6 +126,7 @@ never commit credentials or endpoint secrets.
 ## Project Contract
 
 - This repository is the portable source of truth for OMO/Senpi customizations.
+- `README.md` owns concise native-OMO install, LLM-handoff, local-extension install, and documentation routing. It links full upstream and repository documentation instead of duplicating it.
 - `mise.toml` owns the repository toolchain and task runner. `mise ci` is the
   local CI entrypoint.
 - Bun owns JavaScript package installation; mise owns tools and tasks.
@@ -158,8 +162,10 @@ trigger.
 - `.omo/` — project-local OMO package settings; runtime task state remains
   ignored.
 - `.qlty/` — committed Qlty configuration.
-- `templates/` — portable, merge-safe OMO user-preference templates.
-- `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, customization, and upstream-validation guidance. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/upstream-validation.md`](docs/upstream-validation.md) before relying on OMO or Senpi runtime behavior; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
+- `templates/` — portable OMO preference templates plus complete balanced and GPT-heavy `9router` routing profiles.
+- `README.md` — concise native OMO, LLM handoff, and extension installation entrypoint; routes to complete local and upstream documentation.
+- `customizations/` — policy-only scaffolds for OMO and Senpi capability domains; runnable behavior belongs in `extensions/`. Read [`customizations/AGENTS.md`](customizations/AGENTS.md) and [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) before creating a new customization.
+- `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, customization, and upstream-validation guidance. `docs/model-matrix.md` owns model pricing, benchmark evidence, and profile mappings; `docs/model-routing.md` owns active routing policy. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) for the upstream-backed capability map and creation rules; read [`docs/upstream-validation.md`](docs/upstream-validation.md) before relying on OMO or Senpi runtime behavior; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
 - `extensions/` — extension package ownership boundary.
 - `extensions/better-custom/` — native Senpi port of upstream provider/model
   customization.

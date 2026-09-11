@@ -7,19 +7,24 @@ Store portable, merge-safe OMO configuration templates.
 ## Ownership
 
 - `omo-agent-settings.json` owns global Senpi preferences applied by the OMO bootstrap script.
+- `omo.jsonc.balanced` owns the portable balanced `9router` task-routing profile.
+- `omo.jsonc.gpt-heavy` owns the portable CX-first `9router` task-routing profile.
 
 ## Local Contracts
 
-- Templates contain only user preferences, never credentials, endpoints, model catalogs, or machine paths.
+- Templates contain no credentials, endpoints, or machine paths.
+- Routing templates contain only canonical model IDs verified by `omo --list-models 9router`.
 - `omo-agent-settings.json` keeps native Senpi startup and working tips disabled.
+- Routing templates are complete replacement profiles, not additive JSON fragments.
 
 ## Work Guidance
 
-- Keep each template minimal and additive.
-- Update the matching bootstrap script, tests, README instructions, and parent Child DOX Index when changing a template contract.
+- Keep each template minimal.
+- Update routing-template tests, `docs/model-matrix.md`, `docs/model-routing.md`, README instructions, and parent Child DOX Index when changing a routing profile.
+- Update the matching bootstrap script and tests when changing `omo-agent-settings.json`.
 
 ## Verification
 
-- `bun test test/omo-preferences.test.ts` validates the OMO preferences bootstrap.
+- `bun test test/omo-preferences.test.ts` validates the OMO preferences bootstrap and routing-template shape.
 
 ## Child DOX Index

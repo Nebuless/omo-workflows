@@ -16,6 +16,7 @@ Runtime-dependent claims follow the [upstream validation contract](upstream-vali
 | Global agent instructions | Apply durable instructions to every OMO session | `~/.omo/rules/*.md` | [Global instructions](#global-agent-instructions) |
 | Model routing | Select workstation model families | OMO model configuration | [Model routing](model-routing.md) |
 | Upstream validation | Verify runtime-dependent customization claims | OMO and Senpi authority sources | [Validation contract](upstream-validation.md) |
+| Full customization map | Choose capability boundary and creation policy | `customizations/<domain>/` | [Customization scaffolding](customization-scaffolding.md) |
 
 ## Global agent instructions
 
@@ -83,26 +84,27 @@ Sources:
 - [OMO configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md)
 - [Senpi dynamic-prompt changes](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/dynamic-prompt/changes.md)
 
-## Planned detailed domains
+## Capability scaffolds
 
-These domains are cataloged now. Do not infer conventions or add packages until
-their exploration defines contracts, install boundaries, and verification.
+[`customizations/`](../customizations/) now owns policy-first directory scaffolds
+for every verified OMO or Senpi customization boundary: agents, profiles,
+instructions, skills, hooks, commands, tools, MCP, TUI, workflows, memory,
+automation, integrations, and operational controls. The full capability map,
+creation sequence, and upstream evidence are in
+[customization scaffolding](customization-scaffolding.md).
 
-| Domain | Intended outcome | Questions to settle before implementation |
-|---|---|---|
-| Hooks | Add lifecycle or policy automation | Host hook API, trust model, ordering, persistence, rollback |
-| Skills | Add reusable agent guidance | Package discovery, naming, scope, references, load cost, versioning |
-| TUI | Add interactive commands or views | Senpi UI APIs, noninteractive behavior, accessibility, terminal QA |
-| MCP and tool integrations | Add external capabilities | Credentials, permissions, tool exposure, output limits, failure handling |
-| Themes and presentation | Change terminal appearance | Theme format, inheritance, compatibility, visual QA |
-| Prompts and templates | Add reusable interaction patterns | Discovery path, precedence, variable contracts, injection boundaries |
-| Session and workflow behavior | Change continuation or delegation behavior | Persistence, concurrency, recovery, user control, audit trail |
-| Remote extension installation | Install pinned features from GitHub | OMO Git URL and subdirectory syntax, version pinning, trust, rollback |
+These folders are not runtime discovery paths. Use them to settle scope,
+permissions, lifecycle, persistence, and verification. Place runnable behavior
+in an independently installable `extensions/<name>/` package.
+
+Terminal themes remain unscaffolded: current cited OMO configuration and Senpi
+extension references establish TUI components and rendering, but not a stable
+theme-package contract. Revisit after upstream exposes one.
 
 ## Choosing a customization
 
 1. Pick one catalog boundary.
-2. Read its linked contract or detail page.
+2. Read its linked contract or policy scaffold.
 3. Check root and nearest `AGENTS.md` files before editing.
 4. Prefer an extension package when capability adds runtime behavior.
 5. Keep credentials and machine-local state outside this repository.
@@ -110,6 +112,7 @@ their exploration defines contracts, install boundaries, and verification.
 
 ## Documentation rule
 
-This catalog is short by design. It routes users and agents to detail pages; it
-does not duplicate implementation instructions. Create a detail page only after
-exploration produces stable inputs, outputs, authority rules, and verification.
+This catalog is short by design. It routes users and agents to detail pages and
+policy scaffolds; it does not duplicate implementation instructions. Create a
+detail page only after exploration produces stable inputs, outputs, authority
+rules, and verification.
