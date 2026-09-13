@@ -12,6 +12,7 @@ customization repository.
 - `releasing.md` owns Conventional Commit, SemVer, and changelog procedure.
 - `runtime-repairs.md` owns supported OMO runtime repair and user-preference procedures.
 - `model-routing.md` owns non-secret local model-routing policy.
+- `omo-subagents.md` owns end-to-end OMO/Senpi subagent setup, routing, extension-provider boundaries, validation, and failure diagnosis.
 - `model-matrix.md` owns sourced model price, capability, benchmark evidence, and portable profile mappings.
 - `lsp.md` owns repository language-server tooling and OMO configuration.
 - `authoring-extensions.md` owns modular individually installable extension packaging guidance.
@@ -39,6 +40,7 @@ No child `AGENTS.md` boundaries exist.
 - `releasing.md` — release and versioning procedure.
 - `runtime-repairs.md` — portable runtime repair, OMO preference, and obsolete-config cleanup procedures.
 - `model-routing.md` — installed-model routing policy.
+- `omo-subagents.md` — OMO/Senpi subagent setup, routing, validation, provider extensions, and troubleshooting.
 - `model-matrix.md` — model evidence and balanced/GPT-heavy routing profiles.
 - `lsp.md` — mise-managed language-server setup and verification.
 - `authoring-extensions.md` — modular extension layout, package manifest, tool, skill, and verification guidance.

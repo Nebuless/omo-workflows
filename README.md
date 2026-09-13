@@ -97,6 +97,7 @@ in interactive OMO, then run `/workflow-run list`; it must show
 | Add one installable extension | [Authoring extensions](docs/authoring-extensions.md) |
 | Configure global rules and prompt overlays | [Global instructions](docs/customizations.md#global-agent-instructions) |
 | Configure providers and model routing | [Model matrix and profiles](docs/model-matrix.md) |
+| Set up or troubleshoot delegated work | [OMO/Senpi subagents](docs/omo-subagents.md) |
 | Configure OMO preferences or repair runtime gaps | [Runtime repairs](docs/runtime-repairs.md) |
 | Check OMO/Senpi version-sensitive claims | [Upstream validation](docs/upstream-validation.md) |
 | Review native OMO configuration | [OMO configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md) |
@@ -208,6 +209,7 @@ cleanup only IDs returned while creating QA tab and panes.
 - [Compatibility and upstream provenance](docs/compatibility.md)
 - [LSP setup](docs/lsp.md)
 - [Model routing policy](docs/model-routing.md)
+- [OMO/Senpi subagent setup and troubleshooting](docs/omo-subagents.md)
 - [Model matrix and portable profiles](docs/model-matrix.md)
 - [Release procedure](docs/releasing.md)
 - [Customization policies](customizations/AGENTS.md)
