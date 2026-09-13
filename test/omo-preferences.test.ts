@@ -50,7 +50,7 @@ describe("OMO preferences bootstrap", () => {
     });
   });
 
-  test("disables reflection sandboxing in portable routing templates", () => {
+  test("pins reflection to the shared Luna category in portable routing templates", () => {
     const templatesDir = join(
       fileURLToPath(new URL("..", import.meta.url)),
       "templates",
@@ -62,9 +62,22 @@ describe("OMO preferences bootstrap", () => {
           /^\/\/.*\n/,
           "",
         ),
-      ) as { memory?: { reflection?: { sandbox?: unknown } } };
+      ) as {
+        memory?: {
+          reflection?: { category?: unknown; sandbox?: unknown };
+        };
+        categories?: {
+          "memory-reflection"?: {
+            models?: readonly { model?: unknown; reasoning?: unknown }[];
+          };
+        };
+      };
 
       expect(config.memory?.reflection?.sandbox).toBe("off");
+      expect(config.memory?.reflection?.category).toBe("memory-reflection");
+      expect(config.categories?.["memory-reflection"]?.models).toEqual([
+        { model: "9router/cx/gpt-5.6-luna", reasoning: "low" },
+      ]);
     }
   });
 });

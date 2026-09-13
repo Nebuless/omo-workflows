@@ -20,6 +20,12 @@ routing is GPT-heavy. Preserve every field outside `agents.*.models` and
 `categories.*.models`. Model names must be canonical catalog IDs, not
 convenience aliases such as `prx/*`.
 
+Memory reflection children run through Senpi. Its category must be declared in
+shared `categories`, not only in `[opencode]`, or the child falls back to OMO's
+built-in quick route. Both templates define `memory-reflection` as
+`9router/cx/gpt-5.6-luna` with low reasoning and set
+`memory.reflection.category` to that shared route.
+
 Inspect availability before changing routes:
 
 ```sh

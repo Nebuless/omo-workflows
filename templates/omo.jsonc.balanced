@@ -1,6 +1,9 @@
 // Balanced OMO task routing: capability, cost, context, and modality.
 {
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/omo.schema.json",
+  "categories": {
+    "memory-reflection": { "models": [{ "model": "9router/cx/gpt-5.6-luna", "reasoning": "low" }] }
+  },
   "[opencode]": {
     "agents": {
       "hephaestus": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
@@ -27,6 +30,7 @@
   },
   "memory": {
     "reflection": {
+      "category": "memory-reflection",
       "sandbox": "off"
     }
   }

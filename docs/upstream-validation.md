@@ -47,6 +47,16 @@ verification date.
 
 ## Existing validation records
 
+### Memory reflection shared-category routing
+
+- Verified: `2026-09-13`
+- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`.
+- OMO evidence: [configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md) documents harness-specific overlays after shared base keys. [Issue #6808](https://github.com/code-yeongyu/oh-my-openagent/issues/6808) confirms Reflection defaults to `quick` and that the shipped quick route can be Kimi-only.
+- Senpi evidence: [Senpi README](https://github.com/code-yeongyu/senpi/blob/main/README.md) establishes Senpi as the runtime under OMO's plugin. The installed OMO reflection child ran through the Senpi view and could not resolve the `[opencode]`-only `quick` route.
+- Local proof: `reflection-run-31/ledger.json` recorded old route `9router/ollama-cloud/kimi-k3`; the active profile and both templates parse to shared `memory-reflection` at `9router/cx/gpt-5.6-luna` with low reasoning. `bun test test/omo-preferences.test.ts` enforces selector and model chain. The post-change `/reflect` run is recorded in `docs/issues.md`.
+- Revalidate: OMO or Senpi upgrade, reflection launch change, config merge-precedence change, or routing-profile change.
+- Status: `current; user-local routing workaround for upstream default`
+
 - [Global OMO instructions](customizations.md#verified-runtime-contract) —
   verified 2026-09-11; boundary-crossing prompt overlay behavior.
 - [Customization scaffolding](customization-scaffolding.md#upstream-evidence) —
