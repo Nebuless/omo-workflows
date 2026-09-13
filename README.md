@@ -61,18 +61,32 @@ mise ci
 
 ### 3. Install extensions
 
-```sh
-# All extensions in this repository
-omo install -l .
+Each Worktrunk worktree owns its own `node_modules`. After `wt switch` creates
+or opens a worktree, run this before launching OMO there:
 
-# One extension only
-omo install -l ./extensions/better-custom
-omo install -l ./extensions/herdr
+```sh
+bun install --frozen-lockfile
+```
+
+Without it, a worktree can retain stale dependencies and fail to load an
+extension added by a newer commit. Choose scope before installing. `-l` is
+project-local: OMO loads it only when started inside that project. Omit `-l`
+for fresh OMO agents in every directory.
+
+```sh
+# Global: load all repository extensions in every fresh OMO agent
+omo install .
+
+# Global: load workflow graph only in every fresh OMO agent
+omo install ./extensions/workflow-graph
+
+# Project-local: load only while OMO starts in this repository
 omo install -l ./extensions/workflow-graph
 ```
 
-Restart OMO or run `/reload` in interactive OMO. Test one safe command after
-installation. See [extension authoring and verification](docs/authoring-extensions.md).
+Check installed global packages with `omo list`. Restart OMO or run `/reload`
+in interactive OMO, then run `/workflow-run list`; it must show
+`repo-to-extension`. See [extension authoring and verification](docs/authoring-extensions.md).
 
 ## Choose customization path
 

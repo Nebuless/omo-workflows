@@ -5,6 +5,32 @@ Keep one dated entry per report. State observed behavior, affected runtime, reso
 state, validation, and upstream issue, pull request, or source. If no upstream
 reference exists, state that and label any workaround as invented.
 
+## 2026-09-13T06:35:53Z - Reflection ignored OMO-only quick route
+
+- **Reported symptom:** Compaction-triggered `reflection-run-31` selected
+  `9router/ollama-cloud/kimi-k3`, despite the OMO `quick` route selecting
+  `9router/cx/gpt-5.6-luna`.
+- **Affected runtime:** OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`.
+- **Cause:** Memory Reflection defaults to category `quick`, but its child uses
+  Senpi. The user's `quick` route was nested under `[opencode]`, so it was
+  invisible to the Senpi child. OMO then resolved its built-in Kimi quick
+  fallback; the run failed because that provider had no active credentials.
+- **Resolution:** Routing templates and active `~/.omo/omo.jsonc` now define
+  shared `categories.memory-reflection`, pinned to
+  `9router/cx/gpt-5.6-luna` at low reasoning. `memory.reflection.category`
+  selects it, making the route visible to both OMO and Senpi.
+- **Upstream:** [Issue #6808](https://github.com/code-yeongyu/oh-my-openagent/issues/6808)
+  documents the Kimi-only quick default. The current
+  [configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md)
+  documents separate harness views and shared-base precedence.
+- **Validation:** `reflection-run-31/ledger.json` recorded Kimi under the old
+  configuration. Post-change `reflection-run-32/ledger.json` records category
+  `memory-reflection`, model `9router/cx/gpt-5.6-luna`, and low thinking.
+  `bun test test/omo-preferences.test.ts` passes with the portable profile
+  regression requiring that shared category and selector. The smoke's parent
+  then emitted a separate stale-extension-context error after route selection;
+  it does not alter the recorded child model and is out of this routing fix.
+
 ## 2026-09-11T21:55:41Z - Memory reflection fails before child launch
 
 - **Reported symptom:** Memory reflection repeatedly fails and never advances its
@@ -26,6 +52,20 @@ reference exists, state that and label any workaround as invented.
 - **Validation:** Local configuration parses without errors. Manual reflection
   dispatch from a piped TUI was not reliable; next normal OMO session must run
   `/reflect` and confirm a new completion without `bwrap` stderr.
+
+## 2026-09-13T06:16:56Z - Workflow-graph appeared absent after new OMO agent launch
+
+- **Reported symptom:** User launched a new OMO agent and did not see the new
+  workflow-graph extension.
+- **Affected runtime:** OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`.
+- **Resolution:** `omo install -l` is project-local and only applies when OMO
+  starts in that project. Global `omo list --no-approve` contained
+  `/home/egsox/repo/omo-workflows`; a fresh `omo --print` launched from `/tmp`
+  listed `repo-to-extension`. Updated README install instructions to make scope
+  explicit. Use `omo install ./extensions/workflow-graph` without `-l` for
+  global loading, then restart OMO or run `/reload`.
+- **Upstream source:** [OMO package install CLI](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/packages/omo-senpi/src/cli.ts);
+  [Senpi package settings](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/packages.md).
 
 ## 2026-09-12T14:20:02Z - Atomic workflow parity missing from graph extension
 
