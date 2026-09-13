@@ -22,7 +22,7 @@ run = "bun test"
 
 [tasks.build]
 description = "Bundle the OMO extension with Bun"
-run = "bun build extensions/better-custom/src/index.ts extensions/herdr/index.ts --outdir .build-check --target bun && rm -rf .build-check"
+run = "bun build extensions/better-custom/src/index.ts extensions/herdr/index.ts extensions/workflow-graph/src/index.ts extensions/workflow-graph/src/herdr/viewer.ts --outdir .build-check --target bun && rm -rf .build-check"
 
 [tasks.quality]
 description = "Validate sources with Biome and run Qlty checks"
@@ -47,6 +47,18 @@ run = "bun run configure:omo-preferences"
 [tasks.repair-omo-comment-checker]
 description = "Install OMO's missing global comment-checker dependency"
 run = "bun run repair:omo-comment-checker"
+
+[tasks.repair-omo-dag-ui]
+description = "Check pinned native DAG UI hook; pass --apply for explicit repair"
+run = "bun run repair:omo-dag-ui"
+
+[tasks.repair-senpi-workflow-journal]
+description = "Check pinned native session journal flush; pass --apply for explicit repair"
+run = "bun run repair:senpi-workflow-journal"
+
+[tasks.repair-senpi-workflow-mouse]
+description = "Check pinned fullscreen mouse deferral; pass --apply for explicit repair"
+run = "bun run repair:senpi-workflow-mouse"
 
 [tasks.ci]
 description = "Run the complete local CI gate"

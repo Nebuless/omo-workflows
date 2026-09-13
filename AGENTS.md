@@ -180,6 +180,7 @@ trigger.
 - `extensions/better-custom/src/` — runtime implementation guidance.
 - `extensions/better-custom/test/` — provider/model extension regression guidance.
 - `extensions/herdr/` — standalone OMO lifecycle integration, skills, and safe CLI tools for Herdr.
+- `extensions/workflow-graph/` — staged Atomic program admission over native OMO DAGs, graph overlay, and optional Herdr side-pane observer.
 - `extensions/test/` — standalone extension regression coverage.
 - `scripts/` — validation and portable runtime-repair scripts.
 - `test/` — OMO/Senpi boundary regression tests.

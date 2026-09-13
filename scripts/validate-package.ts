@@ -25,13 +25,16 @@ const extensions = manifest.pi?.extensions;
 const extensionEntrypoints = [
   "./extensions/better-custom/src/index.ts",
   "./extensions/herdr/index.ts",
+  "./extensions/workflow-graph/src/index.ts",
 ] as const;
 if (
   !Array.isArray(extensions) ||
   extensions.length !== extensionEntrypoints.length ||
   !extensionEntrypoints.every((entrypoint) => extensions.includes(entrypoint))
 ) {
-  errors.push("package must expose better-custom and Herdr extensions");
+  errors.push(
+    "package must expose better-custom, Herdr, and workflow graph extensions",
+  );
 }
 
 for (const entrypoint of extensionEntrypoints) {
@@ -39,22 +42,31 @@ for (const entrypoint of extensionEntrypoints) {
   if (!existsSync(path)) errors.push(`missing extension entrypoint: ${path}`);
 }
 
-const herdrPackagePath = resolve(root, "extensions/herdr/package.json");
-if (!existsSync(herdrPackagePath)) {
-  errors.push("missing standalone Herdr package manifest");
-} else {
-  const herdrPackage = JSON.parse(
-    readFileSync(herdrPackagePath, "utf8"),
+for (const [relativePath, packageName, entrypoint] of [
+  ["extensions/herdr/package.json", "@omo-workflows/herdr", "./index.ts"],
+  [
+    "extensions/workflow-graph/package.json",
+    "@omo-workflows/workflow-graph",
+    "./src/index.ts",
+  ],
+] as const) {
+  const standalonePath = resolve(root, relativePath);
+  if (!existsSync(standalonePath)) {
+    errors.push(`missing standalone package manifest: ${relativePath}`);
+    continue;
+  }
+  const standalonePackage = JSON.parse(
+    readFileSync(standalonePath, "utf8"),
   ) as PackageManifest;
-  if (herdrPackage.name !== "@omo-workflows/herdr") {
-    errors.push("Herdr package name must be @omo-workflows/herdr");
+  if (standalonePackage.name !== packageName) {
+    errors.push(`${relativePath} package name must be ${packageName}`);
   }
   if (
-    !Array.isArray(herdrPackage.pi?.extensions) ||
-    herdrPackage.pi.extensions.length !== 1 ||
-    herdrPackage.pi.extensions[0] !== "./index.ts"
+    !Array.isArray(standalonePackage.pi?.extensions) ||
+    standalonePackage.pi.extensions.length !== 1 ||
+    standalonePackage.pi.extensions[0] !== entrypoint
   ) {
-    errors.push("Herdr package must expose only ./index.ts");
+    errors.push(`${relativePath} must expose only ${entrypoint}`);
   }
 }
 
@@ -67,6 +79,8 @@ const sourceFiles = [
   "extensions/better-custom/src/index.ts",
   "extensions/better-custom/src/config.ts",
   "extensions/better-custom/src/model-browser.ts",
+  "extensions/workflow-graph/src/index.ts",
+  "extensions/workflow-graph/src/overlay/controller.ts",
 ];
 const herdrSkillFiles = [
   "extensions/herdr/skills/herdr/SKILL.md",

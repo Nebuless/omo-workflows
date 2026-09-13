@@ -55,5 +55,44 @@ describe("OMO extension boundary", () => {
     expect(events.has("resources_discover")).toBe(true);
     expect(tools.has("herdr_inspect")).toBe(true);
     expect(tools.has("herdr_control")).toBe(true);
+
+    const graphEvents = new Map<string, (data: unknown) => void>();
+    const graphCommands = new Map<string, unknown>();
+    const graphTools = new Map<string, unknown>();
+    const graphLifecycle = new Map<string, () => Promise<void> | void>();
+    const graphHost = {
+      registerTool(definition: { name: string }) {
+        graphTools.set(definition.name, definition);
+      },
+      events: {
+        on(channel: string, handler: (data: unknown) => void) {
+          graphEvents.set(channel, handler);
+          return () => graphEvents.delete(channel);
+        },
+      },
+      registerCommand(name: string, definition: unknown) {
+        graphCommands.set(name, definition);
+      },
+      on(name: string, handler: () => Promise<void> | void) {
+        graphLifecycle.set(name, handler);
+      },
+    };
+    const graphExtension = await import(
+      "../extensions/workflow-graph/src/index.ts"
+    );
+    graphExtension.default(graphHost as never);
+    try {
+      expect(graphEvents.has("senpi:extension-rpc-event")).toBe(true);
+      expect(graphCommands.has("workflow-graph")).toBe(true);
+      expect(graphCommands.has("workflow-run")).toBe(true);
+      expect(graphTools.has("workflow_program")).toBe(true);
+      expect(graphCommands.has("workflow-graph-pane")).toBe(true);
+      expect(graphLifecycle.has("session_start")).toBe(true);
+      expect(graphLifecycle.has("session_before_switch")).toBe(true);
+      expect(graphLifecycle.has("session_before_fork")).toBe(true);
+      expect(graphLifecycle.has("session_shutdown")).toBe(true);
+    } finally {
+      await graphLifecycle.get("session_shutdown")?.();
+    }
   });
 });
