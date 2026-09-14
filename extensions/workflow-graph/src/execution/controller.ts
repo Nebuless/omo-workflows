@@ -11,6 +11,10 @@ import type {
 } from "./policy.ts";
 import { validateDecision } from "./policy.ts";
 import { nativeDefinitionFingerprint } from "./native-fingerprint.ts";
+import {
+  ComposedIdentitySchema,
+  type CompositionIdentity,
+} from "./composed.ts";
 import type {
   NativeDetails as Details,
   NativeWorkflowTransport,
@@ -52,6 +56,7 @@ const CheckpointSchema = Type.Object(
     workflow: Type.String(),
     programVersion: Type.Integer({ minimum: 1 }),
     inputs: Type.Unknown(),
+    compositionIdentity: Type.Optional(ComposedIdentitySchema),
     runId: Type.Optional(Type.String()),
     definition: Type.Optional(DefinitionSchema),
     results: Type.Record(
@@ -77,9 +82,18 @@ const CheckpointSchema = Type.Object(
   },
   { additionalProperties: false },
 );
-export type StagedCheckpoint = Static<typeof CheckpointSchema>;
-type RuntimeCheckpoint = StagedCheckpoint & {
+export type StagedCheckpoint = Omit<
+  Static<typeof CheckpointSchema>,
+  "compositionIdentity"
+> & {
+  readonly compositionIdentity?: CompositionIdentity;
+};
+type RuntimeCheckpoint = Omit<StagedCheckpoint, "compositionIdentity"> & {
   readonly external: Record<string, unknown>;
+  readonly compositionIdentity?: CompositionIdentity;
+};
+type CheckpointValue = Omit<StagedCheckpoint, "compositionIdentity"> & {
+  readonly compositionIdentity?: CompositionIdentity;
 };
 export interface StagedJournal {
   appendEntry(customType: string, data: unknown): Promise<void>;
@@ -103,7 +117,9 @@ export interface StagedController {
   cancel(): Promise<ControllerDecision>;
 }
 
-class InvalidOutputError extends Error {
+class StableRejectionError extends Error {}
+
+class InvalidOutputError extends StableRejectionError {
   constructor(
     readonly code: "json" | "schema" | "missing" | "empty",
     message: string,
@@ -194,6 +210,7 @@ export function createStagedController<I>(input: {
   readonly program: StagedProgram<I>;
   readonly inputs: I;
   readonly readArtifact: (path: string) => Promise<string>;
+  readonly compositionIdentity?: CompositionIdentity;
 }): StagedController {
   if (
     !Value.Check(input.program.input, input.inputs) ||
@@ -201,6 +218,20 @@ export function createStagedController<I>(input: {
   )
     throw new Error("Invalid staged program inputs.");
   const prior = restored(input.journal.getBranch(), input.program);
+  const identity =
+    input.program.compositionIdentity ?? input.compositionIdentity;
+  const launchIdentity = input.compositionIdentity ?? identity;
+  const storedIdentity =
+    launchIdentity === undefined ? undefined : structuredClone(launchIdentity);
+  const identityChanged =
+    (input.compositionIdentity !== undefined &&
+      !isDeepStrictEqual(
+        input.compositionIdentity,
+        input.program.compositionIdentity,
+      )) ||
+    (prior !== undefined &&
+      prior !== "invalid" &&
+      !isDeepStrictEqual(prior.compositionIdentity, identity));
   if (
     prior !== undefined &&
     prior !== "invalid" &&
@@ -215,6 +246,9 @@ export function createStagedController<I>(input: {
           workflow: input.program.key,
           programVersion: input.program.version,
           inputs: input.inputs,
+          ...(storedIdentity === undefined
+            ? {}
+            : { compositionIdentity: storedIdentity }),
           results: {},
           answers: {},
           external: {},
@@ -227,6 +261,9 @@ export function createStagedController<I>(input: {
             workflow: input.program.key,
             programVersion: input.program.version,
             inputs: input.inputs,
+            ...(storedIdentity === undefined
+              ? {}
+              : { compositionIdentity: storedIdentity }),
             results: {},
             answers: {},
             external: {},
@@ -240,7 +277,7 @@ export function createStagedController<I>(input: {
   });
   let generation = 0;
   let cancelRequested = checkpoint.cancelled === true;
-  const persist = async (next: StagedCheckpoint): Promise<boolean> => {
+  const persist = async (next: CheckpointValue): Promise<boolean> => {
     if (!isSerializable(next))
       throw new Error("Checkpoint is not JSON serializable.");
     try {
@@ -255,7 +292,39 @@ export function createStagedController<I>(input: {
       return false;
     }
   };
-  const reject = async (reason: string): Promise<ControllerDecision> => {
+  const reject = async (
+    failure: string | StableRejectionError,
+  ): Promise<ControllerDecision> => {
+    // Persist only fixed reasons. Host and adapter exceptions may contain secrets.
+    const safeReasons: Readonly<Record<string, string>> = {
+      "missing-run-id": "missing-run-id",
+      "native-snapshot-failed": "native-snapshot-failed",
+      "native-definition-conflict": "native-definition-conflict",
+      "native-dispatch-failed": "native-dispatch-failed",
+      "foreign-native-run": "foreign-native-run",
+      "program-repeated-admitted-wave": "program-repeated-admitted-wave",
+      "native-wait-failed": "native-wait-failed",
+      "output-invalid": "output-invalid",
+      "composition-identity-changed": "composition-identity-changed",
+      "composition-intent-changed": "composition-intent-changed",
+      "Workflow catalog changed; choose again.":
+        "Workflow catalog changed; choose again.",
+      "Design review helper is not configured.":
+        "Design review helper is not configured.",
+      "Composition source did not finish.":
+        "Composition source did not finish.",
+      "Native workflow settled failed.": "Native workflow settled failed.",
+      "Native workflow settled cancelled.":
+        "Native workflow settled cancelled.",
+      "Composition source is missing or null.":
+        "Composition source is missing or null.",
+      "Composition destination fails schema validation.":
+        "Composition destination fails schema validation.",
+    };
+    const reason =
+      failure instanceof StableRejectionError
+        ? failure.message
+        : (safeReasons[failure] ?? "workflow-failed");
     const next = { ...checkpoint, intent: undefined, rejected: reason };
     return (await persist(next))
       ? { kind: "rejected", reason }
@@ -282,6 +351,26 @@ export function createStagedController<I>(input: {
     if (intent === undefined) return undefined;
     if (generation !== fence || cancelRequested)
       return { kind: "rejected", reason: "cancelled" };
+    const validateCompositionIntent = () => {
+      if (identity === undefined) return;
+      if (
+        !isDeepStrictEqual(
+          checkpoint.compositionIdentity,
+          input.program.compositionIdentity ?? input.compositionIdentity,
+        )
+      )
+        throw new Error("composition-identity-changed");
+      const current = decide();
+      if (
+        current.kind !== "wave" ||
+        current.id !== intent.waveId ||
+        nativeDefinitionFingerprint(
+          cumulative(checkpoint, input.program, current),
+        ) !== intent.fingerprint
+      )
+        throw new Error("composition-intent-changed");
+    };
+    validateCompositionIntent();
     if (intent.action === "amend") {
       const runId = checkpoint.runId;
       if (runId === undefined) return await reject("missing-run-id");
@@ -298,6 +387,7 @@ export function createStagedController<I>(input: {
         reply.details.snapshot.runKey !== checkpoint.workflow
       )
         return await reject("native-snapshot-failed");
+      validateCompositionIntent();
       const actual = reply.details.snapshot.definitionFingerprint;
       if (actual === intent.fingerprint) {
         return (await persist({
@@ -364,13 +454,18 @@ export function createStagedController<I>(input: {
     result: Extract<Details, { kind: "waited" }>["result"],
     fence: number,
   ): Promise<Record<string, unknown>> => {
-    if (result.status !== "completed")
-      throw new Error(`Native workflow settled ${result.status}.`);
+    if (result.status !== "completed") {
+      if (result.status === "failed" || result.status === "cancelled")
+        throw new StableRejectionError(
+          `Native workflow settled ${result.status}.`,
+        );
+      throw new Error("output-invalid");
+    }
     const output: Record<string, unknown> = {};
     for (const node of wave.nodes) {
       const current = result.nodes[node.id];
       if (current?.state !== "completed")
-        throw new Error(
+        throw new StableRejectionError(
           `Native workflow omitted completed output for ${node.id}.`,
         );
       try {
@@ -453,6 +548,8 @@ export function createStagedController<I>(input: {
   const run = async (): Promise<ControllerDecision> => {
     const fence = generation;
     if (checkpoint.cancelled) return { kind: "rejected", reason: "cancelled" };
+    if (checkpoint.rejected !== undefined)
+      return { kind: "rejected", reason: checkpoint.rejected };
     const reconciled = await reconcile(fence);
     if (reconciled !== undefined) return reconciled;
     if (generation !== fence) return { kind: "rejected", reason: "cancelled" };
@@ -524,7 +621,7 @@ export function createStagedController<I>(input: {
       return error instanceof Error && error.message === "cancelled"
         ? { kind: "rejected", reason: "cancelled" }
         : await reject(
-            error instanceof Error ? error.message : "output-invalid",
+            error instanceof StableRejectionError ? error : "output-invalid",
           );
     }
     if (generation !== fence) return { kind: "rejected", reason: "cancelled" };
@@ -539,7 +636,20 @@ export function createStagedController<I>(input: {
   };
   const serial = (
     operation: () => Promise<ControllerDecision>,
-  ): Promise<ControllerDecision> => (chain = chain.then(operation, operation));
+  ): Promise<ControllerDecision> => {
+    const guarded = async (): Promise<ControllerDecision> => {
+      if (identityChanged && checkpoint.rejected === undefined)
+        return reject("composition-identity-changed");
+      try {
+        return await operation();
+      } catch (error) {
+        if (identity === undefined || !(error instanceof Error)) throw error;
+        return reject(error.message);
+      }
+    };
+    chain = chain.then(guarded, guarded);
+    return chain;
+  };
   return {
     checkpoint: () => checkpoint,
     advance: () => serial(run),

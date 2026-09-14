@@ -154,7 +154,10 @@ function fixture(gate = false) {
   const registry = {
     list: () => ["sample"],
     get: (key: string) => (key === "sample" ? program : undefined),
+    identity: (key: string) =>
+      key === "sample" ? { revision: 1, digest: "stable" } : undefined,
   };
+  const selection = { key: "sample", revision: 1, digest: "stable" };
   const host = createProgramHost(runtime, registry, () => {});
   return {
     host,
@@ -167,26 +170,28 @@ function fixture(gate = false) {
     },
     runtime,
     registry,
+    selection,
   };
 }
 
 test("settled native run admits and submits next wave with same run identity", async () => {
   const f = fixture();
-  const first = await f.host.start(f.context, "sample", { prompt: "task" });
+  const first = await f.host.start(f.context, f.selection, { prompt: "task" });
   if (first.kind !== "active") throw new Error("not active");
   expect(
-    (await f.host.start(f.context, "sample", { prompt: "replacement" })).kind,
+    (await f.host.start(f.context, f.selection, { prompt: "replacement" }))
+      .kind,
   ).toBe("rejected");
   f.complete();
   await f.host.settled(first.runId);
   expect(f.host.status()?.decision?.kind).toBe("final");
   expect(f.amendments).toEqual([first.runId]);
-  await f.host.start(f.context, "sample", { prompt: "second" });
+  await f.host.start(f.context, f.selection, { prompt: "second" });
   expect(new Set(f.starts).size).toBe(2);
 });
 test("human gate blocks amendment until explicit answer and restart keeps run", async () => {
   const f = fixture(true);
-  const first = await f.host.start(f.context, "sample", { prompt: "task" });
+  const first = await f.host.start(f.context, f.selection, { prompt: "task" });
   if (first.kind !== "active") throw new Error("not active");
   f.complete();
   await f.host.settled(first.runId);
@@ -202,8 +207,10 @@ test("human gate blocks amendment until explicit answer and restart keeps run", 
 
 test("concurrent explicit starts reject replacement before journal acknowledgement", async () => {
   const f = fixture();
-  const first = f.host.start(f.context, "sample", { prompt: "first" });
-  const second = await f.host.start(f.context, "sample", { prompt: "second" });
+  const first = f.host.start(f.context, f.selection, { prompt: "first" });
+  const second = await f.host.start(f.context, f.selection, {
+    prompt: "second",
+  });
   expect(second.kind).toBe("rejected");
   expect((await first).kind).toBe("active");
   expect(f.starts).toHaveLength(1);
@@ -217,14 +224,18 @@ test("session switch fences pending authored import before any dispatch", async 
     {},
   );
   f.host.stop();
-  await expect(pending).rejects.toThrow();
+  await expect(pending).resolves.toEqual({
+    kind: "rejected",
+    reason: "Start requires opaque selection identity.",
+  });
   expect(f.starts).toEqual([]);
   expect(f.host.status()).toBeUndefined();
 });
 
-test("explicit trusted module resume preserves original launch and native identity", async () => {
+test("rejects spoofed descriptor path on explicit restore without replacing native instance", async () => {
+  // Given: durable descriptor key is changed to an existing module path without matching catalog authority.
   const f = fixture(true);
-  const first = await f.host.start(f.context, "sample", { prompt: "task" });
+  const first = await f.host.start(f.context, f.selection, { prompt: "task" });
   if (first.kind !== "active") throw Error("not active");
   const directory = await mkdtemp(join(tmpdir(), "workflow-module-"));
   try {
@@ -248,11 +259,15 @@ test("explicit trusted module resume preserves original launch and native identi
     const restored = createProgramHost(f.runtime, f.registry, () => {});
     const context = { ...f.context, cwd: directory };
     expect((await restored.restore(context))?.kind).toBe("rejected");
-    expect((await restored.restore(context, "./program.ts"))?.kind).toBe(
-      "final",
-    );
-    expect(restored.status()?.runId).toBe(first.runId);
-    expect(f.starts).toHaveLength(1);
+    // When: explicit path is supplied despite the missing descriptor.
+    const result = await restored.restore(context, "./program.ts");
+    // Then: exact path alone cannot authorize replacement code.
+    expect(result).toEqual({
+      kind: "rejected",
+      reason: "Workflow catalog changed; choose again.",
+    });
+    expect(restored.status()).toBeUndefined();
+    expect(f.starts).toEqual([first.runId]);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
@@ -278,12 +293,16 @@ test("fallback gate uses interactive choice and deterministic fallback only when
             fallback: "proposed",
           },
   };
-  const registry = { list: () => ["sample"], get: () => fallbackProgram };
+  const registry = {
+    list: () => ["sample"],
+    get: () => fallbackProgram,
+    identity: () => ({ revision: 1, digest: "stable" }),
+  };
   const selected = createProgramHost(f.runtime, registry, () => {});
   expect(
     await selected.start(
       { ...f.context, ui: { select: async () => "first" } },
-      "sample",
+      f.selection,
       { prompt: "task" },
     ),
   ).toEqual({
@@ -295,7 +314,7 @@ test("fallback gate uses interactive choice and deterministic fallback only when
   expect(
     await dismissed.start(
       { ...f.context, ui: { select: async () => undefined } },
-      "sample",
+      f.selection,
       { prompt: "task" },
     ),
   ).toEqual({
@@ -314,7 +333,7 @@ test("fallback gate uses interactive choice and deterministic fallback only when
           },
         },
       },
-      "sample",
+      f.selection,
       { prompt: "task" },
     ),
   ).toEqual({
@@ -336,7 +355,7 @@ test("gate without fallback remains durable waiting and is never auto-answered",
         },
       },
     },
-    "sample",
+    f.selection,
     { prompt: "task" },
   );
   if (result.kind !== "active") throw Error("not active");
@@ -344,6 +363,136 @@ test("gate without fallback remains durable waiting and is never auto-answered",
   await f.host.settled(result.runId);
   expect(f.host.status()?.decision?.kind).toBe("gate");
   expect(selections).toBe(0);
+});
+
+test("catalog changed before dispatch rejects with exact message and zero starts", async () => {
+  const f = fixture();
+  let digest = "stable";
+  const host = createProgramHost(
+    f.runtime,
+    {
+      list: () => ["sample"],
+      get: () => f.registry.get("sample"),
+      identity: () => ({ revision: 1, digest }),
+    },
+    () => {},
+  );
+  const originalAppend = f.runtime.appendEntry;
+  f.runtime.appendEntry = (type, data) => {
+    originalAppend(type, data);
+    if (type === LAUNCH_ENTRY_TYPE) digest = "changed";
+  };
+  await expect(
+    host.start(f.context, f.selection, { prompt: "task" }),
+  ).rejects.toThrow("Workflow catalog changed; choose again.");
+  expect(f.starts).toHaveLength(0);
+});
+
+test("persisted stale descriptor digest rejects restore with zero starts", async () => {
+  const f = fixture();
+  const entry = {
+    customType: LAUNCH_ENTRY_TYPE,
+    data: {
+      key: "sample",
+      instance: "sample:stale-digest",
+      version: 1,
+      inputs: { prompt: "task" },
+      artifactRoot: "/tmp/workflow",
+      revision: 1,
+      digest: "old",
+    },
+  };
+  f.context.sessionManager.getBranch = () => [entry];
+  const host = createProgramHost(
+    f.runtime,
+    {
+      ...f.registry,
+      identity: () => ({ revision: 1, digest: "new" }),
+    },
+    () => {},
+  );
+  await expect(host.restore(f.context)).resolves.toEqual({
+    kind: "rejected",
+    reason: "Workflow catalog changed; choose again.",
+  });
+  expect(f.starts).toHaveLength(0);
+});
+
+test("persisted stale descriptor revision rejects restore with zero starts", async () => {
+  const f = fixture();
+  f.context.sessionManager.getBranch = () => [
+    {
+      customType: LAUNCH_ENTRY_TYPE,
+      data: {
+        key: "sample",
+        instance: "sample:stale-revision",
+        version: 1,
+        inputs: { prompt: "task" },
+        artifactRoot: "/tmp/workflow",
+        revision: 1,
+        digest: "stable",
+      },
+    },
+  ];
+  const host = createProgramHost(
+    f.runtime,
+    {
+      ...f.registry,
+      identity: () => ({ revision: 2, digest: "stable" }),
+    },
+    () => {},
+  );
+  await expect(host.restore(f.context)).resolves.toEqual({
+    kind: "rejected",
+    reason: "Workflow catalog changed; choose again.",
+  });
+  expect(f.starts).toHaveLength(0);
+});
+
+test("journal flush failure rejects as durability unavailable before native start", async () => {
+  const f = fixture();
+  const context = {
+    ...f.context,
+    sessionManager: {
+      ...f.context.sessionManager,
+      flushEntries: () => {
+        throw new Error("disk full");
+      },
+    },
+  };
+  await expect(
+    f.host.start(context, f.selection, { prompt: "task" }),
+  ).resolves.toEqual({
+    kind: "durability-unavailable",
+  });
+  expect(f.starts).toHaveLength(0);
+});
+
+test("unexpected launch journal errors propagate before native start", async () => {
+  const f = fixture();
+  const runtime = {
+    ...f.runtime,
+    appendEntry: () => {
+      throw new TypeError("journal adapter broke");
+    },
+  };
+  const host = createProgramHost(runtime, f.registry, () => {});
+  await expect(
+    host.start(f.context, f.selection, { prompt: "task" }),
+  ).rejects.toThrow("journal adapter broke");
+  expect(f.starts).toHaveLength(0);
+});
+
+test("matching descriptor identity starts one native instance", async () => {
+  const f = fixture();
+  const host = createProgramHost(
+    f.runtime,
+    { ...f.registry, identity: () => ({ revision: 1, digest: "stable" }) },
+    () => {},
+  );
+  const decision = await host.start(f.context, f.selection, { prompt: "task" });
+  expect(decision.kind).toBe("active");
+  expect(f.starts).toHaveLength(1);
 });
 
 test("gate fallback must equal listed choice", () => {
@@ -363,10 +512,10 @@ test("gate fallback must equal listed choice", () => {
   const f = fixture();
   const host = createProgramHost(
     f.runtime,
-    { list: () => ["sample"], get: () => program },
+    { ...f.registry, get: () => program },
     () => {},
   );
   return expect(
-    host.start(f.context, "sample", { prompt: "task" }),
+    host.start(f.context, f.selection, { prompt: "task" }),
   ).rejects.toThrow("Invalid staged gate");
 });

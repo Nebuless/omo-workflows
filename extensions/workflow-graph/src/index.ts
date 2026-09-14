@@ -26,6 +26,15 @@ import {
   type TaskControlResult,
 } from "./task-control.ts";
 
+export function recommendationWidgetState(
+  mode: string,
+  recommendations: readonly string[],
+): readonly string[] | undefined {
+  return mode === "tui" && recommendations.length > 0
+    ? recommendations
+    : undefined;
+}
+
 export function graphFromProjection(
   projection: GraphProjection,
   runId?: string,
@@ -225,16 +234,54 @@ export default function workflowGraph(pi: ExtensionAPI): void {
   let unsubscribe: (() => void) | undefined;
   let releaseNativeDagUi: (() => void) | undefined;
   const programs = new Map<string, string>();
-  const staged = registerStagedWorkflows(pi, store, (runId, decision) => {
-    if (runId === undefined) return;
-    programs.set(runId, decision.kind);
-    synchronizeGraphPresentation({
-      projection: store.get(),
-      controller,
-      writer,
-      programs,
-    });
-  });
+  let recommendations: readonly {
+    readonly key: string;
+    readonly title: string;
+    readonly rationale: string;
+    readonly confidence: number;
+  }[] = [];
+  let recommendationUi:
+    | Pick<ExtensionCommandContext["ui"], "setWidget">
+    | undefined;
+  let recommendationWidgetShown = false;
+  const clearRecommendations = (): void => {
+    recommendations = [];
+    recommendationUi?.setWidget("workflow-recommendations", undefined);
+    recommendationWidgetShown = false;
+  };
+  const staged = registerStagedWorkflows(
+    pi,
+    store,
+    (runId, decision) => {
+      if (runId === undefined) return;
+      programs.set(runId, decision.kind);
+      synchronizeGraphPresentation({
+        projection: store.get(),
+        controller,
+        writer,
+        programs,
+      });
+    },
+    (accepted) => {
+      recommendations = accepted.map(
+        ({ key, title, rationale, confidence }) => ({
+          key,
+          title,
+          rationale,
+          confidence,
+        }),
+      );
+      if (recommendationUi === undefined || recommendationWidgetShown === false)
+        return;
+      recommendationUi.setWidget(
+        "workflow-recommendations",
+        recommendations.map(
+          (item) => `${item.key}: ${item.rationale} (${item.confidence})`,
+        ),
+      );
+    },
+    clearRecommendations,
+  );
 
   function subscribe(): void {
     if (unsubscribe !== undefined) return;
@@ -374,6 +421,7 @@ export default function workflowGraph(pi: ExtensionAPI): void {
   });
 
   const resetSessionState = async (): Promise<void> => {
+    clearRecommendations();
     staged.host.stop();
     programs.clear();
     controller?.dispose();
@@ -384,6 +432,40 @@ export default function workflowGraph(pi: ExtensionAPI): void {
     store.reset();
   };
 
+  pi.on("before_agent_start", async (_event, context) => {
+    recommendationUi = context.mode === "tui" ? context.ui : undefined;
+    if (recommendations.length === 0) return;
+    if (context.mode === "tui" && !recommendationWidgetShown) {
+      try {
+        recommendationWidgetShown = true;
+        context.ui.setWidget(
+          "workflow-recommendations",
+          recommendations.map(
+            (item) => `${item.key}: ${item.rationale} (${item.confidence})`,
+          ),
+        );
+      } catch (error) {
+        recommendationWidgetShown = false;
+        context.ui.notify(
+          error instanceof Error ? error.message : String(error),
+          "warning",
+        );
+      }
+    }
+    return {
+      message: {
+        customType: "workflow-capability",
+        content: JSON.stringify({
+          capability: "workflow_recommend",
+          workflows: recommendations
+            .slice(0, 5)
+            .map(({ key, title }) => ({ key, title })),
+        }),
+        display: true,
+      },
+    };
+  });
+  pi.on("agent_settled", () => clearRecommendations());
   pi.on("session_start", async (_event, context) => {
     await resetSessionState();
     await staged.host.restore(context);

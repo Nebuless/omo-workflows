@@ -2,7 +2,15 @@
 {
   "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/omo.schema.json",
   "categories": {
-    "memory-reflection": { "models": [{ "model": "9router/cx/gpt-5.6-luna", "reasoning": "low" }] }
+    "memory-reflection": { "models": [{ "model": "9router/cx/gpt-5.6-luna", "reasoning": "low" }] },
+    "visual-engineering": { "models": [{ "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }, { "model": "9router/cx/gpt-5.6-luna", "reasoning": "medium" }] },
+    "ultrabrain": { "models": [{ "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
+    "deep": { "models": [{ "model": "9router/ollama-cloud/deepseek-v4-pro:0813", "reasoning": "high" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
+    "artistry": { "models": [{ "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }, { "model": "9router/cx/gpt-5.6-luna", "reasoning": "medium" }] },
+    "quick": { "models": [{ "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "low" }, { "model": "9router/ollama-cloud/deepseek-v4-flash:0731", "reasoning": "low" }] },
+    "unspecified-low": { "models": [{ "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "low" }, { "model": "9router/ollama-cloud/deepseek-v4-flash:0731", "reasoning": "low" }] },
+    "unspecified-high": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
+    "writing": { "models": [{ "model": "9router/ollama-cloud/kimi-k2.7-code", "reasoning": "medium" }, { "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }] }
   },
   "[opencode]": {
     "agents": {
@@ -16,22 +24,15 @@
       "momus": { "models": [{ "model": "9router/cx/gpt-5.3-codex-spark-review", "reasoning": "high" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
       "atlas": { "models": [{ "model": "9router/cx/gpt-5.3-codex-spark", "reasoning": "high" }, { "model": "9router/ollama-cloud/deepseek-v4-flash:0731", "reasoning": "medium" }] },
       "sisyphus-junior": { "models": [{ "model": "9router/cx/gpt-5.3-codex-spark", "reasoning": "high" }, { "model": "9router/ollama-cloud/kimi-k2.7-code", "reasoning": "medium" }] }
-    },
-    "categories": {
-      "visual-engineering": { "models": [{ "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }, { "model": "9router/cx/gpt-5.6-luna", "reasoning": "medium" }] },
-      "ultrabrain": { "models": [{ "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
-      "deep": { "models": [{ "model": "9router/ollama-cloud/deepseek-v4-pro:0813", "reasoning": "high" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
-      "artistry": { "models": [{ "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }, { "model": "9router/cx/gpt-5.6-luna", "reasoning": "medium" }] },
-      "quick": { "models": [{ "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "low" }, { "model": "9router/ollama-cloud/deepseek-v4-flash:0731", "reasoning": "low" }] },
-      "unspecified-low": { "models": [{ "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "low" }, { "model": "9router/ollama-cloud/deepseek-v4-flash:0731", "reasoning": "low" }] },
-      "unspecified-high": { "models": [{ "model": "9router/cx/gpt-5.6-terra", "reasoning": "high" }, { "model": "9router/ollama-cloud/glm-5.3", "reasoning": "high" }] },
-      "writing": { "models": [{ "model": "9router/ollama-cloud/kimi-k2.7-code", "reasoning": "medium" }, { "model": "9router/ollama-cloud/glm-5.3-flash", "reasoning": "medium" }] }
     }
   },
   "memory": {
     "reflection": {
       "category": "memory-reflection",
       "sandbox": "off"
+    },
+    "recall": {
+      "category": "memory-reflection"
     }
   }
 }

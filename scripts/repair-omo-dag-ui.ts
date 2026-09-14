@@ -4,17 +4,16 @@ import { readFile, rename, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
-export const OMO_VERSION = "5.0.0-0.beta.53";
+export const OMO_VERSION = "5.0.0-0.beta.62";
 export const PREIMAGE_SHA256 =
-  "fd0e1e0d75236407c7457947fda3f1d72573f2c2b7cd42c37e7a4d4c516c6b02";
+  "23263ffd451afeec0d9ea5224d6742d36c19e72d37d58d936035991e1aa622b2";
 export const POSTIMAGE_SHA256 =
-  "d561cb6e1fe602a8734d52ab3e6bbfd1c04869f76e94db8460276db9fe62e865";
+  "f768856997fcd3b336307bc3940057545a25618b2059e95fc67c47eeab252d28";
 
 const hook =
   'if("tui"===n.mode){let a=globalThis[Symbol.for("omo.workflow-graph.native-dag-ui.v1")];if("workflow-graph"===a?.owner)try{if(await a.handle({args:t,context:n,runId:o,sessionId:i}))return}catch{}}';
-const seam =
-  'if(void 0===i)return void r.notify(uI,"info");let o=t.trim().split(/\\s+/).filter(e=>e.length>0)[0];';
-const replacement = `if(void 0===i)return void r.notify(uI,"info");let o=t.trim().split(/\\s+/).filter(e=>e.length>0)[0];if(void 0===o){${hook}}else{let a;try{a=e.snapshot(o,i)}catch{}if(void 0!==a){${hook}}}`;
+const seam = "let o=t.trim().split(/\\s+/).filter(e=>e.length>0)[0];";
+const replacement = `${seam}if(void 0===o){${hook}}else{let a;try{a=e.snapshot(o,i)}catch{}if(void 0!==a){${hook}}}`;
 
 export function sha256(source: string): string {
   return createHash("sha256").update(source).digest("hex");

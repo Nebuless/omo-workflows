@@ -27,11 +27,14 @@ session custom entries store intent, results, human answers, and external events
 no Atomic DBOS or second state database is installed.
 
 [Explicit repairs](../../docs/runtime-repairs.md#optional-staged-workflow-runtime-hooks)
-provide acknowledged `SessionManager.flushEntries()`, native `/dag` presentation
-delegation, and focused-overlay mouse deferral. Extension loading applies none.
-Missing journal flush or non-persisted session rejects launches. Global runtime
-was not modified for validation. `activateInactiveTool: true` uses the public
-Senpi dispatch API; lazy native registration is not missing capability.
+provide journal acknowledgment, native `/dag` presentation delegation, and
+focused-overlay mouse deferral. Extension loading applies none. Historical
+`2026.9.10-2` hooks remained unmodified during their validation. Current
+authorized `2026.9.13` repair changes only installed Senpi journal files to
+provide async `SessionManager.flushEntries(): Promise<void>`; it does not change
+OMO DAG behavior. Missing journal acknowledgment or a non-persisted session
+rejects launches. `activateInactiveTool: true` uses the public Senpi dispatch
+API; lazy native registration is not missing capability.
 
 ## Capability matrix
 
@@ -43,13 +46,14 @@ Senpi dispatch API; lazy native registration is not missing capability.
 | Nested graphs [A1] | Authoritative independent native run projections | Native snapshots have no Atomic child-workflow boundaries or tool-node attach identities; no inferred edges | Projection tests reject unknown edges |
 | Progress [A1] | Native terminal counts, attempts, timestamps, duration; separate program and native status | No Atomic queued-message cards or complete actor status model | Real `program: gate` with native completed wave; Herdr final state |
 | Authoring [A4,A5] | Typed `StagedProgram.decide`; schema/file outputs; trusted TS/JS module launch and resume; six-source catalog, precedence, metadata, diagnostics, reload | Not source-compatible `workflow(spec)/run(ctx)`; installed package `pi.workflows` discovery is extension-owned over native package inventory | Catalog/registered-entry tests; real OMO reload and native disk resume receipts |
-| Composition/admission [A4] | Deterministic wave decisions, bounded fanout/join, fresh cumulative nodes, exact JSON/file/byte validation before dispatch | Arbitrary callbacks, nested continuation, native per-node tools/context settings absent | All-nine controller execution; real fanout and invalid-output rejection |
-| Launch and human gates [A5,A6] | `workflow_program` list/reload/start/resume/status/answer/cancel; `/workflow-run`; unique launch keys; recorded answer provenance | Session-local owner; explicit module reload on resume; no native operator pause/resume | Launch races/session-fence/restart tests; actual registered gate answer and same-run amend |
+| Recommendations and identity | `workflow_recommend` validates whole fresh catalog proposal set; session-local widget/message; opaque `{key,revision,digest}` start fence | Advice never starts, amends, cancels, answers, or replaces prompt; descriptor identity is current-session catalog authority | `authoring-catalog-entry` and `authoring-host` rejection tests; registered descriptor check |
+| Composition/admission [A4] | Deterministic wave decisions, bounded fanout/join, fresh cumulative nodes, exact JSON/file/byte validation before dispatch; declared composition uses one instance/root/checkpoint/native run and namespaced RFC 6901 mappings | Arbitrary callbacks, nested continuation, native per-node tools/context settings absent; composition is not cross-run continuation | Composition/controller tests; one-run native receipt |
+| Launch, transfer, and human gates [A5,A6] | `workflow_program` list/reload/start/resume/status/answer/cancel/transfer; `/workflow-run`; unique launch keys; recorded answer provenance; confirmed terminal verified-copy transfer to distinct run | Session-local owner; transfer accepts only current/restored completed source and is not native continuation or arbitrary cross-session history; no native operator pause/resume | Launch races/session-fence/restart and transfer replay tests; real persisted transfer receipt |
 | Durable tools [A6] | Native tasks retain results; controller/helper event replay reuses admitted outputs | Arbitrary callback side effects and their timeout/failure-return semantics have no public native node owner | Native journal reopen; keyed recovery; helper reply replay tests |
 | Budgets and exit [A4] | Source iteration bounds; deterministic approval/stop reducers; native cancel fencing | Cumulative native DAG ceiling is 64; no general Atomic budget, graceful quit, or pause/continue API | Goal/Ralph default-ten capacity rejection; boundary/cancel tests |
 | Subagents [A7,N2] | Native routes, task sessions, processes, outputs, completion delivery and steering | Atomic per-stage tool/context policy and worktree delegation cannot be expressed by pinned node schema | Live child identities preserved; unsupported target configuration rejected |
 | Parent/peer communication [A7,N2] | Native task completion, workflow send and team messaging retain native owners; admitted results feed next prompts/files | No Atomic supervisor-decision/stage-group actor namespace or attached child custom UI | Native final results and same-run artifacts; ownership/control tests |
-| Recovery [N1,N2] | Native WAL/tasks plus native-session controller checkpoints; exact definition fingerprint; keyed initial recovery | Does not promise restart replay for arbitrary user callbacks or external effects outside helper protocol | Copied real SessionManager reopen; admission/amend/answer/cancel tests |
+| Recovery [N1,N2] | Native WAL/tasks plus native-session controller checkpoints; exact definition fingerprint; keyed initial recovery; optional acknowledged flush repair | Does not promise restart replay for arbitrary user callbacks or external effects outside helper protocol. Repair hashes and runtime version gate use; broad native static check currently fails from missing upstream test dependencies | Copied real SessionManager reopen; admission/amend/answer/cancel tests; durable-journal repair receipt |
 | Controls [N1] | Native start/attach/snapshot/wait/cancel/retry/send/amend; confirmed cancel and authoritative updates | Public actions exclude pause/resume/quit; program resume restores controller, not paused native scheduler | Live schema validation and foreign-run rejection tests |
 | Herdr | No-focus read-only observer; normalized run/node metadata; fold/run persistence; manual reopen | No scheduler ownership or transcript storage; richer Atomic stage UI not reproduced | Genuine extension-written 16-node projection, terminal captures, cleanup receipts |
 
@@ -94,6 +98,21 @@ task-failure value. This is distinct from supported malformed-output reasks.
 - Native graph compiler accepted all 64 nodes: nine setup, 53 live events,
   exporter and final-display. Literal unbounded Atomic execution still exceeds
   native capacity.
+
+## Public boundary and security limits
+
+`repo-to-extension` accepts canonical HTTPS owner/repository input only. It rejects
+whitespace, raw backslashes, percent escapes, credentials, ports, query, fragment,
+literal IP and local hosts, and paths other than two segments. It lowercases host,
+removes one trailing slash, and retains path case and `.git`. This parser is not
+SSRF, DNS rebinding, redirect, Git configuration, hook, submodule, credential,
+resource-exhaustion, or repository-code execution protection.
+
+Terminal transfer verifies current or restored completed source run identity,
+declared regular-file artifacts, SHA-256, size, schema, mapping, and copied bytes.
+It journals intent before one fresh destination start and preserves source state.
+Descriptor-relative Linux copying protects checked ownership paths, but same-UID
+hostile mutation between filesystem operations remains outside atomic OS guarantees.
 
 ## Usage and authoring
 
@@ -140,6 +159,8 @@ Evidence root (ignored local artifacts):
 - `live-review/native-review-proof.json`: current-source controller run `dag_cab59390-7b34-4462-807a-82a1d7adae3b` rejected candidate 4, admitted repair 5, and obtained fresh approval. Four native tasks retained their identities and used zero tools. File checkpoint adapter is evidence only, not native-journal restart proof.
 - Design lifecycle tests cover canonical prerequisites, model reply, abort, helper failure, actual exit, and replay at node capacity. Pinned helper reproduction is `.omo/evidence/pinned-live-bootstrap.sh`; portable shipped tests have no `/tmp` checkout dependency.
 - Fresh LSP diagnostics subsequently passed: 43 workflow source files with zero errors; mouse repair library/CLI/test, README, and PARITY clean. Earlier timeout was not treated as success.
+
+2026-09-13 routing, composition, and transfer proof: `bun test --timeout 30000 extensions/workflow-graph/test/authoring-transfer*.test.ts extensions/workflow-graph/test/authoring-host.test.ts extensions/workflow-graph/test/authoring-command.test.ts extensions/workflow-graph/test/authoring-catalog-entry.test.ts extensions/workflow-graph/test/authoring-composition.test.ts extensions/workflow-graph/test/native-journal*.test.ts` exited 0 with 112 pass, 0 fail, and 290 assertions. Real persisted OMO transfer created source `dag_d8436985-bc7d-4012-893f-f1f993db59b1` and distinct destination `dag_39797372-4c3c-498a-b2a7-e4c44e901fc4`, with one destination start, one durable intent, copied `{"ok":true}`, unchanged source snapshot, and declined confirmation rejected. Receipts: `.omo/evidence/st_01a09b74-task-13/task-13-packet.json` and `result.json`.
 
 Historical graph-only gate rejected full parity when builtins were absent. Its
 verdict is superseded as a description of implementation, not silently converted

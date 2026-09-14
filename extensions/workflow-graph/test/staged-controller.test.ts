@@ -1,12 +1,16 @@
 import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
 import { Type } from "typebox";
 import { createNativeWorkflowTransport } from "../src/execution/native-transport.ts";
 import { nativeDefinitionFingerprint } from "../src/execution/native-fingerprint.ts";
 import {
   createStagedController,
   createStagedProgram,
+  composeStagedPrograms,
   type NativeWorkflowTransport,
   type ProgramNode,
+  type CompositionIdentity,
+  type StagedProgram,
 } from "../src/execution/index.ts";
 
 const output = Type.Object(
@@ -155,7 +159,513 @@ const make = (
 
 const deferred = <T>() => Promise.withResolvers<T>();
 
+function compositionFixture(preapproved = true) {
+  const identity: Pick<CompositionIdentity, "stageSelections" | "mappings"> = {
+    stageSelections: [
+      ["one", 1, "d1"],
+      ["two", 1, "d2"],
+      ["three", 1, "d3"],
+    ],
+    mappings: [
+      [{ source: "/value", destination: "/input" }],
+      [{ source: "/value", destination: "/input" }],
+    ],
+  };
+  const outputs = {
+    "stage-0-one:one": '{"value":"mapped"}',
+    "stage-1-two:two": '{"value":"mapped2"}',
+    "stage-2-three:prior": '{"ok":true}',
+    "stage-2-three:three": '{"ok":true}',
+  };
+  const j = journal();
+  const beforeDispatch: unknown[][] = [];
+  const fault: { snapshot?: Extract<Detail["details"], { kind: "snapshot" }> } =
+    {};
+  const transport = native(outputs, async (params) => {
+    if (params.action === "start" || params.action === "amend")
+      beforeDispatch.push(structuredClone(j.entries));
+    if (params.action === "snapshot" && fault.snapshot !== undefined)
+      return { content: [], details: fault.snapshot };
+    return undefined;
+  });
+  const inputsSeen = new Map<string, unknown>();
+  const finals: Record<string, unknown> = {};
+  const stages = ["one", "two", "three"].map((key, index) => ({
+    workflowKey: key,
+    descriptorDigest: `d${index + 1}`,
+    program: createStagedProgram({
+      key,
+      version: 1,
+      input: Type.Object(
+        { input: Type.String() },
+        { additionalProperties: false },
+      ),
+      decide: ({ inputs, results }) => {
+        inputsSeen.set(key, inputs);
+        return results.work === undefined
+          ? {
+              kind: "wave",
+              id: "work",
+              nodes:
+                key === "three"
+                  ? [node("prior"), { ...node(key), dependsOn: ["prior"] }]
+                  : [
+                      node(key, {
+                        schema: Type.Object({ value: Type.String() }),
+                      }),
+                    ],
+            }
+          : {
+              kind: "final",
+              result: Object.hasOwn(finals, key)
+                ? finals[key]
+                : results.work[key],
+            };
+      },
+    }),
+  }));
+  const compose = () =>
+    composeStagedPrograms({
+      key: "composed",
+      version: 1,
+      stages,
+      mappings: identity.mappings,
+      preapproved,
+      compositionIdentity: {
+        ...identity,
+        stageSelections: stages.map(
+          (stage) => [stage.workflowKey, 1, stage.descriptorDigest] as const,
+        ),
+      },
+    });
+  const composed = compose();
+  const launch = (p: StagedProgram = composed) =>
+    createStagedController({
+      native: transport.value,
+      journal: j,
+      program: p,
+      inputs: { input: "start" },
+      readArtifact: async () => "",
+    });
+  return {
+    identity,
+    stages,
+    compose,
+    launch,
+    transport,
+    j,
+    beforeDispatch,
+    inputsSeen,
+    finals,
+    fault,
+  };
+}
+
 describe("staged workflow controller", () => {
+  test.each([
+    "changed digest",
+    "non-final source replacement",
+    "missing mapping",
+  ] as const)(
+    "pending composed amendment rejects %s before recovery dispatch",
+    async (invalidity) => {
+      // Given: source settled; destination intent persisted against a still-running snapshot.
+      const f = compositionFixture();
+      const controller = f.launch();
+      await controller.advance();
+      const definition = controller.checkpoint().definition;
+      assert(definition !== undefined);
+      f.fault.snapshot = {
+        kind: "snapshot",
+        run_id: "run-1",
+        snapshot: {
+          runId: "run-1",
+          runKey: "composed",
+          status: "running",
+          nodes: [],
+          definitionFingerprint: nativeDefinitionFingerprint(definition),
+        },
+      };
+      assert((await controller.advance()).kind === "active");
+      assert(controller.checkpoint().intent?.action === "amend");
+      delete f.fault.snapshot;
+      const source = f.stages[0];
+      assert(source !== undefined);
+      switch (invalidity) {
+        case "changed digest":
+          source.descriptorDigest = "changed";
+          break;
+        case "non-final source replacement":
+          source.program.decide = () => ({
+            kind: "wave",
+            id: "replacement",
+            nodes: [node("replacement")],
+          });
+          break;
+        case "missing mapping":
+          f.finals.one = {};
+          break;
+        default:
+          invalidity satisfies never;
+      }
+      // When: a restored controller attempts to reconcile the pending amendment.
+      const resumed = f.launch();
+      const decision = await resumed.advance();
+      // Then: durable rejection clears intent without touching the source-only native run.
+      expect(
+        f.transport.calls.filter((call) => call.action === "amend"),
+      ).toHaveLength(0);
+      assert(decision.kind === "rejected");
+      expect(resumed.checkpoint().rejected).toBe(decision.reason);
+      expect(resumed.checkpoint().intent).toBeUndefined();
+      expect(resumed.checkpoint().definition).toEqual(definition);
+      expect(await f.launch().advance()).toEqual(decision);
+    },
+  );
+
+  test("approval drift cannot upgrade a paused composed checkpoint", async () => {
+    // Given: unapproved composition paused without a gate answer.
+    const f = compositionFixture(false);
+    assert((await f.launch().advance()).kind === "gate");
+    const rebuilt = composeStagedPrograms({
+      key: "composed",
+      version: 1,
+      stages: f.stages,
+      mappings: f.identity.mappings,
+      preapproved: true,
+      compositionIdentity: f.identity,
+    });
+    // When: changed approval policy resumes the original journal.
+    const resumed = f.launch(rebuilt);
+    const decision = await resumed.advance();
+    // Then: no amendment; original authorization remains durably rejected.
+    expect(
+      f.transport.calls.filter((call) => call.action === "amend"),
+    ).toHaveLength(0);
+    expect(decision).toEqual({
+      kind: "rejected",
+      reason: "composition-identity-changed",
+    });
+    expect(resumed.checkpoint().answers).toEqual({});
+    expect(resumed.checkpoint().compositionIdentity).toMatchObject({
+      preapproved: false,
+    });
+    expect(await f.launch(rebuilt).advance()).toEqual(decision);
+  });
+
+  test("composed three-stage controller keeps one native root and maps namespaced waves", async () => {
+    // Given: existing three-stage fixture delegates through the real composer.
+    const f = compositionFixture();
+    const controller = f.launch();
+    // When: all three native waves settle through controller admission.
+    const decisions = [
+      await controller.advance(),
+      await controller.advance(),
+      await controller.advance(),
+    ];
+    // Then: one start, two same-run amendments, exact mappings and local dependency namespacing.
+    const dispatches = f.transport.calls.filter(
+      (call) => call.action === "start" || call.action === "amend",
+    );
+    expect(decisions.map(({ kind }) => kind)).toEqual([
+      "wave",
+      "wave",
+      "final",
+    ]);
+    expect(decisions.at(-1)).toEqual({ kind: "final", result: { ok: true } });
+    expect(dispatches.map((call) => call.action)).toEqual([
+      "start",
+      "amend",
+      "amend",
+    ]);
+    expect(
+      dispatches
+        .filter((call) => call.action === "amend")
+        .map((call) => call.run_id),
+    ).toEqual(["run-1", "run-1"]);
+    expect(dispatches.map((call) => call.definition.key)).toEqual([
+      "composed",
+      "composed",
+      "composed",
+    ]);
+    expect(f.inputsSeen).toEqual(
+      new Map([
+        ["one", { input: "start" }],
+        ["two", { input: "mapped" }],
+        ["three", { input: "mapped2" }],
+      ]),
+    );
+    expect(controller.checkpoint().definition?.nodes.at(-1)?.dependsOn).toEqual(
+      ["stage-2-three:prior"],
+    );
+    expect(controller.checkpoint().results).toEqual({
+      "stage-0-one:work": { "stage-0-one:one": { value: "mapped" } },
+      "stage-1-two:work": { "stage-1-two:two": { value: "mapped2" } },
+      "stage-2-three:work": {
+        "stage-2-three:prior": { ok: true },
+        "stage-2-three:three": { ok: true },
+      },
+    });
+    if (process.env.TASK_11_TRANSCRIPT === "1")
+      console.log(
+        JSON.stringify({
+          scenario: "three-stage",
+          outcome: decisions.at(-1),
+          calls: f.transport.calls,
+          journal: f.j.entries,
+        }),
+      );
+  });
+
+  test("composition identity persists before first dispatch and resumes the same checkpoint stream", async () => {
+    // Given: source admitted; program identity is the only supplied identity.
+    const f = compositionFixture();
+    await f.launch().advance();
+    expect(f.beforeDispatch[0]?.[0]).toMatchObject({
+      customType: "omo-workflow-graph:staged",
+      data: { compositionIdentity: f.identity, intent: { action: "start" } },
+    });
+    const resumed = f.launch(f.compose());
+    // When: a fresh controller resumes both remaining stages.
+    const decisions = [await resumed.advance(), await resumed.advance()];
+    // Then: one journal/root/run survives, with no second start or replayed source.
+    expect(decisions.map(({ kind }) => kind)).toEqual(["wave", "final"]);
+    expect(
+      f.transport.calls.filter((call) => call.action === "start"),
+    ).toHaveLength(1);
+    expect(
+      f.transport.calls
+        .filter((call) => call.action === "amend")
+        .map((call) => call.run_id),
+    ).toEqual(["run-1", "run-1"]);
+    expect(resumed.checkpoint()).toMatchObject({
+      workflow: "composed",
+      runId: "run-1",
+      compositionIdentity: f.identity,
+      admittedWaves: [
+        "stage-0-one:work",
+        "stage-1-two:work",
+        "stage-2-three:work",
+      ],
+    });
+    expect(f.j.entries.at(-1)).toEqual({
+      customType: "omo-workflow-graph:staged",
+      data: resumed.checkpoint(),
+    });
+  });
+
+  test.each(["continue", "stop"] as const)(
+    "composition gate %s controls destination dispatch without fallback",
+    async (answer) => {
+      // Given: unapproved source stops at an explicit gate, including on resume.
+      const f = compositionFixture(false);
+      const source = f.launch();
+      const gate = await source.advance();
+      assert(gate.kind === "gate");
+      expect(gate.choices).toEqual(["continue", "stop"]);
+      expect(gate).not.toHaveProperty("fallback");
+      expect(await f.launch().advance()).toEqual(gate);
+      expect(
+        f.transport.calls.filter((call) => call.action === "amend"),
+      ).toHaveLength(0);
+      const resumed = f.launch();
+      // When: the persisted gate answer is applied, then the controller advances.
+      await resumed.answerGate(gate.id, answer);
+      const decision = await resumed.advance();
+      // Then: continue admits only stage two; stop never even evaluates destination.
+      expect(resumed.checkpoint().answers[gate.id]).toBe(answer);
+      switch (answer) {
+        case "continue":
+          expect(decision).toMatchObject({
+            kind: "gate",
+            id: "compose-composed-1",
+          });
+          expect(f.inputsSeen.get("two")).toEqual({ input: "mapped" });
+          expect(
+            f.transport.calls.filter((call) => call.action === "amend"),
+          ).toHaveLength(1);
+          expect(resumed.checkpoint().admittedWaves).toEqual([
+            "stage-0-one:work",
+            "stage-1-two:work",
+          ]);
+          break;
+        case "stop":
+          expect(decision).toEqual({
+            kind: "final",
+            result: { value: "mapped" },
+          });
+          expect(f.inputsSeen.has("two")).toBe(false);
+          expect(
+            f.transport.calls.filter((call) => call.action === "amend"),
+          ).toHaveLength(0);
+          expect(await f.launch().advance()).toEqual(decision);
+          break;
+        default:
+          answer satisfies never;
+      }
+    },
+  );
+
+  test("composition identity mutation rejects restore durably before amendment", async () => {
+    // Given: persisted source identity differs from the reloaded descriptor.
+    const f = compositionFixture();
+    await f.launch().advance();
+    const source = f.stages[0];
+    assert(source !== undefined);
+    source.descriptorDigest = "changed";
+    const changed = f.compose();
+    // When: reloaded composition resumes the original checkpoint.
+    const decision = await f.launch(changed).advance();
+    // Then: rejection survives restart and no transport call follows invalidity.
+    expect(decision).toEqual({
+      kind: "rejected",
+      reason: "composition-identity-changed",
+    });
+    assert(decision.kind === "rejected");
+    expect(f.j.entries.at(-1)).toMatchObject({
+      data: { compositionIdentity: f.identity, rejected: decision.reason },
+    });
+    const calls = f.transport.calls.length;
+    expect(await f.launch(changed).advance()).toEqual(decision);
+    expect(f.transport.calls).toHaveLength(calls);
+    expect(
+      f.transport.calls.filter((call) => call.action === "amend"),
+    ).toHaveLength(0);
+  });
+
+  test("preapproved composition rejects non-final source replacement before destination starts", async () => {
+    // Given: source finalized with a destination wave pending, without a gate.
+    const f = compositionFixture();
+    const controller = f.launch();
+    await controller.advance();
+    const source = f.stages[0];
+    assert(source !== undefined);
+    source.program.decide = () => ({
+      kind: "wave",
+      id: "replacement",
+      nodes: [node("replacement")],
+    });
+    // When: the preapproved destination would otherwise start.
+    const decision = await controller.advance();
+    // Then: rejection is durable and amendment count stays zero across restart.
+    expect(decision).toEqual({
+      kind: "rejected",
+      reason: "Workflow catalog changed; choose again.",
+    });
+    assert(decision.kind === "rejected");
+    expect(f.j.entries.at(-1)).toMatchObject({
+      data: { rejected: decision.reason },
+    });
+    expect(await f.launch().advance()).toEqual(decision);
+    expect(
+      f.transport.calls.filter((call) => call.action === "amend"),
+    ).toHaveLength(0);
+  });
+
+  test.each([
+    "changed digest",
+    "non-final source replacement",
+    "missing mapping",
+    "destination schema mismatch",
+    "foreign run identity",
+    "fingerprint conflict",
+  ] as const)(
+    "composition durably rejects %s before amendment",
+    async (invalidity) => {
+      // Given: source completed and transition approved, but no amendment sent.
+      const f = compositionFixture(false);
+      const controller = f.launch();
+      const gate = await controller.advance();
+      assert(gate.kind === "gate");
+      await controller.answerGate(gate.id, "continue");
+      const source = f.stages[0];
+      assert(source !== undefined);
+      switch (invalidity) {
+        case "changed digest":
+          source.descriptorDigest = "changed";
+          break;
+        case "non-final source replacement":
+          source.program.decide = () => ({
+            kind: "wave",
+            id: "replacement",
+            nodes: [node("replacement")],
+          });
+          break;
+        case "missing mapping":
+          f.finals.one = {};
+          break;
+        case "destination schema mismatch":
+          f.finals.one = { value: 42 };
+          break;
+        case "foreign run identity":
+        case "fingerprint conflict": {
+          const definition = controller.checkpoint().definition;
+          assert(definition !== undefined);
+          f.fault.snapshot = {
+            kind: "snapshot",
+            run_id:
+              invalidity === "foreign run identity" ? "other-run" : "run-1",
+            snapshot: {
+              runId: "run-1",
+              runKey: "composed",
+              status: "completed",
+              nodes: [],
+              definitionFingerprint:
+                invalidity === "fingerprint conflict"
+                  ? "external-definition"
+                  : nativeDefinitionFingerprint(definition),
+            },
+          };
+          break;
+        }
+        default:
+          invalidity satisfies never;
+      }
+      const amendments = f.transport.calls.filter(
+        (call) => call.action === "amend",
+      ).length;
+      // When: the controller attempts the next wave under invalid state.
+      const decision = await controller.advance();
+      // Then: source-only definition and durable sticky rejection precede any amendment.
+      const reasons = {
+        "changed digest": "Workflow catalog changed; choose again.",
+        "non-final source replacement":
+          "Workflow catalog changed; choose again.",
+        "missing mapping": "Composition source is missing or null.",
+        "destination schema mismatch":
+          "Composition destination fails schema validation.",
+        "foreign run identity": "native-snapshot-failed",
+        "fingerprint conflict": "native-definition-conflict",
+      } as const;
+      expect(decision).toEqual({
+        kind: "rejected",
+        reason: reasons[invalidity],
+      });
+      assert(decision.kind === "rejected");
+      expect(f.j.entries.at(-1)).toMatchObject({
+        customType: "omo-workflow-graph:staged",
+        data: { rejected: decision.reason },
+      });
+      expect(
+        controller.checkpoint().definition?.nodes.map(({ id }) => id),
+      ).toEqual(["stage-0-one:one"]);
+      const calls = f.transport.calls.length;
+      expect(await f.launch().advance()).toEqual(decision);
+      expect(f.transport.calls).toHaveLength(calls);
+      expect(
+        f.transport.calls.filter((call) => call.action === "amend"),
+      ).toHaveLength(amendments);
+      if (process.env.TASK_11_TRANSCRIPT === "1")
+        console.log(
+          JSON.stringify({
+            scenario: invalidity,
+            decision,
+            calls: f.transport.calls,
+            journal: f.j.entries,
+          }),
+        );
+    },
+  );
   test("registered inactive workflow uses public lazy activation", async () => {
     let dispatched = false;
     const transport = createNativeWorkflowTransport({
@@ -316,6 +826,29 @@ describe("staged workflow controller", () => {
     ).toEqual([]);
     expect(controller.checkpoint().cancelled).toBe(true);
   });
+  test("does not persist arbitrary failure text", async () => {
+    // Given: native output status contains a private sentinel.
+    const privateSentinel = "PRIVATE_SENTINEL";
+    const n = native({}, async (params) =>
+      params.action === "wait"
+        ? {
+            content: [],
+            details: {
+              kind: "waited",
+              run_id: "run-1",
+              result: { runId: "run-1", status: privateSentinel, nodes: {} },
+            },
+          }
+        : undefined,
+    );
+    const j = journal();
+    // When: controller admits native result.
+    const decision = await make(n.value, j).advance();
+    // Then: durable rejection has bounded fallback, never private text.
+    expect(decision).toEqual({ kind: "rejected", reason: "output-invalid" });
+    expect(JSON.stringify(j.entries.at(-1))).not.toContain(privateSentinel);
+  });
+
   test("validates output schema; rejection stays sticky across calls and restart", async () => {
     const n = native({ first: '{"ok":"wrong"}' });
     const j = journal();

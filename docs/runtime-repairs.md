@@ -72,12 +72,12 @@ user's comments, profiles, or model-routing choices.
 
 ## Optional staged workflow runtime hooks
 
-These explicit local repairs target OMO `5.0.0-0.beta.53` and Senpi
-`2026.9.10-2`. They are invented compatibility hooks, not upstream APIs.
-Extension loading never applies them. All commands check exact package version
-and preimage/postimage SHA-256; unknown builds fail without mutation.
+### Historical 2026.9.10-2 repairs
 
-Check installed targets:
+The repository retains explicit, hash-pinned compatibility hooks for OMO
+`5.0.0-0.beta.62` and Senpi `2026.9.10-2`. They are not upstream APIs, and
+extension loading never applies them. Each command checks the exact package
+version and preimage or postimage SHA-256. Unknown builds fail without mutation.
 
 ```sh
 mise run repair-omo-dag-ui
@@ -85,7 +85,7 @@ mise run repair-senpi-workflow-journal
 mise run repair-senpi-workflow-mouse
 ```
 
-Apply only when intentionally enabling the hooks, then restart OMO:
+Use `--apply` only on that historical runtime:
 
 ```sh
 bun run repair:omo-dag-ui --apply
@@ -93,29 +93,32 @@ bun run repair:senpi-workflow-journal --apply
 bun run repair:senpi-workflow-mouse --apply
 ```
 
-The OMO repair lets native `/dag` delegate TUI presentation to the owning
-workflow-graph extension. Non-TUI, foreign runs, absent hooks, and hook failures
-retain native behavior. It never changes scheduling.
+The OMO hook delegates native `/dag` TUI presentation to workflow-graph. The
+journal hook adds synchronous `SessionManager.flushEntries()`. The mouse hook
+lets focused overlays receive SGR clicks before fullscreen Senpi consumes them.
+The mouse hook targets `@earendil-works/pi-tui@2026.9.10-2`,
+`dist/tui-alt-screen.js`. These hooks remain check-only unless `--apply` is
+passed. Reapplying a known postimage is idempotent. Reinstall the exact upstream
+package to remove a hook.
 
-The Senpi repair adds synchronous `SessionManager.flushEntries()`. Staged launch
-intents and admitted outputs use native custom entries and require acknowledged
-disk flush before downstream dispatch. In-memory sessions and missing capability
-cannot launch staged programs. No second checkpoint store is created.
+Historical validation copied the real SessionManager flush, reopen, repeated
+append, and in-memory refusal cases. It extracted `/dag` with TUI and foreign-run
+fallback cases. Those validations left installed global targets unmodified.
 
-Fullscreen Senpi consumes SGR clicks before focused overlays receive them. The
-mouse repair makes clicks defer to focused overlays, matching existing wheel
-behavior; unfocused native text selection and viewport scrolling remain native.
-It targets `@earendil-works/pi-tui@2026.9.10-2`, `dist/tui-alt-screen.js`.
+### Current authorized 2026.9.13 journal repair
 
-For disposable validation, DAG repair accepts `--path` and `--package-path`;
-journal and mouse repairs accept `--package-root`. Reapplying recognized postimages is
-idempotent. Reinstall the exact upstream package to remove a hook; do not apply
-these patches to an upgraded runtime.
+Current installed Senpi is `2026.9.13`. Authorized local repair
+`durable-journal-v1` changes runtime behavior only through installed
+`SessionManager`. It adds async `flushEntries(): Promise<void>`, exposes that
+acknowledgment through the readonly extension facade, and makes the native
+staged journal await it. The receipt records changes to `dist/core/session-manager.js`,
+`session-manager.d.ts`, both source maps, and `docs/extensions.md`.
 
-Verified locally: extracted installed `/dag` command with TUI/foreign-run
-fallback tests; copied real SessionManager flush, reopen, repeated append,
-and in-memory refusal tests; imported staged controller preserving completed
-task IDs across same-run native amendment and native journal reopen. Installed
-global targets remained unmodified during these tests.
+This is a local runtime repair, not an extension-load action or an OMO DAG
+repair. It does not authorize the historical `2026.9.10-2` DAG or mouse hooks
+for Senpi `2026.9.13`. The receipt records upstream revision
+`0fb7705500641a43de915e72debdabfdcb00e665` and confirms installed files match
+receipt and build. Its upstream static check remains an environment failure,
+`TS2307: Cannot find module 'vitest' or its corresponding type declarations.`
 
 Source and revalidation: [native staged workflow record](upstream-validation.md#native-staged-workflow-runtime-hooks).

@@ -65,19 +65,33 @@ describe("OMO preferences bootstrap", () => {
       ) as {
         memory?: {
           reflection?: { category?: unknown; sandbox?: unknown };
+          recall?: { category?: unknown };
         };
-        categories?: {
-          "memory-reflection"?: {
-            models?: readonly { model?: unknown; reasoning?: unknown }[];
-          };
-        };
+        categories?: Record<
+          string,
+          { models?: readonly { model?: unknown; reasoning?: unknown }[] }
+        >;
+        "[opencode]"?: { categories?: unknown };
       };
 
       expect(config.memory?.reflection?.sandbox).toBe("off");
       expect(config.memory?.reflection?.category).toBe("memory-reflection");
+      expect(config.memory?.recall?.category).toBe("memory-reflection");
       expect(config.categories?.["memory-reflection"]?.models).toEqual([
         { model: "9router/cx/gpt-5.6-luna", reasoning: "low" },
       ]);
+      expect(Object.keys(config.categories ?? {}).sort()).toEqual([
+        "artistry",
+        "deep",
+        "memory-reflection",
+        "quick",
+        "ultrabrain",
+        "unspecified-high",
+        "unspecified-low",
+        "visual-engineering",
+        "writing",
+      ]);
+      expect(config["[opencode]"]?.categories).toBeUndefined();
     }
   });
 });

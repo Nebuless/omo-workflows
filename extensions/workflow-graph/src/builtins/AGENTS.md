@@ -14,7 +14,7 @@ Own staged native-program catalog adapting Atomic builtins pinned at commit `ff5
 - Export factories as `(route, artifactRoot) => StagedProgram`; `artifactRoot` is absolute and unique per launch.
 - Apply source defaults inside every `decide` call.
 - Emit new node IDs and wave IDs only. Native controller owns scheduling, admission, validation, and journaling.
-- Every advertised file has admitted producer node. Machine-consumed files use exact TypeBox schemas and exact destination instructions.
+- Every advertised file has admitted producer node. Machine-consumed files use exact TypeBox schemas and exact destination instructions. `transferArtifacts` declarations are trusted source authority for terminal-transfer schema and mapping checks.
 - Preserve Atomic runner decisions and pure math. Record host gaps explicitly; never claim browser, worktree, PR, or malformed-output recovery parity without host support.
 
 ## Work Guidance
@@ -25,6 +25,7 @@ Own staged native-program catalog adapting Atomic builtins pinned at commit `ff5
 - Fanout trims and filters partition values, caps branches, and admits an exact normalized plan before branch reads; compact file references remain intentional outputs.
 - Progress scores are monitoring only. Admit initial active ledger before work; retain per-repeat nulls, mean, trend, and window alongside evaluator evidence. Record failed status on exhaustion.
 - Goal/Ralph preserve source ten-turn defaults. Check actual cumulative native node count; exceeding 64 rejects rather than silently reducing the requested budget. Finding reverification uses three fresh reports with one re-ask per invalid repeat.
+- `repo-to-extension` canonicalizes only public HTTPS owner/repository input: lowercase host, optional one trailing slash removal, path casing and `.git` retained. It rejects whitespace, backslashes, percent escapes, credentials, ports, query, fragment, IP/local hosts, and extra path segments. This parser does not provide SSRF, DNS, redirect, Git, hook, credential, resource, or repository-code execution protection.
 - Design preview, PRODUCT.md, DESIGN.md, and live configuration share one run root. Bootstrap and poll from that root; export only after explicit skip or journaled helper exit. Final display is native admitted work after export, returns browser availability evidence plus manual fallback, and exposes source result fields including artifact-root run identity and import context.
 
 ## Verification

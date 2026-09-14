@@ -1,5 +1,6 @@
 import { Type, type Static, type TSchema } from "typebox";
 import { Value } from "typebox/value";
+import type { CompositionIdentity } from "./composed.ts";
 
 export const AuthoredNodeSchema = Type.Object(
   {
@@ -76,6 +77,15 @@ export interface StagedProgram<I = unknown> {
   readonly key: string;
   readonly version: number;
   readonly input: TSchema;
+  readonly normalizeInput?: (value: unknown) => I;
+  readonly compositionIdentity?: CompositionIdentity;
+  readonly transferArtifacts?: readonly {
+    readonly canonicalPath: string;
+    readonly destination: string;
+    readonly schemaId: string;
+    readonly schema: TSchema;
+    readonly mapping: { readonly source: string; readonly destination: string };
+  }[];
   decide(context: ProgramContext<I>): Decision;
 }
 

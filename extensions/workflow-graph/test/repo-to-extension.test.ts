@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { atomicBuiltins } from "../src/builtins/index.ts";
 import { repoToExtension } from "../src/builtins/repo-to-extension.ts";
+import { parseRepositoryUrl } from "../src/builtins/repo-to-extension-contracts.ts";
 
 type Result = Readonly<Record<string, Readonly<Record<string, unknown>>>>;
 
@@ -71,6 +72,125 @@ const plan = {
 };
 
 describe("repo-to-extension workflow", () => {
+  test("canonical repository URL accepts and normalizes safe HTTPS repositories", () => {
+    expect(parseRepositoryUrl("HTTPS://GitHub.com/acme/widgets.git/")).toBe(
+      "https://github.com/acme/widgets.git",
+    );
+    expect(parseRepositoryUrl("https://gitlab.com/acme/widgets")).toBe(
+      "https://gitlab.com/acme/widgets",
+    );
+  });
+
+  test("rejects ambiguous repository URLs", () => {
+    const rejected = [
+      " https://github.com/acme/widgets.git",
+      "https://github.com/acme\\widgets.git",
+      "https://github.com/acme%2Fwidgets.git",
+      "https://github.com/acme/%2e%2e/widgets.git",
+      "https://github.com:443/acme/widgets.git",
+      "http://github.com/acme/widgets.git",
+      "https://user:pass@github.com/acme/widgets.git",
+      "https://github.com/acme/widgets.git?x=1",
+      "https://github.com/acme/widgets.git#x",
+      "https://127.0.0.1/acme/widgets.git",
+      "https://foo.local/acme/widgets",
+      "https://x.localhost/acme/widgets",
+      "https://foo.local./acme/widgets",
+      "https://[::1]/acme/widgets.git",
+      "https://github.com/acme//widgets.git",
+      "https://github.com/acme/widgets.git/extra",
+    ];
+    for (const value of rejected)
+      expect(parseRepositoryUrl(value)).toBeUndefined();
+  });
+
+  test("rejects invalid repository URL before inspection wave", () => {
+    let inspectionCalls = 0;
+    const program = repoToExtension(
+      { subagent_type: "omo-senpi" },
+      "/tmp/workflow-artifacts",
+    );
+    const state = {
+      inputs: { repository_url: "https://foo.local/acme/widgets" },
+      results: new Proxy(
+        {},
+        {
+          get: () => {
+            inspectionCalls += 1;
+            return undefined;
+          },
+        },
+      ),
+      answers: {},
+    };
+    expect(() => program.decide(state)).toThrow(
+      "repo-to-extension: invalid repository_url",
+    );
+    expect(inspectionCalls).toBe(0);
+  });
+  test("persists canonical repository identity in normalized inputs", () => {
+    const program = repoToExtension(
+      { subagent_type: "omo-senpi" },
+      "/tmp/workflow-artifacts",
+    );
+    expect(
+      program.normalizeInput?.({
+        repository_url: "https://GitHub.com/acme/widgets.git/",
+      }),
+    ).toEqual({
+      repository_url: "https://github.com/acme/widgets.git",
+    });
+    expect(() => program.normalizeInput?.({ repository_url: "bad" })).toThrow(
+      "repo-to-extension: invalid repository_url",
+    );
+  });
+
+  test("propagates canonical repository identity", () => {
+    const program = repoToExtension(
+      { subagent_type: "omo-senpi" },
+      "/tmp/workflow-artifacts",
+    );
+    const first = program.decide({
+      inputs: { repository_url: "https://GitHub.com/acme/widgets.git/" },
+      results: {},
+      answers: {},
+    });
+    expect(first).toMatchObject({ kind: "wave" });
+    if (first.kind !== "wave") throw new Error("missing discovery wave");
+    expect(first.nodes[0]?.prompt).toContain(
+      "https://github.com/acme/widgets.git",
+    );
+
+    const rejected = program.decide({
+      inputs: { repository_url: "https://GitHub.com/acme/widgets.git/" },
+      results: {
+        "inspect-repository": {
+          "inspect-repository": report,
+        },
+        "design-extension": {
+          "design-extension": plan,
+        },
+      },
+      answers: { "approve-extension": "reject" },
+    });
+    expect(rejected).toMatchObject({
+      kind: "final",
+      result: { repository_url: "https://github.com/acme/widgets.git" },
+    });
+  });
+
+  test("rejects raw identity replay", () => {
+    const first = decide({
+      "inspect-repository": {
+        "inspect-repository": {
+          ...report,
+          repository_url: "https://GitHub.com/acme/widgets.git/",
+        },
+      },
+    });
+    expect(first).toMatchObject({ kind: "wave", id: "inspect-repository" });
+  });
+
   test("creates safe discovery stage from HTTPS repository input", () => {
     const first = decide();
 
@@ -186,7 +306,7 @@ describe("repo-to-extension workflow", () => {
         results: {},
         answers: {},
       }),
-    ).toThrow("repo-to-extension: invalid inputs");
+    ).toThrow("repo-to-extension: invalid repository_url");
     expect(() =>
       program.decide({
         inputs: {
@@ -196,6 +316,6 @@ describe("repo-to-extension workflow", () => {
         results: {},
         answers: {},
       }),
-    ).toThrow("repo-to-extension: invalid inputs");
+    ).toThrow("repo-to-extension: invalid repository_url");
   });
 });

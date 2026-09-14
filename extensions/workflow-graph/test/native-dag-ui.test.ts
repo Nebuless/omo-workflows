@@ -54,15 +54,15 @@ function nativeDagCommand(
   source: string,
   manager: NativeManager,
 ): NativeCommand {
-  const start = source.indexOf("function cI(e,t)");
-  const end = source.indexOf("function pI", start);
+  const start = source.indexOf("function hI");
+  const end = source.indexOf("function vI", start);
   if (start === -1 || end === -1)
     throw new Error("native /dag handler not found");
   const factory = new Function(
     "uI",
     "pI",
     "Sd",
-    `${source.slice(start, end)};return cI;`,
+    `const xd=(value)=>String(value);var fI="No dag runs in this session.";${source.slice(start, end)};return hI;`,
   );
   const register = factory(
     "empty",
@@ -145,7 +145,14 @@ describe("native /dag TUI delegation", () => {
     });
     try {
       const command = nativeDagCommand(patched, {
-        list: () => [{ runId: "dag-local" }],
+        list: () => [
+          {
+            runId: "dag-local",
+            counts: { completed: 0, total: 0, running: 0, failed: 0 },
+            name: "local",
+            status: "done",
+          },
+        ],
         snapshot: (runId, sessionId) => {
           if (runId === "dag-foreign" || sessionId !== "session-a")
             throw new Error("foreign run");

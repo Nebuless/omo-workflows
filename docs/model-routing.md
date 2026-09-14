@@ -15,16 +15,16 @@ live in [model-matrix.md](model-matrix.md).
 
 ## Configuration
 
-`~/.omo/omo.jsonc` holds OMO task routing under `[opencode]`. The active global
-routing is GPT-heavy. Preserve every field outside `agents.*.models` and
-`categories.*.models`. Model names must be canonical catalog IDs, not
+`~/.omo/omo.jsonc` holds routing in shared top-level `categories`, so parent
+OMO runs and Senpi-owned children resolve same models. The active global routing
+is GPT-heavy. `[opencode]` only carries optional host-specific agent overrides;
+it must not contain `categories`. Preserve every field outside `agents.*.models`
+and `categories.*.models`. Model names must be canonical catalog IDs, not
 convenience aliases such as `prx/*`.
 
-Memory reflection children run through Senpi. Its category must be declared in
-shared `categories`, not only in `[opencode]`, or the child falls back to OMO's
-built-in quick route. Both templates define `memory-reflection` as
-`9router/cx/gpt-5.6-luna` with low reasoning and set
-`memory.reflection.category` to that shared route.
+Memory reflection and recall/Kibitzer select shared `memory-reflection`, pinned
+to `9router/cx/gpt-5.6-luna` at low reasoning, via
+`memory.reflection.category` and `memory.recall.category`.
 
 Inspect availability before changing routes:
 

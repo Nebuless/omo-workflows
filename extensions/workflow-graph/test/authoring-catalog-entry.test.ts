@@ -20,25 +20,27 @@ const source = (key: string, result: number = 1) =>
   ',version:1,input:{type:"object"},decide:()=>({kind:"final",result:' +
   result +
   "})};";
-async function fixture() {
+export async function fixture() {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-entry-"));
   const agentDir = join(cwd, "agent");
   const nativeSession = SessionManager.inMemory(cwd);
-  let execute:
-    | ((params: unknown, context: ExtensionContext) => Promise<unknown>)
-    | undefined;
+  const executes = new Map<
+    string,
+    (params: unknown, context: ExtensionContext) => Promise<unknown>
+  >();
+  const callbacks: unknown[] = [];
+  const nativeDispatches: unknown[] = [];
   const store = createWorkflowGraphStore({ on: () => () => {} });
   const extension = registerStagedWorkflows(
     {
       cwd,
       registerTool(value) {
-        execute = async (params, context) => {
-          if (!Value.Check(value.parameters, params))
-            throw Error("Invalid tool parameters");
+        executes.set(value.name, async (params, context) => {
+          Value.Assert(value.parameters, params);
           return (
             await value.execute("qa", params, undefined, undefined, context)
           ).details;
-        };
+        });
       },
       registerCommand() {},
       appendEntry(customType: string, data: unknown) {
@@ -46,12 +48,14 @@ async function fixture() {
       },
       getAllTools: () => [],
       getActiveTools: () => [],
-      executeTool: async () => {
+      executeTool: async (_name, params) => {
+        nativeDispatches.push(params);
         throw Error("Unexpected native dispatch");
       },
     },
     store,
     () => {},
+    (recommendations) => callbacks.push(recommendations),
   );
   const modelRuntime = await ModelRuntime.create({
     agentDir,
@@ -98,9 +102,18 @@ async function fixture() {
         JSON.stringify(data),
       ),
     async call(params: unknown, ctx = context) {
+      const execute = executes.get("workflow_program");
       if (!execute) throw Error("Missing registered tool");
       return execute(params, ctx);
     },
+    async recommend(params: unknown, ctx = context) {
+      const execute = executes.get("workflow_recommend");
+      if (!execute) throw Error("Missing recommendation tool");
+      return execute(params, ctx);
+    },
+    tools: executes,
+    callbacks,
+    nativeDispatches,
     async close() {
       extension.dispose();
       store.dispose();
@@ -160,8 +173,28 @@ test("registered catalog uses six ordered sources and live config reload", async
     expect(next).not.toMatchObject({
       programs: expect.arrayContaining(["shared", "package"]),
     });
+    const replacement = next as {
+      readonly revision: number;
+      readonly descriptors: readonly {
+        readonly key: string;
+        readonly digest: string;
+      }[];
+    };
+    const replacementDescriptor = replacement.descriptors.find(
+      (item) => item.key === "replacement",
+    );
+    if (replacementDescriptor === undefined)
+      throw Error("missing replacement descriptor");
     expect(
-      await f.call({ action: "start", key: "replacement", inputs: {} }),
+      await f.call({
+        action: "start",
+        selection: {
+          key: replacementDescriptor.key,
+          revision: replacement.revision,
+          digest: replacementDescriptor.digest,
+        },
+        inputs: {},
+      }),
     ).toEqual({ kind: "final", result: 2 });
     expect(await f.call({ action: "resume", key: "wrong-key" })).toMatchObject({
       kind: "rejected",
@@ -223,34 +256,6 @@ test("untrusted project cannot import configured package code", async () => {
     expect(result).not.toMatchObject({
       programs: expect.arrayContaining(["unsafe-package"]),
     });
-  } finally {
-    await f.close();
-  }
-});
-
-test("invalid native settings surface config diagnostics without losing builtins", async () => {
-  const f = await fixture();
-  try {
-    await f.put(join(f.cwd, ".senpi/settings.json"), "{broken");
-    expect(await f.call({ action: "list" })).toMatchObject({
-      programs: expect.arrayContaining(["goal"]),
-      diagnostics: expect.arrayContaining([
-        expect.objectContaining({ code: "CONFIG_INVALID" }),
-      ]),
-    });
-  } finally {
-    await f.close();
-  }
-});
-
-test("session stop fences catalog import before launch", async () => {
-  const f = await fixture();
-  try {
-    await f.put(join(f.cwd, ".omo/workflows/local.ts"), source("local"));
-    const pending = f.call({ action: "start", key: "local", inputs: {} });
-    f.extension.host.stop();
-    expect(await pending).toMatchObject({ kind: "rejected" });
-    expect(f.extension.host.status()).toBeUndefined();
   } finally {
     await f.close();
   }

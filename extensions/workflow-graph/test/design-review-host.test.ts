@@ -564,7 +564,7 @@ const preview=readFileSync(target,"utf8");if(!preview.includes("</body>"))throw 
   const registry = {
     list: () => ["open-claude-design"],
     get: (_key: string, root: string) =>
-      openClaudeDesign({ subagent_type: "omo-senpi" }, root),
+      openClaudeDesign({ subagent_type: "omo-senpi" }, root || artifactRoot()),
   };
   const host = createProgramHost(runtime, registry, () => {}, {
     designReview: {

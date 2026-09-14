@@ -152,10 +152,20 @@ In OMO:
 Picker lists discovered programs plus all nine Atomic builtins. `/workflow-run list`
 shows source metadata and diagnostics; `/workflow-run reload` refreshes source
 files and settings without restarting OMO. Input keys and defaults live in
-[schemas.ts](extensions/workflow-graph/src/builtins/schemas.ts). `workflow_program`
-exposes `list`, `reload`, `start`, `resume`, `status`, `answer`, and confirmed `cancel`
-to agents. Human answers require explicit choice. Explicit start creates a new
-instance; resume restores journaled instance and completed tasks.
+[schemas.ts](extensions/workflow-graph/src/builtins/schemas.ts).
+
+`workflow_recommend` accepts one current catalog revision and one to five unique
+`{key, digest, rationale, confidence}` proposals. It validates all proposals as
+one set and never starts, amends, cancels, answers, or rewrites a prompt. Accepted
+advice is session-local, appears in `workflow-recommendations` for UI sessions,
+and clears when agent settles. `workflow_program start` requires
+`selection:{key,revision,digest}` and inputs. It rejects key-only model starts;
+`/workflow-run <key> <JSON>` obtains exact current identity before launch. A stale
+selection returns `Workflow catalog changed; choose again.` and starts no native
+workflow. `workflow_program` exposes `list`, `reload`, `start`, `resume`,
+`status`, `answer`, confirmed `cancel`, and confirmed `transfer`. Human answers
+require explicit choice. Explicit start creates a new instance; resume restores
+journaled instance and completed tasks.
 
 Discovery precedence: configured project, .omo/workflows, configured global,
 agentDir/workflows, installed packages, bundled. First key wins; duplicate,
@@ -177,11 +187,26 @@ project sources without trust. Resume a discovered module with
 Trusted project modules export `program: StagedProgram` and launch with
 `/workflow-run ./path/to/program.ts {"input":"value"}`. Deterministic `decide`
 returns a typed wave, gate, or final result; only admitted results unlock the
-next same-run amendment. After restart, use `/workflow-run resume ./path/to/program.ts`
+next same-run amendment. `composeStagedPrograms()` combines predeclared stages
+into one instance, artifact root, checkpoint stream, and native run. It namespaces
+stage nodes and maps admitted final values through declared RFC 6901 pointers.
+An unapproved boundary stops at `continue` or `stop`; composition is not a
+cross-run continuation. After restart, use `/workflow-run resume ./path/to/program.ts`
 to reload authored code explicitly. See [authoring contract](extensions/workflow-graph/src/authoring/AGENTS.md)
 and [execution types](extensions/workflow-graph/src/execution/policy.ts).
 
-Artifacts live under `.omo/workflow-artifacts/<instance>`. Live design review
+Artifacts live under `.omo/workflow-artifacts/<instance>`. A terminal transfer
+uses `/workflow-run transfer` or `workflow_program` action `transfer`; the
+command obtains native UI confirmation, while the tool requires explicit
+`confirmed:true`. Both need current destination selection identity and a declared
+TerminalTransfer v1 manifest. Only current or restored completed staged source
+runs qualify. Extension checks source run/key/fingerprint, regular-file paths,
+size, SHA-256, schema, declared mapping, and copied bytes. It records durable
+intent before one distinct destination launch. Source run stays byte-for-byte
+unchanged. Transfer is a verified fresh launch, not native continuation or
+cross-session history search. Linux descriptor-relative copying limits same-UID
+filesystem races, but cannot make arbitrary concurrent hostile replacement an
+atomic compare-and-unlink operation. Live design review
 requires explicitly installed pinned Impeccable helpers through
 `OMO_IMPECCABLE_SCRIPTS`; [helper setup](extensions/workflow-graph/src/design-review/README.md)
 explains the boundary. Helper download never runs at launch. Final display tries
@@ -190,6 +215,14 @@ availability plus manual opening instructions. Native 64-node capacity,
 per-node tool policy, attached stage chat, and Atomic SDK differences remain
 explicit in [parity matrix](extensions/workflow-graph/PARITY.md).
 
+
+`repo-to-extension` accepts only canonical public HTTPS owner/repository URLs.
+It rejects whitespace, backslashes, percent escapes, credentials, ports, query,
+fragment, IP and local hosts, and paths other than two segments. It lowercases
+host and removes one trailing slash while preserving path case and `.git`.
+Parsing does not prevent SSRF, DNS rebinding, redirects, Git configuration,
+hooks, submodules, credential-helper use, resource exhaustion, or repository-code
+execution. Inspection remains an untrusted-data boundary.
 
 ### Isolated workflow-graph QA
 

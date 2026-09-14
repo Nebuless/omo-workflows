@@ -16,7 +16,7 @@ Store portable, merge-safe OMO configuration templates.
 - Routing templates contain only canonical model IDs verified by `omo --list-models 9router`.
 - `omo-agent-settings.json` keeps native Senpi startup and working tips disabled.
 - Routing templates are complete replacement profiles, not additive JSON fragments.
-- Both routing templates declare shared `categories.memory-reflection` and select it with `memory.reflection.category`; reflection children run through Senpi and cannot use an `[opencode]`-only route.
+- Both routing templates keep every execution category in shared top-level `categories`; parent OMO runs, Senpi children, reflection, and Kibitzer use same routing map. `memory.reflection.category` and `memory.recall.category` select `memory-reflection` explicitly.
 - Both routing templates disable reflection sandboxing until upstream merges a fix for missing `runtime/reflection-sessions`; see `docs/issues.md`.
 
 ## Work Guidance

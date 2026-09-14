@@ -119,6 +119,17 @@ verification date.
 - Revalidate: OMO or Senpi runtime upgrade, Herdr CLI upgrade, native task-tool schema change, extension transport change, or before broadening controls beyond `workflow` discovery.
 - Status: `current; Wave 0 source-creation gate evidence`
 
+### Workflow graph routing, composition, transfer, and durable journal repair
+
+- Verified: `2026-09-13`
+- Local runtime: OMO `5.0.0-0.beta.62`; Senpi `2026.9.13`; Bun `1.4.1`.
+- OMO evidence: native workflow snapshot/start contract remains runtime authority. This extension reads live schemas, requires native `run_id` snapshot identity, and leaves scheduling, keyed recovery, and DAG mutation with OMO.
+- Senpi evidence: installed extension APIs register `workflow_recommend`, `workflow_program`, `/workflow-run`, and `before_agent_start`. No upstream authority owns extension-local descriptor hashing, URL policy, composition, or transfer filesystem validation.
+- Local proof: `bun test --timeout 30000 extensions/workflow-graph/test/authoring-transfer*.test.ts extensions/workflow-graph/test/authoring-host.test.ts extensions/workflow-graph/test/authoring-command.test.ts extensions/workflow-graph/test/authoring-catalog-entry.test.ts extensions/workflow-graph/test/authoring-composition.test.ts extensions/workflow-graph/test/native-journal*.test.ts` exited 0, 112 pass, 0 fail, 290 assertions. Real persisted OMO transfer created source `dag_d8436985-bc7d-4012-893f-f1f993db59b1` and destination `dag_39797372-4c3c-498a-b2a7-e4c44e901fc4`; one transfer intent and one destination start followed confirmed verified copy, source snapshot stayed unchanged, and declined confirmation made no run. Receipt: `.omo/evidence/st_01a09b74-task-13/task-13-packet.json`.
+- Durable repair: `durable-journal-v1` changed installed Senpi `SessionManager` files from recorded preimage hashes to recorded postimage hashes and exposes `flushEntries(): Promise<void>`. Receipt `.omo/evidence/workflow-graph-natural-routing-chaining-url-policy/20260913T140255Z-native-repair-st_01a09aea/runtime-repair-receipt.json` records version `2026.9.13`, upstream revision `0fb7705500641a43de915e72debdabfdcb00e665`, and matching installed build. It is local repair only. Native broad static check exited 1 because upstream test dependencies, including `vitest`, were absent. It is not a passing static gate.
+- Revalidate: OMO or Senpi upgrade, native workflow/session schema or lifecycle change, repair preimage or postimage hash mismatch, extension registration change, or Linux filesystem behavior change.
+- Status: `current; extension-local policy with native runtime boundaries`
+
 ### Native staged workflow runtime hooks
 
 - Verified: `2026-09-12`

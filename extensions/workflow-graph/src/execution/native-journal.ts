@@ -1,5 +1,16 @@
 import type { StagedJournal } from "./controller.ts";
 
+export class JournalDurabilityError extends Error {
+  readonly name = "JournalDurabilityError";
+
+  constructor(cause: unknown) {
+    super(
+      `Workflow journal durability unavailable: ${cause instanceof Error ? cause.message : String(cause)}`,
+      { cause },
+    );
+  }
+}
+
 export function createNativeStagedJournal(
   pi: { appendEntry(customType: string, data: unknown): void },
   manager: {
@@ -20,7 +31,11 @@ export function createNativeStagedJournal(
   return {
     async appendEntry(customType, data) {
       pi.appendEntry(customType, data);
-      flush();
+      try {
+        await flush();
+      } catch (error) {
+        throw new JournalDurabilityError(error);
+      }
     },
     getBranch: () => manager.getBranch(),
   };

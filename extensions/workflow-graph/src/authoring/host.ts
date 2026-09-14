@@ -1,13 +1,23 @@
 import { dirname, join } from "node:path";
+import {
+  pendingTransfer,
+  prepareTransfer,
+  rejectTransfer,
+  transferRejected,
+} from "./transfer-launch.ts";
+import { rejectTransferLaunch, transferGuard } from "./transfer-guard.ts";
 import type { ExtensionContext } from "@code-yeongyu/senpi";
-import { Type, type Static } from "typebox";
+import type { Static } from "typebox";
 import { Value } from "typebox/value";
 import {
   createStagedController,
   type ControllerDecision,
   type StagedController,
 } from "../execution/controller.ts";
-import { createNativeStagedJournal } from "../execution/native-journal.ts";
+import {
+  createNativeStagedJournal,
+  JournalDurabilityError,
+} from "../execution/native-journal.ts";
 import { createNativeWorkflowTransport } from "../execution/native-transport.ts";
 import type { StagedProgram } from "../execution/policy.ts";
 import type { WorkflowToolRuntime } from "../task-control.ts";
@@ -24,21 +34,15 @@ import type {
   ModelEventResult,
 } from "../design-review/protocol.ts";
 
-export const LAUNCH_ENTRY_TYPE = "omo-workflow-graph:staged-launch";
-const LaunchSchema = Type.Object(
-  {
-    key: Type.String(),
-    instance: Type.String(),
-    version: Type.Integer({ minimum: 1 }),
-    inputs: Type.Unknown(),
-    artifactRoot: Type.String(),
-  },
-  { additionalProperties: false },
-);
+import { LAUNCH_ENTRY_TYPE, LaunchSchema } from "./launch-record.ts";
+export { LAUNCH_ENTRY_TYPE } from "./launch-record.ts";
 export interface ProgramRegistry {
   list(): readonly string[];
   get(key: string, artifactRoot: string): StagedProgram | undefined;
   requiresExplicitResume?(key: string): boolean;
+  identity?(
+    key: string,
+  ): { readonly revision: number; readonly digest: string } | undefined;
 }
 export type ProgramHost = ReturnType<typeof createProgramHost>;
 export type ProgramContext = Pick<
@@ -77,6 +81,7 @@ export function createProgramHost(
   let active:
     | {
         controller: StagedController;
+        program: StagedProgram;
         decision?: ControllerDecision;
         instance: string;
         generation: number;
@@ -329,21 +334,16 @@ export function createProgramHost(
       });
     return chain;
   };
+  const native = createNativeWorkflowTransport(runtime);
   const activate = async (
     context: ProgramContext,
-    saved: {
-      key: string;
-      instance: string;
-      version: number;
-      inputs: unknown;
-      artifactRoot: string;
-    },
+    saved: Static<typeof LaunchSchema>,
     restore: boolean,
     explicitKey?: string,
   ): Promise<ControllerDecision> => {
     const fence = generation;
-    const journal = createNativeStagedJournal(runtime, context.sessionManager);
-    if (journal === undefined) return { kind: "durability-unavailable" };
+    const source = active;
+    const transfer = transferGuard({ saved, context, registry, native });
     let program = registry.get(saved.key, saved.artifactRoot);
     if (
       restore &&
@@ -355,6 +355,17 @@ export function createProgramHost(
         kind: "rejected",
         reason: "Authored module must be loaded explicitly after restart.",
       };
+    const identity = registry.identity?.(saved.key);
+    if (
+      (registry.identity !== undefined ||
+        saved.revision !== undefined ||
+        saved.digest !== undefined) &&
+      (identity === undefined || program === undefined)
+    )
+      return {
+        kind: "rejected",
+        reason: "Workflow catalog changed; choose again.",
+      };
     if (program === undefined) {
       if (restore && explicitKey !== saved.key)
         return {
@@ -363,10 +374,46 @@ export function createProgramHost(
         };
       program = await loadAuthoredProgram(saved.key, context);
     }
+    transfer?.check();
     if (restore && program.version !== saved.version)
       return { kind: "rejected", reason: "Program version changed." };
+    if (
+      !restore &&
+      registry.identity !== undefined &&
+      (identity === undefined ||
+        identity.revision !== saved.revision ||
+        identity.digest !== saved.digest)
+    )
+      return {
+        kind: "rejected",
+        reason: "Workflow catalog changed; choose again.",
+      };
+    if (!Value.Check(program.input, saved.inputs))
+      return { kind: "rejected", reason: "Invalid staged program inputs." };
+    const journal = createNativeStagedJournal(runtime, context.sessionManager);
+    if (journal === undefined) return { kind: "durability-unavailable" };
+    // Seeded builtins have durable content identity, but no published session revision yet.
+    const revision =
+      restore &&
+      identity?.revision === 0 &&
+      registry.requiresExplicitResume?.(saved.key) === false
+        ? identity.revision
+        : saved.revision;
+    const catalogChanged = () => {
+      const current = registry.identity?.(saved.key);
+      return current === undefined
+        ? registry.identity !== undefined ||
+            saved.revision !== undefined ||
+            saved.digest !== undefined ||
+            transfer !== undefined
+        : revision !== current.revision || saved.digest !== current.digest;
+    };
+    if (catalogChanged())
+      return {
+        kind: "rejected",
+        reason: "Workflow catalog changed; choose again.",
+      };
     if (generation !== fence) throw new Error("Workflow context disposed.");
-    const native = createNativeWorkflowTransport(runtime);
     const scopedProgram = { ...program, key: saved.instance };
     const guarded = {
       getBranch: () => (restore ? journal.getBranch() : []),
@@ -380,6 +427,17 @@ export function createProgramHost(
         execute: async (params) => {
           if (generation !== fence)
             throw new Error("Workflow context disposed.");
+          if (params.action !== "cancel" && catalogChanged())
+            throw new Error("Workflow catalog changed; choose again.");
+          if (transfer !== undefined && params.action !== "cancel") {
+            await transfer.verify();
+            if (
+              generation !== fence ||
+              catalogChanged() ||
+              (!restore && source?.controller.checkpoint().cancelled === true)
+            )
+              throw new Error("Workflow context disposed or catalog changed.");
+          }
           return native.execute(params);
         },
       },
@@ -387,42 +445,148 @@ export function createProgramHost(
       program: scopedProgram,
       inputs: saved.inputs,
       readArtifact: async (path) => Bun.file(path).text(),
+      ...(saved.compositionIdentity === undefined
+        ? {}
+        : { compositionIdentity: saved.compositionIdentity }),
     });
-    if (!restore)
-      await journal.appendEntry(LAUNCH_ENTRY_TYPE, {
-        ...saved,
-        version: program.version,
-      });
+    if (!restore) {
+      if (catalogChanged())
+        return {
+          kind: "rejected",
+          reason: "Workflow catalog changed; choose again.",
+        };
+      try {
+        await journal.appendEntry(LAUNCH_ENTRY_TYPE, {
+          ...saved,
+          version: program.version,
+          ...(program.compositionIdentity === undefined
+            ? {}
+            : { compositionIdentity: program.compositionIdentity }),
+          ...(identity === undefined ? {} : identity),
+        });
+      } catch (error) {
+        if (error instanceof JournalDurabilityError)
+          return { kind: "durability-unavailable" };
+        throw error;
+      }
+    }
     if (generation !== fence) throw new Error("Workflow context disposed.");
     const current = {
       controller,
+      program,
       instance: saved.instance,
       generation: fence,
       context,
       journal,
       waiters: new Map<string, ModelWaiter>(),
     };
+    transfer?.check();
     active = current;
     latestError = undefined;
     return pump(current);
   };
+  const status = () =>
+    active === undefined
+      ? undefined
+      : {
+          instance: active.instance,
+          runId: active.controller.checkpoint().runId,
+          decision: active.decision,
+          error: latestError,
+        };
   return {
     list: () => registry.list(),
-    status: () =>
-      active === undefined
-        ? undefined
-        : {
-            instance: active.instance,
-            runId: active.controller.checkpoint().runId,
-            decision: active.decision,
-            error: latestError,
-          },
+    status,
     stop,
+    async transfer(
+      context: ProgramContext,
+      request: unknown,
+    ): Promise<ControllerDecision> {
+      const journal = createNativeStagedJournal(
+        runtime,
+        context.sessionManager,
+      );
+      if (launching !== undefined)
+        return rejectTransfer(journal, "transfer-busy");
+      const fence = generation;
+      launching = fence;
+      let launch: Static<typeof LaunchSchema> | undefined;
+      try {
+        const prepared = await prepareTransfer(
+          {
+            context,
+            journal,
+            registry,
+            native,
+            status,
+            sourceProgram: active?.program,
+            current: () => generation === fence,
+          },
+          request,
+        );
+        if (prepared.kind !== "prepared") return prepared;
+        launch = prepared.intent.launch;
+        if (generation !== fence)
+          return rejectTransferLaunch(
+            { saved: launch, context, registry, native },
+            journal,
+            true,
+          );
+        if (prepared.replay && active?.instance === launch.instance) {
+          await transferGuard({
+            saved: launch,
+            context,
+            registry,
+            native,
+          })?.verify();
+          if (generation !== fence)
+            return rejectTransferLaunch(
+              { saved: launch, context, registry, native },
+              journal,
+              true,
+            );
+          return (
+            active?.decision ?? { kind: "rejected", reason: "transfer-busy" }
+          );
+        }
+        const decision = await activate(context, launch, false);
+        return decision.kind === "rejected"
+          ? rejectTransferLaunch(
+              { saved: launch, context, registry, native },
+              journal,
+              generation !== fence,
+            )
+          : decision;
+      } catch {
+        // no-excuse-ok: catch -- transfer public boundary returns bounded errors only.
+        return launch === undefined
+          ? rejectTransfer(journal, "transfer-launch-failed")
+          : rejectTransferLaunch(
+              { saved: launch, context, registry, native },
+              journal,
+              generation !== fence,
+            );
+      } finally {
+        if (launching === fence) launching = undefined;
+      }
+    },
     async start(
       context: ProgramContext,
-      key: string,
+      selection:
+        | {
+            readonly key: string;
+            readonly revision: number;
+            readonly digest: string;
+          }
+        | string,
       inputs: unknown,
     ): Promise<ControllerDecision> {
+      if (typeof selection === "string" && registry.identity !== undefined)
+        return {
+          kind: "rejected",
+          reason: "Start requires opaque selection identity.",
+        };
+      const key = typeof selection === "string" ? selection : selection.key;
       if (
         launching !== undefined ||
         (active !== undefined &&
@@ -435,6 +599,16 @@ export function createProgramHost(
             "Current program must finish or be cancelled before new launch.",
         };
       const instance = `${key.replace(/[^a-zA-Z0-9_-]/g, "-")}:${crypto.randomUUID()}`;
+      const artifactRoot = join(
+        context.cwd,
+        ".omo",
+        "workflow-artifacts",
+        instance.replace(":", "-"),
+      );
+      const program = registry.get(key, artifactRoot);
+      if (program === undefined)
+        return { kind: "rejected", reason: "Workflow not found." };
+      const normalizedInputs = program.normalizeInput?.(inputs) ?? inputs;
       const fence = ++generation;
       launching = fence;
       try {
@@ -444,13 +618,11 @@ export function createProgramHost(
             key,
             instance,
             version: 1,
-            inputs,
-            artifactRoot: join(
-              context.cwd,
-              ".omo",
-              "workflow-artifacts",
-              instance.replace(":", "-"),
-            ),
+            inputs: normalizedInputs,
+            artifactRoot,
+            ...(typeof selection === "string"
+              ? {}
+              : { revision: selection.revision, digest: selection.digest }),
           },
           false,
         );
@@ -458,8 +630,12 @@ export function createProgramHost(
         if (launching === fence) launching = undefined;
       }
     },
-    async restore(context: ProgramContext, explicitKey?: string) {
+    async restore(
+      context: ProgramContext,
+      explicitKey?: string,
+    ): Promise<ControllerDecision | undefined> {
       stop();
+      const fence = generation;
       let saved: Static<typeof LaunchSchema> | undefined;
       for (const entry of context.sessionManager.getBranch()) {
         if (
@@ -472,11 +648,53 @@ export function createProgramHost(
         )
           saved = entry.data;
       }
-      if (saved !== undefined) {
-        launching = generation;
-        const fence = generation;
+      const transfer = pendingTransfer(context.sessionManager.getBranch());
+      if (
+        transfer !== undefined &&
+        transferRejected(context.sessionManager.getBranch(), transfer)
+      )
+        return { kind: "rejected", reason: "transfer-launch-failed" };
+      if (
+        transfer !== undefined &&
+        saved?.instance !== transfer.launch.instance
+      ) {
+        if (explicitKey !== transfer.launch.key)
+          return {
+            kind: "rejected",
+            reason: "Authored module must be loaded explicitly after restart.",
+          };
+        const journal = createNativeStagedJournal(
+          runtime,
+          context.sessionManager,
+        );
+        if (journal === undefined) return { kind: "durability-unavailable" };
         try {
-          const decision = await activate(context, saved, true, explicitKey);
+          await journal.appendEntry(LAUNCH_ENTRY_TYPE, transfer.launch);
+        } catch {
+          return { kind: "durability-unavailable" };
+        }
+        if (generation !== fence)
+          return rejectTransferLaunch(
+            { saved: transfer.launch, context, registry, native },
+            journal,
+            true,
+          );
+        saved = transfer.launch;
+      }
+      if (saved !== undefined) {
+        launching = fence;
+        try {
+          let decision: ControllerDecision;
+          try {
+            decision = await activate(context, saved, true, explicitKey);
+          } catch (error) {
+            if (transfer?.launch.instance !== saved.instance) throw error;
+            return rejectTransferLaunch(
+              { saved, context, registry, native },
+              createNativeStagedJournal(runtime, context.sessionManager),
+              generation !== fence,
+            );
+          }
           if (active === undefined && generation === fence)
             notify(undefined, decision);
           return decision;

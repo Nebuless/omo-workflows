@@ -23,4 +23,23 @@ export {
   type StagedJournal,
 } from "./controller.ts";
 export { createNativeWorkflowTransport } from "./native-transport.ts";
+export {
+  CompositionIdentitySchema,
+  CompositionMappingSchema,
+  CompositionSchema,
+  MAX_NATIVE_NODES,
+  applyCompositionMapping,
+  compositionDigest,
+  compositionNamespace,
+  rfc6901Lookup,
+  validateComposition,
+  type Composition,
+  type CompositionMapping,
+} from "./composition.ts";
 export { createNativeStagedJournal } from "./native-journal.ts";
+export {
+  composeStagedPrograms,
+  type CompositionIdentity,
+  type CompositionPlan,
+  type CompositionStage,
+} from "./composed.ts";

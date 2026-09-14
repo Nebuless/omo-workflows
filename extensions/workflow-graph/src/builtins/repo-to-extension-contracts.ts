@@ -29,10 +29,7 @@ const CapabilitySchema = Type.Object(
 
 export const RepoToExtensionInputSchema = Type.Object(
   {
-    repository_url: Type.String({
-      minLength: 1,
-      pattern: "^https://[^/\\s]+/[^/\\s]+/[^/\\s]+/?$",
-    }),
+    repository_url: Type.String({ minLength: 1 }),
     extension_name: Type.Optional(Name),
   },
   Strict,
@@ -51,6 +48,51 @@ export const RepositoryReportSchema = Type.Object(
 );
 
 export type RepoToExtensionInputs = Static<typeof RepoToExtensionInputSchema>;
+
+export function parseRepositoryUrl(value: string): string | undefined {
+  if (/\s|\\|%/u.test(value)) return undefined;
+  const raw = /^https:\/\/([^/?#]+)(\/[^?#]*)?([?#].*)?$/iu.exec(value);
+  if (!raw || raw[3] || raw[1].includes("@") || raw[1].endsWith(":"))
+    return undefined;
+  const rawSegments = (raw[2] ?? "").split("/").slice(1);
+  if (rawSegments.some((segment) => segment === "." || segment === ".."))
+    return undefined;
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return undefined;
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.search ||
+    url.hash ||
+    /:\d+(?:\/|$)/u.test(value.slice(value.indexOf("//") + 2))
+  )
+    return undefined;
+  const host = url.hostname.toLowerCase().replace(/\.$/u, "");
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    host.endsWith(".local") ||
+    host.includes(":") ||
+    /^(?:\d{1,3}\.){3}\d{1,3}$/u.test(host)
+  )
+    return undefined;
+  const segments = url.pathname.split("/").slice(1);
+  if (segments.at(-1) === "") segments.pop();
+  if (
+    segments.length !== 2 ||
+    segments.some(
+      (segment) => segment.length === 0 || segment === "." || segment === "..",
+    )
+  )
+    return undefined;
+  return `https://${host}/${segments.join("/")}`;
+}
 export type RepositoryReport = Static<typeof RepositoryReportSchema>;
 type Capability = Static<typeof CapabilitySchema>;
 

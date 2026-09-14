@@ -15,8 +15,8 @@ Provide workflow graph rendering for native OMO DAG state and a companion Herdr 
 ## Local Contracts
 
 - Use public Senpi APIs and runtime-discovered OMO `workflow` capability. Approved optional repairs expose `SessionManager.flushEntries()`, the versioned native `/dag` presentation hook, and fullscreen mouse deferral to focused overlays. Capability-gate journal and presentation hooks; never patch during extension load.
-- `src/execution/` owns deterministic admission policy, not task scheduling: persist intent and admitted results through native session custom entries, acknowledge flush before dispatch, and amend the same native DAG after validation. No separate state database.
-- Exact native definition fingerprints gate amendment recovery. Initial dispatch recovery uses native keyed `start` reuse. Never invent key-based snapshot calls or per-node fingerprint fields.
+- `src/execution/` owns deterministic admission policy, not task scheduling: persist intent and admitted results through native session custom entries, acknowledge flush before dispatch, and amend the same native DAG after validation. No separate state database. Predeclared composition remains one instance, root, checkpoint stream, and native run.
+- Exact native definition fingerprints gate amendment recovery. Initial dispatch recovery uses native keyed `start` reuse. Never invent key-based snapshot calls or per-node fingerprint fields. Descriptor identity is opaque `{key, revision, digest}`; stale identity rejects before dispatch.
 - Never mutate DAG state optimistically or infer dependency edges.
 - Keep task prompt and full error bodies out of logs and fixtures.
 - Guard TUI behavior; non-TUI sessions expose no overlay.
@@ -35,7 +35,9 @@ Provide workflow graph rendering for native OMO DAG state and a companion Herdr 
 - Footer prioritizes action results and unknown-edge warnings so fullscreen graph height cannot discard feedback.
 - Program status stays distinct from native DAG status. A completed native wave does not complete a staged program. Herdr persists only the program decision kind, never gate text, outputs, or failure bodies.
 - Preserve native runtime ownership when exact Atomic behavior needs unavailable APIs. Do not ship prompt-only substitutes for durable callbacks, gates, output admission, or replay.
-- `repo-to-extension` accepts public HTTPS repository URLs only. Inspection treats repository content as untrusted data, never executes repository code, and requires explicit approval before generated extension writes.
+- `workflow_recommend` is read-only session-local advice. It validates one fresh catalog revision and one to five unique descriptor proposals, never auto-starts or rewrites prompt.
+- `repo-to-extension` accepts canonical HTTPS owner/repository URLs only. Parser rejects whitespace, backslashes, percent escapes, credentials, ports, query, fragment, literal or local hosts, and non-two-segment paths. It is not SSRF or clone hardening. Inspection treats repository content as untrusted data, never executes repository code, and requires explicit approval before generated extension writes.
+- Terminal transfer accepts only current or restored completed staged sources, current destination identity, and declared trusted mappings. Tool requests require explicit `confirmed:true`; `/workflow-run transfer` obtains native UI confirmation. Verify source identity and copied regular-file bytes before durable intent and distinct fresh launch. Never treat it as native continuation or arbitrary cross-session discovery. Descriptor-relative Linux copying narrows same-UID races but cannot provide atomic protection from hostile concurrent replacement.
 - Capability-gate task status, snapshot, steer, retry, and cancel through live schemas; task status uses `task_output` mode `status` only, never transcript retrieval; cancellation needs confirmation.
 - Keep pane state writer and observer persistence failure-isolated from OMO projection updates.
 

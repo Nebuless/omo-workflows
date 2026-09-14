@@ -1,18 +1,55 @@
+import { createHash } from "node:crypto";
 import { lstat, readdir, readFile, realpath } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createJiti } from "jiti/static";
 import { DefaultPackageManager, SettingsManager } from "@code-yeongyu/senpi";
+import { createJiti } from "jiti/static";
 import { Type } from "typebox";
 import { Value } from "typebox/value";
+import { ComposedIdentitySchema } from "../execution/composed.ts";
+import { CompositionMappingSchema } from "../execution/composition.ts";
 import type { StagedProgram } from "../execution/policy.ts";
 
 const ProgramMetadata = Type.Object({
   key: Type.String({ minLength: 1 }),
   version: Type.Integer({ minimum: 1 }),
   input: Type.Object({}, { additionalProperties: true }),
+  compositionIdentity: Type.Optional(ComposedIdentitySchema),
+  transferArtifacts: Type.Optional(
+    Type.Array(
+      Type.Object(
+        {
+          canonicalPath: Type.String({ minLength: 1 }),
+          destination: Type.String({ minLength: 1 }),
+          schemaId: Type.String({ minLength: 1 }),
+          schema: Type.Object({}, { additionalProperties: true }),
+          mapping: CompositionMappingSchema,
+        },
+        { additionalProperties: false },
+      ),
+      { minItems: 1, maxItems: 64 },
+    ),
+  ),
 });
 const isModule = (path: string) => /\.[cm]?[jt]s$/.test(path);
+function clone<T>(value: T, seen = new WeakMap<object, object>()): T {
+  if (value === null || typeof value !== "object") return value;
+  const existing = seen.get(value);
+  if (existing !== undefined) return existing as T;
+  const copy = Array.isArray(value) ? [] : {};
+  seen.set(value, copy);
+  for (const key of Reflect.ownKeys(value))
+    Reflect.set(copy, key, clone(value[key as keyof T], seen));
+  return copy as T;
+}
+function deepFreeze<T>(value: T): T {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value))
+    return value;
+  for (const key of Reflect.ownKeys(value)) deepFreeze(value[key as keyof T]);
+  return Object.freeze(value);
+}
+const snapshotProgram = (program: StagedProgram): StagedProgram =>
+  deepFreeze({ ...clone(program), decide: program.decide });
 const moduleLoader = createJiti(import.meta.url, {
   moduleCache: false,
   tryNative: false,
@@ -35,6 +72,102 @@ export type ProgramSource = {
   readonly path?: string;
   readonly configuredName?: string;
 };
+export type WorkflowDescriptor = {
+  readonly key: string;
+  readonly version: number;
+  readonly title: string;
+  readonly description: string;
+  readonly intents: readonly string[];
+  readonly examples: readonly string[];
+  readonly inputSummary: string;
+  readonly source: "bundled" | "project" | "global" | "package";
+  readonly digest: string;
+};
+type DescriptorProgram = {
+  readonly key: string;
+  readonly version: number;
+  readonly metadata?: unknown;
+};
+export function workflowDescriptorDigest(
+  kind: "authored" | "bundled",
+  keyOrPath: string,
+  bytesOrVersion: string | Uint8Array,
+): string {
+  const nul = "\0";
+  const prefix =
+    kind === "authored"
+      ? `v1${nul}authored${nul}${keyOrPath}${nul}`
+      : `v1${nul}bundled${nul}0.1.0${nul}ff55b141109e3f9f5980c1f0c718dea39f6b2fd9${nul}${keyOrPath}${nul}`;
+  return `sha256:v1:${createHash("sha256").update(prefix, "utf8").update(bytesOrVersion).digest("hex")}`;
+}
+export function normalizeWorkflowDescriptor(
+  program: DescriptorProgram,
+  source: ProgramSourceKind,
+  digest = workflowDescriptorDigest(
+    "bundled",
+    program.key,
+    String(program.version),
+  ),
+): WorkflowDescriptor {
+  const normalized =
+    source === "bundled"
+      ? "bundled"
+      : source.includes("project")
+        ? "project"
+        : source.includes("global")
+          ? "global"
+          : "package";
+  const metadata =
+    program.metadata !== null && typeof program.metadata === "object"
+      ? (program.metadata as Record<string, unknown>)
+      : {};
+  const hasControls = (value: string) =>
+    [...value].some((character) => {
+      const code = character.codePointAt(0);
+      return (
+        code !== undefined &&
+        (code <= 0x1f || code === 0x7f || (code >= 0x80 && code <= 0x9f))
+      );
+    });
+  if (hasControls(program.key) || program.key.length > 120)
+    throw new Error("Invalid workflow descriptor metadata.");
+  const fallbackKey = program.key;
+  const text = (value: unknown, fallback: string, limit = 240) =>
+    value === undefined
+      ? fallback.slice(0, limit)
+      : typeof value === "string" && !hasControls(value)
+        ? value.slice(0, limit)
+        : (() => {
+            throw new Error("Invalid workflow descriptor metadata.");
+          })();
+  const list = (value: unknown) =>
+    value === undefined
+      ? []
+      : Array.isArray(value) && value.every((item) => typeof item === "string")
+        ? value.map((item) => text(item, "")).filter(Boolean)
+        : (() => {
+            throw new Error("Invalid workflow descriptor metadata.");
+          })();
+  return {
+    key: program.key,
+    version: program.version,
+    title: text(metadata.title, fallbackKey, 120),
+    description: text(
+      metadata.description,
+      `Workflow program ${fallbackKey}.`,
+      240,
+    ),
+    intents: list(metadata.intents),
+    examples: list(metadata.examples),
+    inputSummary: text(
+      metadata.inputSummary,
+      "JSON object accepted by the program input schema.",
+    ),
+    source: normalized,
+    digest,
+  };
+}
+
 export type ProgramDiagnostic = {
   readonly code:
     | "CONFIG_INVALID"
@@ -47,6 +180,18 @@ export type ProgramDiagnostic = {
   readonly message: string;
 };
 export type ProgramPaths = readonly string[] | Readonly<Record<string, string>>;
+export type CatalogSnapshot = {
+  readonly revision: number;
+  readonly programs: {
+    readonly get: (key: string) => StagedProgram | undefined;
+    readonly has: (key: string) => boolean;
+  };
+  readonly list: readonly string[];
+  readonly sources: readonly ProgramSource[];
+  readonly descriptors: readonly WorkflowDescriptor[];
+  readonly diagnostics: readonly ProgramDiagnostic[];
+};
+
 export type ProgramCatalogOptions = {
   readonly cwd: string;
   readonly agentDir: string;
@@ -76,14 +221,39 @@ function entries(paths: ProgramPaths | undefined): Candidate[] {
 }
 
 export function createProgramCatalog(options: ProgramCatalogOptions) {
+  const bundled = options.bundled("");
   let programs = new Map(
-    options.bundled("").map((program) => [program.key, program]),
+    bundled.map((program) => [program.key, snapshotProgram(program)]),
   );
-  let sourceList: ProgramSource[] = [...programs.keys()].map((key) => ({
-    key,
-    kind: "bundled",
-  }));
-  let diagnosticList: ProgramDiagnostic[] = [];
+  const initialPrograms = new Map(programs);
+  let snapshot: CatalogSnapshot = Object.freeze({
+    revision: 0,
+    programs: Object.freeze({
+      get: (key: string) => initialPrograms.get(key),
+      has: (key: string) => initialPrograms.has(key),
+    }),
+    list: Object.freeze([...initialPrograms.keys()]),
+    sources: Object.freeze(
+      [...programs.keys()].map((key) =>
+        Object.freeze({ key, kind: "bundled" as const }),
+      ),
+    ),
+    descriptors: Object.freeze(
+      bundled.map((program) => {
+        const descriptor = normalizeWorkflowDescriptor(program, "bundled");
+        return Object.freeze({
+          ...descriptor,
+          intents: Object.freeze([...descriptor.intents]),
+          examples: Object.freeze([...descriptor.examples]),
+        });
+      }),
+    ),
+    diagnostics: Object.freeze([]),
+  });
+  let sourceList = snapshot.sources;
+  let diagnosticList = snapshot.diagnostics;
+  let descriptorList = snapshot.descriptors;
+  let reloadGeneration = 0;
   const load = async (
     candidate: Candidate,
     kind: ProgramSourceKind,
@@ -91,6 +261,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
     next: Map<string, StagedProgram>,
     nextSources: ProgramSource[],
     nextDiagnostics: ProgramDiagnostic[],
+    descriptors: WorkflowDescriptor[],
   ): Promise<void> => {
     const requested = candidate.path;
     let file: string;
@@ -114,9 +285,15 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
       return;
     }
     let loaded: unknown;
+    let digest: string;
     try {
-      // Jiti reloads each entry without moving import.meta.url or relative imports.
-      loaded = moduleLoader(file);
+      const bytes = await readFile(file);
+      digest = workflowDescriptorDigest("authored", file, bytes);
+      // Execute captured bytes, never a native reread; keep canonical import resolution.
+      loaded = moduleLoader.evalModule(bytes.toString("utf8"), {
+        filename: file,
+        forceTranspile: true,
+      });
     } catch (error) {
       nextDiagnostics.push({
         code: "IMPORT_FAILED",
@@ -159,12 +336,22 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
       return;
     }
     const decide = program.decide.bind(program);
-    next.set(program.key, {
-      key: program.key,
-      version: program.version,
-      input: program.input,
-      decide,
-    });
+    descriptors.push(normalizeWorkflowDescriptor(program, kind, digest));
+    next.set(
+      program.key,
+      snapshotProgram({
+        key: program.key,
+        version: program.version,
+        input: program.input,
+        ...(program.compositionIdentity === undefined
+          ? {}
+          : { compositionIdentity: program.compositionIdentity }),
+        ...(program.transferArtifacts === undefined
+          ? {}
+          : { transferArtifacts: program.transferArtifacts }),
+        decide,
+      }),
+    );
     nextSources.push({
       key: program.key,
       kind,
@@ -182,6 +369,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
     next: Map<string, StagedProgram>,
     nextSources: ProgramSource[],
     nextDiagnostics: ProgramDiagnostic[],
+    descriptors: WorkflowDescriptor[],
     missing = true,
   ) => {
     for (const candidate of entries(paths)) {
@@ -203,6 +391,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
             next,
             nextSources,
             nextDiagnostics,
+            descriptors,
           );
         continue;
       }
@@ -217,12 +406,14 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
             next,
             nextSources,
             nextDiagnostics,
+            descriptors,
           );
       }
     }
   };
   return {
-    list: () => [...programs.keys()],
+    snapshot: () => snapshot,
+    list: () => [...snapshot.list],
     get: (key: string, artifactRoot: string) =>
       sourceList.find((source) => source.key === key)?.kind === "bundled"
         ? options.bundled(artifactRoot).find((program) => program.key === key)
@@ -231,8 +422,11 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
       sourceList.find((source) => source.key === key)?.kind !== "bundled",
     sources: () => sourceList as readonly ProgramSource[],
     diagnostics: () => diagnosticList as readonly ProgramDiagnostic[],
+    descriptors: () => descriptorList as readonly WorkflowDescriptor[],
     async reload(context: Pick<TrustedContext, "isProjectTrusted">) {
+      const generation = ++reloadGeneration;
       const next = new Map<string, StagedProgram>();
+      const pendingDescriptors: WorkflowDescriptor[] = [];
       const nextSources: ProgramSource[] = [];
       const nextDiagnostics: ProgramDiagnostic[] = [
         ...(options.diagnostics ?? []),
@@ -246,6 +440,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
           next,
           nextSources,
           nextDiagnostics,
+          pendingDescriptors,
         );
         await loadPaths(
           [join(options.cwd, ".omo", "workflows")],
@@ -255,6 +450,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
           next,
           nextSources,
           nextDiagnostics,
+          pendingDescriptors,
           false,
         );
       }
@@ -266,6 +462,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
         next,
         nextSources,
         nextDiagnostics,
+        pendingDescriptors,
       );
       await loadPaths(
         [join(options.agentDir, "workflows")],
@@ -275,6 +472,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
         next,
         nextSources,
         nextDiagnostics,
+        pendingDescriptors,
         false,
       );
       // Explicit package resources inherit the trust and base directory of their settings scope.
@@ -287,6 +485,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
           next,
           nextSources,
           nextDiagnostics,
+          pendingDescriptors,
         );
       await loadPaths(
         options.globalPackage,
@@ -296,6 +495,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
         next,
         nextSources,
         nextDiagnostics,
+        pendingDescriptors,
       );
       for (const pkg of options.installedPackages ?? []) {
         if (pkg.scope === "project" && !context.isProjectTrusted()) continue;
@@ -307,6 +507,7 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
           next,
           nextSources,
           nextDiagnostics,
+          pendingDescriptors,
         );
       }
       for (const program of options.bundled("")) {
@@ -317,13 +518,55 @@ export function createProgramCatalog(options: ProgramCatalogOptions) {
             message: `bundled program "${program.key}" skipped by precedence.`,
           });
         else {
-          next.set(program.key, program);
+          next.set(program.key, snapshotProgram(program));
           nextSources.push({ key: program.key, kind: "bundled" });
         }
       }
-      programs = next;
+      if (generation !== reloadGeneration) return;
+      const publishedPrograms = new Map(next);
+      programs = publishedPrograms;
       sourceList = nextSources;
       diagnosticList = nextDiagnostics;
+      const descriptorsByKey = new Map<string, WorkflowDescriptor>();
+      for (const descriptor of pendingDescriptors)
+        descriptorsByKey.set(descriptor.key, descriptor);
+      for (const program of options.bundled("")) {
+        if (!descriptorsByKey.has(program.key))
+          descriptorsByKey.set(
+            program.key,
+            normalizeWorkflowDescriptor(program, "bundled"),
+          );
+      }
+      descriptorList = sourceList.flatMap((source) => {
+        const descriptor = descriptorsByKey.get(source.key);
+        return descriptor === undefined ? [] : [descriptor];
+      });
+      snapshot = Object.freeze({
+        revision: snapshot.revision + 1,
+        programs: Object.freeze({
+          get: (key: string) => publishedPrograms.get(key),
+          has: (key: string) => publishedPrograms.has(key),
+        }),
+        list: Object.freeze([...programs.keys()]),
+        sources: Object.freeze(
+          sourceList.map((source) => Object.freeze({ ...source })),
+        ),
+        descriptors: Object.freeze(
+          descriptorList.map((descriptor) =>
+            Object.freeze({
+              ...descriptor,
+              intents: Object.freeze([...descriptor.intents]),
+              examples: Object.freeze([...descriptor.examples]),
+            }),
+          ),
+        ),
+        diagnostics: Object.freeze(
+          diagnosticList.map((diagnostic) => Object.freeze({ ...diagnostic })),
+        ),
+      });
+      sourceList = snapshot.sources;
+      diagnosticList = snapshot.diagnostics;
+      descriptorList = snapshot.descriptors;
     },
   };
 }
@@ -510,6 +753,12 @@ export async function loadAuthoredProgram(
     key: program.key,
     version: program.version,
     input: program.input,
+    ...(program.compositionIdentity === undefined
+      ? {}
+      : { compositionIdentity: structuredClone(program.compositionIdentity) }),
+    ...(program.transferArtifacts === undefined
+      ? {}
+      : { transferArtifacts: structuredClone(program.transferArtifacts) }),
     decide: (value) => decide(value),
   };
 }
