@@ -6,7 +6,7 @@ Own regression tests spanning package boundaries and Senpi public contracts.
 
 ## Ownership
 
-- `extension-load.test.ts` owns OMO/Senpi extension loading smoke coverage.
+- `extension-load.test.ts` owns loading smoke coverage for every root extension.
 
 ## Local Contracts
 

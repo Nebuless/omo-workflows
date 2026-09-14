@@ -1,4 +1,7 @@
 {
+  "files": {
+    "includes": ["**", "!!extensions/compound-engineering/skills"]
+  },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",

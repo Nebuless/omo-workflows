@@ -31,6 +31,7 @@ Own extension package boundaries and upstream adaptation policy.
 
 ## Child DOX Index
 
+- `compound-engineering/` — pinned Every Compound Engineering skills through native Senpi discovery.
 - `better-custom/` — custom provider and model-browser Senpi extension.
 - `herdr/` — OMO lifecycle reporting, skills, and LLM-safe CLI tools for Herdr.
 - `workflow-graph/` — staged Atomic program admission over native OMO DAGs, TUI overlay, and optional read-only Herdr observer; preserves Atomic and omo-herdr-dag provenance.

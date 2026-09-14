@@ -4,6 +4,8 @@ exclude_patterns = [
   "**/node_modules/**",
   "**/.build-check/**",
   "**/.omo/senpi-task/**",
+  "**/.omp/**",
+  "extensions/compound-engineering/skills/**",
   "**/*.d.ts",
 ]
 

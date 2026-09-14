@@ -10,7 +10,7 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "build": "bun build extensions/better-custom/src/index.ts extensions/herdr/index.ts extensions/workflow-graph/src/index.ts extensions/workflow-graph/src/herdr/viewer.ts --outdir .build-check --target bun && rm -rf .build-check",
+    "build": "bun build extensions/better-custom/src/index.ts extensions/compound-engineering/src/index.ts extensions/herdr/index.ts extensions/workflow-graph/src/index.ts extensions/workflow-graph/src/herdr/viewer.ts --outdir .build-check --target bun && rm -rf .build-check",
     "validate": "bun run validate:package && bun run typecheck && bun test",
     "validate:package": "bun scripts/validate-package.ts",
     "lint:commit": "commitlint --edit",
@@ -42,6 +42,7 @@
   "pi": {
     "extensions": [
       "./extensions/better-custom/src/index.ts",
+      "./extensions/compound-engineering/src/index.ts",
       "./extensions/herdr/index.ts",
       "./extensions/workflow-graph/src/index.ts"
     ]
