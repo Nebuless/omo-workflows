@@ -57,6 +57,17 @@ verification date.
 - Revalidate: OMO or Senpi upgrade, reflection launch change, config merge-precedence change, or routing-profile change.
 - Status: `current; user-local routing workaround for upstream default`
 
+### Compound Engineering native skill discovery
+
+- Verified: `2026-09-13`
+- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`.
+- OMO evidence: [current OMO Senpi source](https://github.com/code-yeongyu/oh-my-openagent/tree/76e54b0a9bfa7bc730afefa877aea03f2c948b08/packages/omo-senpi); OMO delegates extension resource loading to Senpi.
+- Senpi evidence: [`resources_discover` public contract](https://github.com/code-yeongyu/senpi/blob/ce72afe2b7368d9e19fe6a63abb128dd453591e8/packages/coding-agent/src/core/extensions/types.ts).
+- Adapted upstream evidence: [Every package manifest](https://github.com/EveryInc/compound-engineering-plugin/blob/44d65ad64a0ac8e542eabee31ce031a7aeb41b28/package.json), [native Pi adapter](https://github.com/EveryInc/compound-engineering-plugin/blob/44d65ad64a0ac8e542eabee31ce031a7aeb41b28/.pi/extensions/compound-engineering.ts), and [skill tree](https://github.com/EveryInc/compound-engineering-plugin/tree/44d65ad64a0ac8e542eabee31ce031a7aeb41b28/skills).
+- Local proof: `bun test extensions/compound-engineering/test` registered one skill root and found 35 frontmatter skill names across 418 byte-matched imported files. `omo -e ./extensions/compound-engineering --offline --print "List installed skills whose names start with ce-. Reply with names only, one per line."` exited 0 and returned discovered `ce-*` names; invalid `/skill:not-a-real-ce-skill` exited cleanly with an explicit not-found result.
+- Revalidate: OMO or Senpi upgrade, upstream Compound Engineering refresh, or resource-discovery contract change.
+- Status: `current`
+
 - [Global OMO instructions](customizations.md#verified-runtime-contract) —
   verified 2026-09-11; boundary-crossing prompt overlay behavior.
 - [Customization scaffolding](customization-scaffolding.md#upstream-evidence) —

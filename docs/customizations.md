@@ -9,6 +9,7 @@ Runtime-dependent claims follow the [upstream validation contract](upstream-vali
 | Customization | Outcome | Main surface | Detail |
 |---|---|---|---|
 | Modular extensions | Install one portable feature | `extensions/<name>/` | [Authoring extensions](authoring-extensions.md) |
+| Compound Engineering | Run Every's 35-skill engineering loop natively | `extensions/compound-engineering/` | [Package guide](../extensions/compound-engineering/README.md) |
 | Custom providers and models | Add providers and choose models | `extensions/better-custom/` | [Better Custom contract](../extensions/better-custom/AGENTS.md) |
 | Herdr | Control Herdr resources and agents | `extensions/herdr/` | [Herdr contract](../extensions/herdr/AGENTS.md) |
 | Toolchain and quality | Set local tools and checks | `mise.toml`, Qlty, Biome, prek | [LSP setup](lsp.md) |

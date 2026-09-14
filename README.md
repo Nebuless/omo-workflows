@@ -5,7 +5,7 @@ repository or one extension package.
 
 - Native OMO: [`omo-ai`](https://www.npmjs.com/package/omo-ai) beta
 - Runtime pin: OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`
-- Included packages: [`better-custom`](extensions/better-custom/AGENTS.md),
+- Included packages: [`compound-engineering`](extensions/compound-engineering/README.md), [`better-custom`](extensions/better-custom/AGENTS.md),
   [`herdr`](extensions/herdr/AGENTS.md), and
   [`workflow-graph`](extensions/workflow-graph/AGENTS.md)
 
@@ -81,6 +81,10 @@ omo install .
 omo install ./extensions/workflow-graph
 
 # Project-local: load only while OMO starts in this repository
+# One extension only
+omo install -l ./extensions/compound-engineering
+omo install -l ./extensions/better-custom
+omo install -l ./extensions/herdr
 omo install -l ./extensions/workflow-graph
 ```
 
@@ -105,6 +109,7 @@ in interactive OMO, then run `/workflow-run list`; it must show
 
 ## Included packages
 
+- [`extensions/compound-engineering`](extensions/compound-engineering/README.md): Every's 35 Compound Engineering skills through native Senpi discovery. Use `/skill:<name>` for deterministic invocation.
 - [`extensions/better-custom`](extensions/better-custom/AGENTS.md): custom
   provider CRUD and model browser commands.
 - [`extensions/herdr`](extensions/herdr/AGENTS.md): Herdr lifecycle reporting,

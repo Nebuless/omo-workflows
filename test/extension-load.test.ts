@@ -38,6 +38,21 @@ describe("OMO extension boundary", () => {
     expect(commands.has("custom-provider")).toBe(true);
     expect(providers.size).toBe(0);
 
+    let compoundDiscover:
+      | (() => { readonly skillPaths: readonly string[] })
+      | undefined;
+    const compoundHost = {
+      on(name: string, handler: typeof compoundDiscover) {
+        if (name === "resources_discover") compoundDiscover = handler;
+      },
+    };
+    const compoundExtension = await import(
+      "../extensions/compound-engineering/src/index.ts"
+    );
+    compoundExtension.default(compoundHost as never);
+
+    expect((await compoundDiscover?.())?.skillPaths).toHaveLength(1);
+
     const events = new Map<string, unknown>();
     const tools = new Map<string, unknown>();
     const herdrHost = {

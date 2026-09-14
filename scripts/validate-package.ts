@@ -24,6 +24,7 @@ if (manifest.version !== "0.1.0") errors.push("package version must be 0.1.0");
 const extensions = manifest.pi?.extensions;
 const extensionEntrypoints = [
   "./extensions/better-custom/src/index.ts",
+  "./extensions/compound-engineering/src/index.ts",
   "./extensions/herdr/index.ts",
   "./extensions/workflow-graph/src/index.ts",
 ] as const;
@@ -32,9 +33,7 @@ if (
   extensions.length !== extensionEntrypoints.length ||
   !extensionEntrypoints.every((entrypoint) => extensions.includes(entrypoint))
 ) {
-  errors.push(
-    "package must expose better-custom, Herdr, and workflow graph extensions",
-  );
+  errors.push("package must expose every supported extension");
 }
 
 for (const entrypoint of extensionEntrypoints) {
@@ -43,6 +42,11 @@ for (const entrypoint of extensionEntrypoints) {
 }
 
 for (const [relativePath, packageName, entrypoint] of [
+  [
+    "extensions/compound-engineering/package.json",
+    "@omo-workflows/compound-engineering",
+    "./src/index.ts",
+  ],
   ["extensions/herdr/package.json", "@omo-workflows/herdr", "./index.ts"],
   [
     "extensions/workflow-graph/package.json",
@@ -77,6 +81,7 @@ if (senpiVersion !== "2026.9.10-2") {
 
 const sourceFiles = [
   "extensions/better-custom/src/index.ts",
+  "extensions/compound-engineering/src/index.ts",
   "extensions/better-custom/src/config.ts",
   "extensions/better-custom/src/model-browser.ts",
   "extensions/workflow-graph/src/index.ts",

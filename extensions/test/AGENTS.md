@@ -8,6 +8,7 @@ Own regression coverage shared by standalone OMO/Senpi extensions.
 
 - `herdr.test.ts` owns observable Herdr lifecycle reporting coverage.
 - `herdr-tools.test.ts` owns Herdr tool boundary and skill-discovery coverage.
+- Compound Engineering package tests live under its own `test/` boundary.
 
 ## Local Contracts
 

@@ -16,7 +16,7 @@ customization repository.
 - `model-matrix.md` owns sourced model price, capability, benchmark evidence, and portable profile mappings.
 - `lsp.md` owns repository language-server tooling and OMO configuration.
 - `authoring-extensions.md` owns modular individually installable extension packaging guidance.
-- `customizations.md` owns the customization catalog, global OMO instruction guidance, and detail-doc routing.
+- `customizations.md` owns the customization catalog, global OMO instruction guidance, Compound Engineering routing, and detail-doc routing.
 - `customization-scaffolding.md` owns upstream-backed capability mapping and policy-scaffold creation guidance.
 - `upstream-validation.md` owns authority sources, timestamped runtime-evidence records, and revalidation triggers.
 
