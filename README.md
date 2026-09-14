@@ -6,7 +6,7 @@ repository or one extension package.
 - Native OMO: [`omo-ai`](https://www.npmjs.com/package/omo-ai) beta
 - Runtime pin: OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`
 - Included packages: [`compound-engineering`](extensions/compound-engineering/README.md), [`better-custom`](extensions/better-custom/AGENTS.md),
-  [`herdr`](extensions/herdr/AGENTS.md), and
+  [`herdr`](extensions/herdr/AGENTS.md), [`trim`](extensions/trim/AGENTS.md), and
   [`workflow-graph`](extensions/workflow-graph/AGENTS.md)
 
 ## Install with an LLM handoff
@@ -85,6 +85,7 @@ omo install ./extensions/workflow-graph
 omo install -l ./extensions/compound-engineering
 omo install -l ./extensions/better-custom
 omo install -l ./extensions/herdr
+omo install -l ./extensions/trim
 omo install -l ./extensions/workflow-graph
 ```
 
@@ -114,6 +115,7 @@ in interactive OMO, then run `/workflow-run list`; it must show
   provider CRUD and model browser commands.
 - [`extensions/herdr`](extensions/herdr/AGENTS.md): Herdr lifecycle reporting,
   skills, and argv-only resource tools. No-op outside Herdr.
+- [`extensions/trim`](extensions/trim/AGENTS.md): native compaction governor.
 - [`extensions/workflow-graph`](extensions/workflow-graph/AGENTS.md): Native
   OMO DAG overlay with explicit dependency edges, stale/truncation state, node
   detail, and capability-gated workflow controls. `/workflow-graph` opens the

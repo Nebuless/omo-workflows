@@ -45,6 +45,16 @@ verification date.
 | OMO extension behavior that depends on Senpi | Both upstreams plus installed runtime |
 | Repository-only docs, tests, or formatting | Neither, unless a runtime claim changes |
 
+### Trim extension
+
+- Verified: `2026-09-14`
+- Local runtime: OMO `5.0.0-0.beta.62` (engine Senpi `2026.9.13`); Bun `1.3.14`
+- OMO evidence: https://github.com/code-yeongyu/oh-my-openagent/commit/cfdaa1d16d25d6152410dea514fd978acfd62bab
+- Senpi evidence: https://github.com/code-yeongyu/senpi/tree/919e24dbb2a60d5415c6757c8f1797512c44a095
+- Local proof: task-3 `install.txt` and `list.txt` preserve exact command output; `bun run validate:package` passes; root `package.json` registers `./extensions/trim/src/index.ts` once; standalone `extensions/trim/package.json` retains `./src/index.ts`. Package pin `@code-yeongyu/senpi@2026.9.10-2` is separate from installed OMO/Senpi/Bun runtime versions.
+- Revalidate: `OMO upgrade | Senpi upgrade`
+- Status: `current`
+
 ## Existing validation records
 
 ### Memory reflection shared-category routing

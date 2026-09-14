@@ -26,6 +26,7 @@ const extensionEntrypoints = [
   "./extensions/better-custom/src/index.ts",
   "./extensions/compound-engineering/src/index.ts",
   "./extensions/herdr/index.ts",
+  "./extensions/trim/src/index.ts",
   "./extensions/workflow-graph/src/index.ts",
 ] as const;
 if (
@@ -33,7 +34,7 @@ if (
   extensions.length !== extensionEntrypoints.length ||
   !extensionEntrypoints.every((entrypoint) => extensions.includes(entrypoint))
 ) {
-  errors.push("package must expose every supported extension");
+errors.push("package must expose every supported extension");
 }
 
 for (const entrypoint of extensionEntrypoints) {
@@ -74,9 +75,33 @@ for (const [relativePath, packageName, entrypoint] of [
   }
 }
 
+const trimPackagePath = resolve(root, "extensions/trim/package.json");
+if (!existsSync(trimPackagePath)) {
+  errors.push("missing standalone Trim package manifest");
+} else {
+  const trimPackage = JSON.parse(
+    readFileSync(trimPackagePath, "utf8"),
+  ) as PackageManifest;
+  if (trimPackage.name !== "@omo-workflows/trim") {
+    errors.push("Trim package name must be @omo-workflows/trim");
+  }
+  if (
+    !Array.isArray(trimPackage.pi?.extensions) ||
+    trimPackage.pi.extensions.length !== 1 ||
+    trimPackage.pi.extensions[0] !== "./src/index.ts"
+  ) {
+    errors.push("Trim package must expose only ./src/index.ts");
+  }
+  if (!existsSync(resolve(root, "extensions/trim/src/index.ts"))) {
+    errors.push(
+      "missing Trim extension entrypoint: extensions/trim/src/index.ts",
+    );
+  }
+}
+
 const senpiVersion = manifest.dependencies?.["@code-yeongyu/senpi"];
-if (senpiVersion !== "2026.9.10-2") {
-  errors.push("Senpi must remain pinned to 2026.9.10-2");
+if (senpiVersion !== "2026.9.13") {
+  errors.push("Senpi must remain pinned to 2026.9.13");
 }
 
 const sourceFiles = [
