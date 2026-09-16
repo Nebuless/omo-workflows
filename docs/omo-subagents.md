@@ -186,8 +186,6 @@ Never solve route failure by adding blind fallback chains. First prove model ID 
 
 For ordinary delegated work, the active `task` tool exposes task launch, output/status, steering, and cancellation. Inspect its live schema rather than copying parameters from an older session or a different harness. Read status before a control action. Cancellation is destructive task control; require explicit user confirmation.
 
-For staged programs, [`workflow-graph`](../extensions/workflow-graph/README.md) uses OMO's native workflow/DAG state. It capability-gates controls against current `workflow` and task schemas. Use `/workflow-run status` to inspect, `/workflow-run answer` for human gates, and confirmed cancellation only when needed. See [workflow parity](../extensions/workflow-graph/PARITY.md) for supported and unavailable semantics.
-
 ## Custom providers and extension-added capabilities
 
 Subagent routing accepts any provider/model registered in active OMO/Senpi runtime. Native providers come from OMO setup and provider credentials. Extensions may register providers, models, tools, commands, skills, task agents, or custom categories. Therefore a provider list is runtime inventory, not fixed repository policy.
@@ -251,7 +249,6 @@ Use public Senpi APIs only. Keep provider registration, persistence, UI, and hos
 - [Repository model routing](model-routing.md)
 - [Repository model matrix](model-matrix.md)
 - [Repository extension authoring](authoring-extensions.md)
-- [Workflow graph parity](../extensions/workflow-graph/PARITY.md)
 - [Repository issue register](issues.md)
 
 Revalidate this guide after OMO or Senpi upgrade, provider catalog change, new extension provider/agent/category, or any change to configuration merge precedence.

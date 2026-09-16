@@ -27,7 +27,6 @@ const extensionEntrypoints = [
   "./extensions/compound-engineering/src/index.ts",
   "./extensions/herdr/index.ts",
   "./extensions/trim/src/index.ts",
-  "./extensions/workflow-graph/src/index.ts",
 ] as const;
 if (
   !Array.isArray(extensions) ||
@@ -49,11 +48,6 @@ for (const [relativePath, packageName, entrypoint] of [
     "./src/index.ts",
   ],
   ["extensions/herdr/package.json", "@omo-workflows/herdr", "./index.ts"],
-  [
-    "extensions/workflow-graph/package.json",
-    "@omo-workflows/workflow-graph",
-    "./src/index.ts",
-  ],
 ] as const) {
   const standalonePath = resolve(root, relativePath);
   if (!existsSync(standalonePath)) {
@@ -109,8 +103,6 @@ const sourceFiles = [
   "extensions/compound-engineering/src/index.ts",
   "extensions/better-custom/src/config.ts",
   "extensions/better-custom/src/model-browser.ts",
-  "extensions/workflow-graph/src/index.ts",
-  "extensions/workflow-graph/src/overlay/controller.ts",
 ];
 const herdrSkillFiles = [
   "extensions/herdr/skills/herdr/SKILL.md",

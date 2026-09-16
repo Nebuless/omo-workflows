@@ -1,27 +1,27 @@
-# Repository Tests
+# Extension Tests
 
 ## Purpose
 
-Own regression tests spanning package boundaries and Senpi public contracts.
+Own regression coverage shared by standalone OMO/Senpi extensions.
 
 ## Ownership
 
-- `extension-load.test.ts` owns loading smoke coverage for every root extension.
+- `herdr.test.ts` owns observable Herdr lifecycle reporting coverage.
+- `herdr-tools.test.ts` owns Herdr tool boundary and skill-discovery coverage.
+- Compound Engineering package tests live under its own `test/` boundary.
 
 ## Local Contracts
 
-- Test observable host behavior, not prose or implementation formatting.
-- Isolate agent state in temporary directories.
-- Keep tests deterministic; await exact state rather than using timing delays.
+- Test extension behavior through public reporter functions and generated Herdr CLI arguments.
+- Do not use real Herdr processes, sleeps, or timing-dependent retries.
 
 ## Work Guidance
 
-- Add a regression test for every repaired public compatibility boundary.
-- Keep host fakes limited to public ExtensionAPI methods used by the test.
+- Keep tests outside an extension package when they cover a standalone extension boundary.
 
 ## Verification
 
-- `bun test test`
+- `bun test test/herdr.test.ts test/herdr-tools.test.ts test/extension-load.test.ts`
 
 ## Child DOX Index
 

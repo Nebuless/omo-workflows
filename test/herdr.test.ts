@@ -8,8 +8,8 @@ import {
   HERDR_AGENT,
   HERDR_SOURCE,
   resetHerdrSeq,
-} from "../herdr/index.ts";
-import type { HerdrEnv } from "../herdr/index.ts";
+} from "../extensions/herdr/index.ts";
+import type { HerdrEnv } from "../extensions/herdr/index.ts";
 
 const env: HerdrEnv = { bin: "/bin/herdr", paneId: "w1:p3" };
 

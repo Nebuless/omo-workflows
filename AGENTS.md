@@ -181,10 +181,9 @@ trigger.
 - `extensions/better-custom/src/` — runtime implementation guidance.
 - `extensions/better-custom/test/` — provider/model extension regression guidance.
 - `extensions/herdr/` — standalone OMO lifecycle integration, skills, and safe CLI tools for Herdr.
-- `extensions/workflow-graph/` — staged Atomic program admission over native OMO DAGs, graph overlay, and optional Herdr side-pane observer.
-- `extensions/test/` — standalone extension regression coverage.
+- `extensions/trim/` — native compaction governor with package-local tests.
 - `scripts/` — validation and portable runtime-repair scripts.
-- `test/` — OMO/Senpi boundary regression tests.
+- `test/` — shared OMO/Senpi extension regression coverage.
 
 Extension docs own host adaptation, upstream attribution, runtime assumptions,
 and focused tests. Runtime repairs remain explicit user-invoked tasks.

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { herdrSkillPaths } from "../herdr/skills.ts";
+import { herdrSkillPaths } from "../extensions/herdr/skills.ts";
 import {
   requireHerdrEnvironment,
   runHerdrCommand,
   validateHerdrArgs,
-} from "../herdr/tools.ts";
+} from "../extensions/herdr/tools.ts";
 
 describe("Herdr extension tools", () => {
   test("discovers complete Herdr skill suite", () => {

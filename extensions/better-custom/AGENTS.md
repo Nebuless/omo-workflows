@@ -39,4 +39,4 @@ models.
 ## Child DOX Index
 
 - `src/` — extension runtime, host adaptation, and focused source folders.
-- `test/` — extension regression tests; Herdr coverage lives in `extensions/test/`.
+- `test/` — extension regression tests; shared Herdr coverage lives in `../../test/`.

@@ -31,7 +31,7 @@ Report OMO lifecycle state to a containing Herdr pane.
 
 ## Verification
 
-- `bun test extensions/test/herdr.test.ts extensions/test/herdr-tools.test.ts`
+- `bun test test/herdr.test.ts test/herdr-tools.test.ts`
 - `bun run typecheck`
 - `bun run build`
 - `omo list --approve`

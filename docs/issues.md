@@ -51,14 +51,14 @@ reference exists, state that and label any workaround as invented.
 - **Upstream:** No matching issue or pull request identified in this investigation. Owning installed source is bundled `omo-ai/plugin/extensions/omo-task.js`, functions matching plan-path regex `Ew`, extraction `$w`, normalization `Tw`, and canonical prompt `Aw`.
 - **Validation:** Round 1 supplied exact relative path; round 2 supplied exact absolute path. Both completed in about 11-12 seconds with same wildcard rejection and zero review tools, proving failure before plan inspection. Direct installed-bundle inspection shows `$w` falls back from failed explicit-reference matching to highest `count`/latest `lastTouchedAt`, then `Aw` inserts that fallback path into reviewer prompt. Plan SHA-256 remained `8a45830f13cc56eb205a94b395ba5d3b76bb3709ce46547659bb576ca669f345` across both attempts.
 
-## 2026-09-13T07:35:23Z - Repo-to-extension report claimed HTTPS URL parser failure
+## Removed 2026-09-16: Repo-to-extension report claimed HTTPS URL parser failure
 
 - **Reported symptom:** `repo-to-extension` was said to reject HTTPS repository URLs because its JSON parser cannot parse them.
-- **Affected runtime:** OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`, workflow-graph current checkout.
+- **Affected runtime:** OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`, removed workflow-graph checkout.
 - **Cause:** Reproduction refutes a general JSON parsing failure. Canonical `https://github.com/acme/widgets` passes the TypeBox schema and reaches the `inspect-repository` wave. Malformed command JSON fails in `JSON.parse` before schema validation. The URL-specific boundary is a raw regex, which also accepts userinfo, explicit ports, query/fragment variants, and literal private-IP hosts. It does not canonicalize equivalent URLs.
-- **Resolution:** Implemented extension-local parser policy. `parseRepositoryUrl()` rejects whitespace, raw backslashes, percent escapes, credentials, explicit ports including `:443`, query, fragment, literal IP and local hosts, and paths not exactly `owner/repository`. It accepts canonical HTTPS with optional `.git` and one trailing slash, lowercases host, retains path case and `.git`, and binds canonical URL through input, inspection, report, plan, verification, final result, and identity checks. Malformed `/workflow-run` JSON still fails before URL parser. Parser is not SSRF, DNS rebinding, redirect, Git configuration, hook, submodule, credential-helper, resource-exhaustion, or repository-code execution protection.
+- **Resolution:** Historical only. The extension and its parser were removed from this repository on 2026-09-16.
 - **Upstream:** No matching OMO or Senpi issue/PR identified. Current upstream URLs establish the public lifecycle and DAG contracts but do not own this extension-local parser policy: [Senpi extension event types](https://github.com/code-yeongyu/senpi/blob/4f4cd74518749d00674571ff867ce6d53766dde1/packages/coding-agent/src/core/extensions/types.ts) and [OMO DAG parameters](https://github.com/code-yeongyu/oh-my-openagent/blob/10bf3db1d35f47feaf7b473a60e988e12e35a501/packages/omo-senpi/src/components/task/dag-tool-params.ts).
-- **Validation:** `bun test extensions/workflow-graph/test/repo-to-extension.test.ts` passed with canonical `https://GitHub.com/acme/widgets.git/` normalized to `https://github.com/acme/widgets.git`, while query, fragment, userinfo, explicit port, IPv4, local host, whitespace, backslash, percent escape, HTTP, SSH, nested path, and malformed JSON cases reject. `bun run validate:package` passed. No clone or network operation ran for parser matrix. Task receipts: `.omo/evidence/workflow-graph-natural-routing-chaining-url-policy/20260913T112000Z/task-5-canonical-results.txt`, `task-5-green.txt`, and `task-5-malformed-json-zero-native-start.txt`.
+- **Validation:** Historical receipts remain under `.omo/evidence/`; no current extension behavior depends on this record.
 
 ## 2026-09-13T06:35:53Z - Reflection ignored OMO-only quick route
 
@@ -108,25 +108,9 @@ reference exists, state that and label any workaround as invented.
   dispatch from a piped TUI was not reliable; next normal OMO session must run
   `/reflect` and confirm a new completion without `bwrap` stderr.
 
-## 2026-09-13T06:16:56Z - Workflow-graph appeared absent after new OMO agent launch
+## Removed 2026-09-16: Workflow-graph appeared absent after new OMO agent launch
 
-- **Reported symptom:** User launched a new OMO agent and did not see the new
-  workflow-graph extension.
+- **Reported symptom:** User launched a new OMO agent and did not see the removed workflow-graph extension.
 - **Affected runtime:** OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`.
-- **Resolution:** `omo install -l` is project-local and only applies when OMO
-  starts in that project. Global `omo list --no-approve` contained
-  `/home/egsox/repo/omo-workflows`; a fresh `omo --print` launched from `/tmp`
-  listed `repo-to-extension`. Updated README install instructions to make scope
-  explicit. Use `omo install ./extensions/workflow-graph` without `-l` for
-  global loading, then restart OMO or run `/reload`.
-- **Upstream source:** [OMO package install CLI](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/packages/omo-senpi/src/cli.ts);
-  [Senpi package settings](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/packages.md).
-
-## 2026-09-12T14:20:02Z - Atomic workflow parity missing from graph extension
-
-- **Reported symptom:** Existing workflow-graph view lacks Atomic staged execution, typed output admission, authored programs, builtin workflows, and native `/dag` integration.
-- **Affected runtime:** OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`.
-- **Cause:** Native workflow tool owns static DAG execution/amendment but no public deterministic callback stage; public custom-entry append lacks pre-assistant disk acknowledgement; native `/dag` has no public presentation override.
-- **Resolution (2026-09-12T18:35:00Z):** Attempt 2 adds six-source discovery, native settings/package inventory, source diagnostics, changed-module reload, exact authored resume and session trust fencing. Design adds admitted final-display and source result fields. Real OMO reload, copied native journal reopen, native export/display unavailable fallback and 64-node compiler checks passed; final delta gate APPROVE confirms bounded native completion. Optional journal, `/dag`, and mouse repairs remain explicit invented local workarounds; globals unmodified. Genuine native capacity, per-node policy/callback, and stage-chat limits remain in the parity matrix.
-- **Upstream:** No matching issue or PR identified in current investigation. Owning source: [OMO DAG manager](https://github.com/code-yeongyu/oh-my-openagent/blob/e0746bcbcdf6341f697358867b2de436251fa5ad/packages/omo-senpi/src/components/task/dag/manager.ts), [Senpi session manager](https://github.com/code-yeongyu/senpi/blob/6db12827c7e5f4bc6773fd9f7097b7891d4afd78/packages/coding-agent/src/core/session-manager.ts), [Atomic workflow baseline](https://github.com/bastani-inc/atomic/tree/ff55b141109e3f9f5980c1f0c718dea39f6b2fd9/packages/workflows).
-- **Validation:** `mise ci` passed 221 tests with typecheck/build/quality/hooks. Real native journal reopen, registered 16-node two-wave gate/answer, fanout artifacts, and invalid-output rejection passed. Exact SGR trace localized mouse interception to Senpi fullscreen viewport; copied-runtime repair tests pass. [Runtime evidence](upstream-validation.md#native-staged-workflow-runtime-hooks) and [parity matrix](../extensions/workflow-graph/PARITY.md) distinguish verified behavior from literal parity limits.
+- **Resolution:** Historical record. The extension and related staged-workflow implementation were removed from this repository on 2026-09-16.
+- **Upstream source:** [OMO package install CLI](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/packages/omo-senpi/src/cli.ts); [Senpi package settings](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/packages.md).

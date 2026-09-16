@@ -4,7 +4,7 @@ Command intent: inspect project package registry, installed Senpi native compact
 
 Observed:
 - extensions/operator-memory/package.json: absent
-- Root build targets: extensions/better-custom, extensions/compound-engineering, extensions/herdr, extensions/trim, extensions/workflow-graph
+- Historical root build targets: extensions/better-custom, extensions/compound-engineering, extensions/herdr, extensions/trim, extensions/workflow-graph (removed 2026-09-16)
 - .omo/settings.json: {"packages":[".."]}
 - /home/egsox/.omo/agent/settings.json compaction: {}
 - Installed Senpi compaction resolver defaults: reserveTokens=16384; keepRecentTokens=20000
