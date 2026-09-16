@@ -5,6 +5,15 @@ Keep one dated entry per report. State observed behavior, affected runtime, reso
 state, validation, and upstream issue, pull request, or source. If no upstream
 reference exists, state that and label any workaround as invented.
 
+## 2026-09-14T03:45:44Z - Native startup and working tips appeared across OMO projects
+
+- **Reported symptom:** An OMO agent launched from another project displayed `Tip:` guidance. User requested every global OMO tip disabled.
+- **Affected runtime:** OMO `5.0.0-0.beta.62` (Senpi `2026.9.13`); global agent directory `/home/egsox/.omo/agent`.
+- **Resolution:** Added `"tips": false` to `/home/egsox/.omo/agent/settings.json`. Senpi's `getTipsEnabled()` now resolves `false` for a process outside the repository, and both native startup and working-tip resolvers return no line when supplied that value. Existing and future OMO projects inherit this global default unless their `.senpi/settings.json` or `.senpi/settings.jsonc` explicitly sets `"tips": true`.
+- **Upstream:** [Senpi settings source](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/settings-manager.ts) owns the `tips` setting; [startup-tip source](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/modes/interactive/tips/startup-tip.ts) and [working-tip source](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/modes/interactive/tips/working-tip.ts) gate rendering on it. No upstream defect identified.
+- **Validation:** At `2026-09-14T03:45:44Z`, a fresh `SettingsManager.create("/tmp")` read `false` from `/home/egsox/.omo/agent/settings.json`; the repository contains no project `tips` override; and `omo --list-tips` still listed its 117-item catalog while the disabled resolver probes produced `undefined` for startup and working tips.
+- **Revalidation trigger:** Rerun after OMO or Senpi upgrade, agent-directory override, or a project-local `tips` setting appears.
+
 ## 2026-09-13T13:35:12Z - Namespaced model IDs disable native apply_patch
 
 - **Reported symptom:** SHPRD terminal, runtime, and services workers stopped because required `apply_patch` was registered but inactive, and no executable existed on `PATH`. Redispatching all three saved sessions in their existing Herdr worktrees did not restore access.

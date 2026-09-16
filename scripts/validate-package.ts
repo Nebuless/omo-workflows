@@ -34,7 +34,7 @@ if (
   extensions.length !== extensionEntrypoints.length ||
   !extensionEntrypoints.every((entrypoint) => extensions.includes(entrypoint))
 ) {
-errors.push("package must expose every supported extension");
+  errors.push("package must expose every supported extension");
 }
 
 for (const entrypoint of extensionEntrypoints) {
