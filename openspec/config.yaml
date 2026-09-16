@@ -1,4 +1,11 @@
-schema: spec-driven
+schema: compound-intent-driven
+
+rules:
+    proposal: []
+    specs: []
+    design: []
+    adr: []
+    tasks: []
 
 # Project context (optional)
 # This is shown to AI when creating artifacts.

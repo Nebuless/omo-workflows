@@ -47,3 +47,4 @@ No child `AGENTS.md` boundaries exist.
 - `customizations.md` — customization catalog and global OMO instruction setup.
 - `customization-scaffolding.md` — capability map, policy scaffolds, and upstream-backed creation rules.
 - `upstream-validation.md` — OMO/Senpi authority registry and version-sensitive evidence format.
+- `plans/` — requirements-only CE unified plan artifacts; read `plans/AGENTS.md` before editing.
