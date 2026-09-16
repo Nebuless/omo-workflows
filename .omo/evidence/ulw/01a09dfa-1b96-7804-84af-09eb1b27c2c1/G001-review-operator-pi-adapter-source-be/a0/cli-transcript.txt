@@ -1,0 +1,14 @@
+Local read-only replay
+
+Command intent: inspect project package registry, installed Senpi native compaction settings, and git worktree without modifying runtime.
+
+Observed:
+- extensions/operator-memory/package.json: absent
+- Root build targets: extensions/better-custom, extensions/compound-engineering, extensions/herdr, extensions/trim, extensions/workflow-graph
+- .omo/settings.json: {"packages":[".."]}
+- /home/egsox/.omo/agent/settings.json compaction: {}
+- Installed Senpi compaction resolver defaults: reserveTokens=16384; keepRecentTokens=20000
+- Installed Senpi native policy exports hard-limit guard: isAtHardLimit
+- git status --short: clean
+
+Verdict: PASS. No Operator runtime package, package registration, custom compaction replacement, or tracked project change exists. Native Senpi compaction remains active.
