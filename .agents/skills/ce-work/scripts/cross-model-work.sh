@@ -39,6 +39,7 @@ route_target() {
   esac
 }
 
+# shellcheck disable=SC2329 # Invoked indirectly by adapter routing below.
 route_harness() {
   case "$1" in
     codex) printf 'codex' ;;
@@ -781,6 +782,7 @@ raw_byte_count() {
 
 ACTIVE_ROUTE_PID=""
 ACTIVITY_PID=""
+# shellcheck disable=SC2329 # Invoked indirectly by the TERM/INT trap below.
 terminate_route() {
   [ -n "$ACTIVITY_PID" ] && kill "$ACTIVITY_PID" 2>/dev/null || true
   [ -n "$ACTIVE_ROUTE_PID" ] && kill -TERM "$ACTIVE_ROUTE_PID" 2>/dev/null || true
@@ -788,7 +790,7 @@ terminate_route() {
   rm -rf "$SCRATCH"
   exit 143
 }
-trap 'terminate_route' TERM INT
+trap terminate_route TERM INT
 
 set +e
 (cd "$WORKSPACE" && exec "${MIN_ENV[@]}" "${ARGS[@]}" < "$PROMPT_FILE" > "$RAW_STDOUT" 2> "$RAW_STDERR") &

@@ -27,7 +27,7 @@ const OVERLAY_FILES = {
 };
 // A Host header is reflected into the served document only in this shape.
 const HOST_HEADER =
-  /^[A-Za-z0-9.\-]+(:\d{1,5})?$|^\[[0-9A-Fa-f:.]+\](:\d{1,5})?$/;
+  /^[A-Za-z0-9.-]+(:\d{1,5})?$|^\[[0-9A-Fa-f:.]+\](:\d{1,5})?$/;
 
 function usage() {
   return [
@@ -246,10 +246,6 @@ function screenVersion(options) {
     screen: path.basename(screen),
     mtimeMs: fs.statSync(screen).mtimeMs,
   };
-}
-
-function versionKey(version) {
-  return `${version?.screen ?? ""}:${version?.mtimeMs ?? 0}`;
 }
 
 // Annotate mode reloads the explorer's page on any change under screens/,
@@ -519,8 +515,7 @@ function screenForPage(options, page = "/") {
       options.screensDir,
       path.resolve(options.screensDir, name.replace(/^\/+/, "")),
     );
-    if (!filePath || contentType(filePath) !== CONTENT_TYPES[".html"])
-      return null;
+    if (contentType(filePath) !== CONTENT_TYPES[".html"]) return null;
     try {
       if (!fs.statSync(filePath).isFile()) return null;
     } catch {
@@ -538,7 +533,7 @@ function screenForPage(options, page = "/") {
 }
 
 function parseAnnotation(raw, options) {
-  if (!raw || !raw.trim()) return null;
+  if (!raw?.trim()) return null;
   let body;
   try {
     body = JSON.parse(raw);
