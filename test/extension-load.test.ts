@@ -182,9 +182,9 @@ describe("OMO extension boundary", () => {
       expect(typeof execution.composeStagedPrograms).toBe("function");
       expect(typeof execution.applyCompositionMapping).toBe("function");
       expect(rootPackage.dependencies).toEqual({
-        "@code-yeongyu/senpi": "2026.9.10-2",
-        "@earendil-works/pi-ai": "npm:@code-yeongyu/senpi-ai@2026.9.10-2",
-        "@earendil-works/pi-tui": "npm:@code-yeongyu/senpi-tui@2026.9.10-2",
+        "@code-yeongyu/senpi": "2026.9.13",
+        "@earendil-works/pi-ai": "npm:@code-yeongyu/senpi-ai@2026.9.13",
+        "@earendil-works/pi-tui": "npm:@code-yeongyu/senpi-tui@2026.9.13",
         typebox: "1.3.18",
         jiti: "2.7.0",
       });
