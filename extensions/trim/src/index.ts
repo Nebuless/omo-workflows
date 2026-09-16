@@ -3,6 +3,11 @@ import { loadConfig, saveConfig, type TrimConfig } from "./config.ts";
 import { decide, type GovernorOutcome, shouldSchedule } from "./governor.ts";
 import { createTrimSettingsHandler } from "./ui/settings.ts";
 
+interface TrimConfigStore {
+  readonly load: () => TrimConfig;
+  readonly save: (config: TrimConfig) => void;
+}
+
 interface TrimState {
   config: TrimConfig;
   outcome: GovernorOutcome;
@@ -36,9 +41,12 @@ function canRun(
   });
 }
 
-export default function trim(pi: ExtensionAPI): void {
+export function registerTrim(
+  pi: ExtensionAPI,
+  configStore: TrimConfigStore = { load: loadConfig, save: saveConfig },
+): void {
   const state: TrimState = {
-    config: loadConfig(),
+    config: configStore.load(),
     outcome: "DEFERRED",
     sampledTokens: null,
     inFlight: false,
@@ -149,7 +157,7 @@ export default function trim(pi: ExtensionAPI): void {
   const settings = createTrimSettingsHandler({
     getConfig: () => state.config,
     saveConfig: (config) => {
-      saveConfig(config);
+      configStore.save(config);
       state.config = config;
     },
   });
@@ -157,23 +165,29 @@ export default function trim(pi: ExtensionAPI): void {
   pi.registerCommand("trim", {
     description: "Configure safe-boundary native compaction",
     handler: async (args, ctx) => {
-      if (args.trim() !== "shake") {
-        await settings(args, ctx);
+      const command = args.trim();
+      if (command === "") {
+        const previous = state.config;
+        await settings(command, ctx);
+        if (state.config !== previous) schedule(ctx);
         return;
       }
-      if (state.inFlight) {
-        ctx.ui.notify(
-          "Trim request remains active; adaptive state was not reset.",
-          "warning",
-        );
+      if (command === "shake") {
+        if (ctx.isCompacting?.() ?? false) {
+          ctx.ui.notify(
+            "Trim shake unavailable while native compaction is active. Session history unchanged.",
+            "warning",
+          );
+          return;
+        }
+        ctx.compact();
         return;
       }
-      state.pendingIntent = false;
-      state.outcome = "DEFERRED";
-      ctx.ui.notify(
-        "Trim adaptive state reset. Session history unchanged.",
-        "info",
-      );
+      ctx.ui.notify("Trim no longer accepts subcommands. Run /trim.", "error");
     },
   });
+}
+
+export default function trim(pi: ExtensionAPI): void {
+  registerTrim(pi);
 }

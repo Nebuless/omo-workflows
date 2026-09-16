@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import type { ExtensionAPI } from "@code-yeongyu/senpi";
 import type { TrimConfig } from "../src/config.ts";
+import { registerTrim } from "../src/index.ts";
 import {
   createTrimSettingsHandler,
   type TrimSettingsContext,
@@ -68,6 +70,59 @@ function settingsHarness() {
         config = next;
       },
     }),
+  };
+}
+
+type RegisteredCommand = Parameters<ExtensionAPI["registerCommand"]>[1];
+
+function trimCommandFixture(config: TrimConfig) {
+  let command: RegisteredCommand | undefined;
+  let compacting = false;
+  const compactCalls: unknown[] = [];
+  const notices: Notice[] = [];
+  const host = {
+    on: () => undefined,
+    registerCommand: (_name: string, definition: RegisteredCommand) => {
+      command = definition;
+    },
+  };
+  const context = {
+    hasUI: true,
+    mode: "tui",
+    isIdle: () => true,
+    hasPendingMessages: () => false,
+    isCompacting: () => compacting,
+    getContextUsage: () => ({ tokens: 100, contextWindow: 200 }),
+    getMessageRevision: () => 1,
+    compact: (options?: unknown) => compactCalls.push(options),
+    sessionManager: {
+      getSessionId: () => "session-a",
+      getLeafId: () => "leaf-a",
+    },
+    ui: {
+      select: async () => "automatic",
+      input: async () => "100",
+      confirm: async () => true,
+      notify: (message: string, type?: Notice["type"]) =>
+        notices.push({ message, type }),
+    },
+  };
+  registerTrim(host as never, {
+    load: () => config,
+    save: (next: TrimConfig) => {
+      config = next;
+    },
+  });
+  if (command === undefined)
+    throw new Error("Trim command was not registered.");
+  return {
+    command,
+    compactCalls,
+    context,
+    notices,
+    setCompacting(next: boolean) {
+      compacting = next;
+    },
   };
 }
 
@@ -186,6 +241,41 @@ describe("trim command", () => {
     await handler("", settingsContext(ui, "tui"));
 
     expect(saved).toEqual([]);
+  });
+
+  test("Given idle native compaction, when shake runs, then it delegates once to Senpi", async () => {
+    const fixture = trimCommandFixture({
+      strategy: "manual",
+      thresholdTokens: 100,
+    });
+
+    await fixture.command.handler("shake", fixture.context as never);
+
+    expect(fixture.compactCalls).toHaveLength(1);
+  });
+
+  test("Given native compaction is active, when shake runs, then it preserves session history", async () => {
+    const fixture = trimCommandFixture({
+      strategy: "manual",
+      thresholdTokens: 100,
+    });
+    fixture.setCompacting(true);
+
+    await fixture.command.handler("shake", fixture.context as never);
+
+    expect(fixture.compactCalls).toEqual([]);
+    expect(fixture.notices[0]?.type).toBe("warning");
+  });
+
+  test("Given manual policy, when settings save automatic policy, then it evaluates safe boundary", async () => {
+    const fixture = trimCommandFixture({
+      strategy: "manual",
+      thresholdTokens: 100,
+    });
+
+    await fixture.command.handler("", fixture.context as never);
+
+    expect(fixture.compactCalls).toHaveLength(1);
   });
 
   test.each(["status", "config", "compact", "snapshot", "handoff"])(
