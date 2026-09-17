@@ -51,6 +51,25 @@ describe("herdr reporter", () => {
     expect(runs).toEqual([]);
   });
 
+  test("surfaces reporter failures without blocking lifecycle callbacks", () => {
+    const diagnostics: string[] = [];
+    const reporter = createHerdrReporter({
+      env,
+      run: () => {
+        throw new Error("injected reporter failure");
+      },
+      onDiagnostic: (message) => diagnostics.push(message),
+    });
+    reporter.onSessionStart();
+    reporter.onAgentStart();
+    reporter.onSessionShutdown("quit");
+    expect(diagnostics).toEqual([
+      "injected reporter failure",
+      "injected reporter failure",
+      "injected reporter failure",
+    ]);
+  });
+
   test("maps lifecycle events to report/release argv with monotonic seq", () => {
     resetHerdrSeq();
     const runs: string[][] = [];
@@ -239,6 +258,39 @@ describe("herdr reporter", () => {
     run(["last"]);
     await promise;
     expect(order).toEqual(["slow", "fast", "last"]);
+  });
+
+  test("serial runner diagnoses rejection and continues with next report", async () => {
+    const order: string[] = [];
+    const diagnostics: string[] = [];
+    let resolveCompletion!: () => void;
+    const completion = new Promise<void>((resolve) => {
+      resolveCompletion = resolve;
+    });
+    const run = createSerialRunner(
+      async (argv) => {
+        order.push(argv[0]!);
+        if (argv[0] === "bad") throw new Error("nonzero exit");
+        if (order.length === 2) resolveCompletion();
+      },
+      (message) => {
+        diagnostics.push(message);
+      },
+    );
+    run(["bad"]);
+    run(["next"]);
+    await Promise.race([
+      completion,
+      new Promise<never>((_, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error("serial runner completion signal timed out")),
+          1_000,
+        );
+        timer.unref();
+      }),
+    ]);
+    expect(order).toEqual(["bad", "next"]);
+    expect(diagnostics).toEqual(["nonzero exit"]);
   });
 
   test("buildReportCommand omits message when absent", () => {

@@ -5,6 +5,15 @@ Keep one dated entry per report. State observed behavior, affected runtime, reso
 state, validation, and upstream issue, pull request, or source. If no upstream
 reference exists, state that and label any workaround as invented.
 
+## 2026-09-17T18:04:44Z - OMO Herdr typed control lacked safe dispatch proof
+
+- **Reported symptom:** OMO Herdr integration exposed no typed direct agent prompt or supported launch; mutation handling could treat zero exit, unchanged readback, or truncated output as completion, and lifecycle reporter failures were silent.
+- **Affected runtime:** OMO `5.0.0-0.beta.68` (Senpi `2026.9.16-3`); repository Senpi `2026.9.13`; Bun `1.3.14`; Herdr `0.9.1`.
+- **Resolution:** Added pane-identity-only typed prompt and typed supported-kind/profile launch mappings. Herdr 0.9.1 launch capabilities remain unavailable because observed responses do not prove stable agent identity/readiness. Added per-operation state/readback proof, missing-path-only capability disablement, nonblocking reporter diagnostics, and aligned packaged skills.
+- **Upstream:** Herdr `v0.9.1` release documents supported `agent start` kinds and `agent prompt --wait/--until/--timeout`: https://github.com/herdrdev/herdr/releases/tag/v0.9.1. The live `api schema --json` exposes agent status, pane revision, and `state_change_seq`, but no stable agent ID or `interactive_ready` in the observed pane readback. No upstream defect or response contract proving OMO profile dispatch was identified; the typed profile aliases are local policy.
+- **Validation:** Focused tests cover nonzero mutation, unchanged readback, truncated mutation output, truncated readback, extra unrelated command paths, version mismatch, pane binding, unavailable launch zero-runner behavior, and injected reporter failure. Start/profile schemas and fixed profiles remain present as typed unavailable mappings until stable identity/readiness proof exists.
+- **Revalidation trigger:** Herdr command inventory/version change, agent result/readback schema change, or OMO/Senpi lifecycle/tool registration API change.
+
 ## 2026-09-14T03:45:44Z - Native startup and working tips appeared across OMO projects
 
 - **Reported symptom:** An OMO agent launched from another project displayed `Tip:` guidance. User requested every global OMO tip disabled.

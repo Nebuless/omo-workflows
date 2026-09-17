@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { herdrSkillPaths } from "../extensions/herdr/skills.ts";
 import {
   capabilitiesForDiscovery,
+  buildCapabilityArgv,
   HERDR_0_9_1_COMMAND_PATHS,
   HERDR_0_9_1_CAPABILITIES,
   validateHerdrDiscovery,
@@ -102,6 +103,20 @@ describe("Herdr extension tools", () => {
     ]);
   });
 
+  test("packaged skills expose no raw pane or executable route", async () => {
+    for (const path of herdrSkillPaths(".")) {
+      const source = await Bun.file(
+        `extensions/herdr/${path.replace(/^\.\//u, "")}`,
+      ).text();
+      expect(source).not.toContain("pane run");
+      expect(source).not.toContain("pane send-text");
+      expect(source).not.toContain("pane send-keys");
+      expect(source).not.toContain("normal executable");
+      expect(source).not.toContain("run its normal executable");
+      expect(source).not.toContain("raw argv");
+    }
+  });
+
   test("fails closed when installed command inventory or version differs", () => {
     const validation = validateHerdrDiscovery({
       version: "0.9.1",
@@ -119,6 +134,557 @@ describe("Herdr extension tools", () => {
     expect(HERDR_0_9_1_CAPABILITIES.length).toBe(
       HERDR_0_9_1_COMMAND_PATHS.length,
     );
+    expect(
+      capabilitiesForDiscovery({
+        version: "0.9.1",
+        commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+        schema: "{}",
+      }).some(
+        (capability) => capability.id === "herdr.0.9.1.agent.profile-launch",
+      ),
+    ).toBe(true);
+  });
+
+  test("tolerates unrelated discovered paths while preserving mapped capabilities", () => {
+    const discovery: HerdrDiscovery = {
+      version: "0.9.1",
+      commandPaths: [
+        ...HERDR_0_9_1_COMMAND_PATHS,
+        ["unrelated", "future-command"],
+      ],
+      schema: "{}",
+    };
+    expect(validateHerdrDiscovery(discovery)).toMatchObject({
+      available: true,
+      commandPathsMatch: true,
+      unexpectedPaths: ["unrelated future-command"],
+    });
+    expect(
+      capabilitiesForDiscovery(discovery).find(
+        (capability) => capability.id === "herdr.0.9.1.agent.prompt",
+      )?.availability,
+    ).toBe("available");
+  });
+
+  test("builds bounded pane-identity prompt and supported launch argv", () => {
+    const discovery: HerdrDiscovery = {
+      version: "0.9.1",
+      commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+      schema: "{}",
+    };
+    const prompt = capabilitiesForDiscovery(discovery).find(
+      (capability) => capability.id === "herdr.0.9.1.agent.prompt",
+    );
+    const start = capabilitiesForDiscovery(discovery).find(
+      (capability) => capability.id === "herdr.0.9.1.agent.start",
+    );
+    expect(prompt?.availability).toBe("available");
+    expect(
+      buildCapabilityArgv(prompt!, { paneId: "p1", text: "hello" }),
+    ).toEqual([
+      "agent",
+      "prompt",
+      "p1",
+      "hello",
+      "--wait",
+      "--until",
+      "working",
+      "--timeout",
+      "30000",
+    ]);
+    expect(start?.availability).toBe("unavailable");
+  });
+
+  test("does not complete mutation on unchanged readback", async () => {
+    type Tool = {
+      execute: (
+        id: string,
+        params: unknown,
+      ) => Promise<{ details: { status: string } }>;
+    };
+    const tools = new Map<string, Tool>();
+    const discovery: HerdrDiscovery = {
+      version: "0.9.1",
+      commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+      schema: "{}",
+    };
+    const pane = (status: "idle" | "working") =>
+      JSON.stringify({
+        id: "p1",
+        result: {
+          pane: {
+            pane_id: "p1",
+            revision: 1,
+            tab_id: "t1",
+            workspace_id: "w1",
+            agent_status: status,
+            state_change_seq: 1,
+          },
+        },
+      });
+    let call = 0;
+    registerHerdrTools(
+      {
+        registerTool(definition: { name: string; execute?: unknown }) {
+          tools.set(definition.name, definition as unknown as Tool);
+        },
+      },
+      {
+        discovery: async () => discovery,
+        env: { HERDR_ENV: "1", HERDR_PANE_ID: "p1" },
+        runner: async () => {
+          call += 1;
+          if (call === 1)
+            return { exitCode: 0, output: pane("idle"), truncated: false };
+          if (call === 2)
+            return { exitCode: 0, output: "accepted", truncated: false };
+          return { exitCode: 0, output: pane("working"), truncated: false };
+        },
+      },
+    );
+    const result = await tools.get("herdr_operation")!.execute("id", {
+      capabilityId: "herdr.0.9.1.agent.prompt",
+      correlationId: "prompt-unchanged",
+      targetSnapshot: createTargetSnapshot({
+        kind: "pane",
+        id: "p1",
+        revision: 1,
+        workspaceId: "w1",
+        tabId: "t1",
+        paneId: "p1",
+        agentStatus: "idle",
+        stateChangeSeq: 1,
+      }),
+      input: { paneId: "p1", text: "hello" },
+    });
+    expect(result.details.status).toBe("unknown");
+    expect(call).toBe(3);
+  });
+
+  test("rejects prompt pane mismatch before any mutation runner call", async () => {
+    const tools = new Map<
+      string,
+      {
+        execute: (
+          id: string,
+          params: unknown,
+        ) => Promise<{ details: { status: string } }>;
+      }
+    >();
+    let calls = 0;
+    registerHerdrTools(
+      {
+        registerTool(definition: { name: string; execute?: unknown }) {
+          tools.set(definition.name, definition as never);
+        },
+      },
+      {
+        discovery: async () => ({
+          version: "0.9.1",
+          commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+          schema: "{}",
+        }),
+        env: { HERDR_ENV: "1", HERDR_PANE_ID: "p2" },
+        runner: async () => {
+          calls += 1;
+          return { exitCode: 0, output: "", truncated: false };
+        },
+      },
+    );
+    const result = await tools.get("herdr_operation")!.execute("id", {
+      capabilityId: "herdr.0.9.1.agent.prompt",
+      correlationId: "mismatch",
+      targetSnapshot: target(),
+      input: { paneId: "p2", text: "hello" },
+    });
+    expect(result.details.status).toBe("failed");
+    expect(calls).toBe(0);
+  });
+
+  test("rejects target outside current pane authority before runner", async () => {
+    const tools = new Map<
+      string,
+      {
+        execute: (
+          id: string,
+          params: unknown,
+        ) => Promise<{ details: { status: string } }>;
+      }
+    >();
+    let calls = 0;
+    registerHerdrTools(
+      {
+        registerTool(definition: { name: string; execute?: unknown }) {
+          tools.set(definition.name, definition as never);
+        },
+      },
+      {
+        discovery: async () => ({
+          version: "0.9.1",
+          commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+          schema: "{}",
+        }),
+        env: { HERDR_ENV: "1", HERDR_PANE_ID: "p2" },
+        runner: async () => {
+          calls += 1;
+          return { exitCode: 0, output: "{}", truncated: false };
+        },
+      },
+    );
+    const result = await tools.get("herdr_operation")!.execute("id", {
+      capabilityId: "herdr.0.9.1.agent.prompt",
+      correlationId: "authority",
+      targetSnapshot: target(),
+      input: { paneId: "p1", text: "hello" },
+    });
+    expect(result.details.status).toBe("failed");
+    expect(calls).toBe(0);
+  });
+
+  test("requires stateChangeSeq before claiming prompt delivery", async () => {
+    const tools = new Map<
+      string,
+      {
+        execute: (
+          id: string,
+          params: unknown,
+        ) => Promise<{ details: { status: string } }>;
+      }
+    >();
+    let calls = 0;
+    registerHerdrTools(
+      {
+        registerTool(definition: { name: string; execute?: unknown }) {
+          tools.set(definition.name, definition as never);
+        },
+      },
+      {
+        discovery: async () => ({
+          version: "0.9.1",
+          commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+          schema: "{}",
+        }),
+        env: { HERDR_ENV: "1", HERDR_PANE_ID: "p1" },
+        runner: async () => {
+          calls += 1;
+          const status = calls === 1 ? "idle" : "working";
+          return {
+            exitCode: 0,
+            output: JSON.stringify({
+              id: "p1",
+              result: {
+                pane: {
+                  pane_id: "p1",
+                  revision: calls,
+                  tab_id: "t1",
+                  workspace_id: "w1",
+                  agent_status: status,
+                },
+              },
+            }),
+            truncated: false,
+          };
+        },
+      },
+    );
+    const result = await tools.get("herdr_operation")!.execute("id", {
+      capabilityId: "herdr.0.9.1.agent.prompt",
+      correlationId: "no-seq",
+      targetSnapshot: createTargetSnapshot({
+        kind: "pane",
+        id: "p1",
+        revision: 1,
+        workspaceId: "w1",
+        tabId: "t1",
+        paneId: "p1",
+        agentStatus: "idle",
+      }),
+      input: { paneId: "p1", text: "hello" },
+    });
+    expect(result.details.status).toBe("unknown");
+  });
+
+  test("completes prompt only after working state and revision change", async () => {
+    const tools = new Map<
+      string,
+      {
+        execute: (
+          id: string,
+          params: unknown,
+        ) => Promise<{ details: { status: string } }>;
+      }
+    >();
+    let call = 0;
+    registerHerdrTools(
+      {
+        registerTool(definition: { name: string; execute?: unknown }) {
+          tools.set(definition.name, definition as never);
+        },
+      },
+      {
+        discovery: async () => ({
+          version: "0.9.1",
+          commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+          schema: "{}",
+        }),
+        env: { HERDR_ENV: "1", HERDR_PANE_ID: "p1" },
+        runner: async () => {
+          call += 1;
+          if (call === 1)
+            return {
+              exitCode: 0,
+              output: JSON.stringify({
+                id: "p1",
+                result: {
+                  pane: {
+                    pane_id: "p1",
+                    revision: 9,
+                    tab_id: "t1",
+                    workspace_id: "w1",
+                    agent_status: "idle",
+                    state_change_seq: 9,
+                  },
+                },
+              }),
+              truncated: false,
+            };
+          if (call === 2)
+            return { exitCode: 0, output: "accepted", truncated: false };
+          return {
+            exitCode: 0,
+            output: JSON.stringify({
+              id: "p1",
+              result: {
+                pane: {
+                  pane_id: "p1",
+                  revision: 10,
+                  tab_id: "t1",
+                  workspace_id: "w1",
+                  agent_status: "working",
+                  state_change_seq: 10,
+                },
+              },
+            }),
+            truncated: false,
+          };
+        },
+      },
+    );
+    const result = await tools.get("herdr_operation")!.execute("id", {
+      capabilityId: "herdr.0.9.1.agent.prompt",
+      correlationId: "prompt-success",
+      targetSnapshot: createTargetSnapshot({
+        kind: "pane",
+        id: "p1",
+        revision: 9,
+        workspaceId: "w1",
+        tabId: "t1",
+        paneId: "p1",
+        agentStatus: "idle",
+        stateChangeSeq: 9,
+      }),
+      input: { paneId: "p1", text: "hello" },
+    });
+    expect(result.details.status).toBe("completed");
+  });
+
+  test("fails nonzero mutation and truncated mutation or readback", async () => {
+    const discovery: HerdrDiscovery = {
+      version: "0.9.1",
+      commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+      schema: "{}",
+    };
+    const pane = (revision: number, status = "idle") =>
+      JSON.stringify({
+        id: "p1",
+        result: {
+          pane: {
+            pane_id: "p1",
+            revision,
+            tab_id: "t1",
+            workspace_id: "w1",
+            agent_status: status,
+            state_change_seq: revision,
+          },
+        },
+      });
+    for (const [mutation, expectedStatus, expectedCalls] of [
+      [{ exitCode: 1, output: "rejected", truncated: false }, "failed", 2],
+      [{ exitCode: 0, output: "accepted", truncated: true }, "unknown", 2],
+      [
+        {
+          exitCode: 0,
+          output: "accepted",
+          truncated: false,
+          readbackTruncated: true,
+        },
+        "unknown",
+        3,
+      ],
+    ] as const) {
+      const tools = new Map<
+        string,
+        {
+          execute: (
+            id: string,
+            params: unknown,
+          ) => Promise<{ details: { status: string } }>;
+        }
+      >();
+      let call = 0;
+      registerHerdrTools(
+        {
+          registerTool(definition: { name: string; execute?: unknown }) {
+            tools.set(definition.name, definition as never);
+          },
+        },
+        {
+          discovery: async () => discovery,
+          env: { HERDR_ENV: "1", HERDR_PANE_ID: "p1" },
+          runner: async (argv) => {
+            call += 1;
+            if (call === 1)
+              return { exitCode: 0, output: pane(1, "idle"), truncated: false };
+            if (call === 3)
+              return {
+                exitCode: 0,
+                output: pane(8, "working"),
+                truncated: Boolean(
+                  (mutation as unknown as { readbackTruncated?: boolean })
+                    .readbackTruncated,
+                ),
+              };
+            return mutation as {
+              exitCode: number;
+              output: string;
+              truncated: boolean;
+            };
+          },
+        },
+      );
+      const result = await tools.get("herdr_operation")!.execute("id", {
+        capabilityId: "herdr.0.9.1.agent.prompt",
+        correlationId: `case-${call}`,
+        targetSnapshot: target(),
+        input: { paneId: "p1", text: "hello" },
+      });
+      expect(result.details.status).toBe(expectedStatus);
+      expect(call).toBe(expectedCalls);
+    }
+  });
+
+  test("rejects oversized UTF-8 prompt after inspection without mutation", async () => {
+    const tools = new Map<
+      string,
+      {
+        execute: (
+          id: string,
+          params: unknown,
+        ) => Promise<{ details: { status: string } }>;
+      }
+    >();
+    let calls = 0;
+    const pane = JSON.stringify({
+      id: "p1",
+      result: {
+        pane: {
+          pane_id: "p1",
+          revision: 1,
+          tab_id: "t1",
+          workspace_id: "w1",
+          agent_status: "idle",
+          state_change_seq: 1,
+        },
+      },
+    });
+    registerHerdrTools(
+      {
+        registerTool(definition: { name: string; execute?: unknown }) {
+          tools.set(definition.name, definition as never);
+        },
+      },
+      {
+        discovery: async () => ({
+          version: "0.9.1",
+          commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+          schema: "{}",
+        }),
+        env: { HERDR_ENV: "1", HERDR_PANE_ID: "p1" },
+        runner: async () => {
+          calls += 1;
+          return { exitCode: 0, output: pane, truncated: false };
+        },
+      },
+    );
+    const result = await tools.get("herdr_operation")!.execute("id", {
+      capabilityId: "herdr.0.9.1.agent.prompt",
+      correlationId: "oversized",
+      targetSnapshot: createTargetSnapshot({
+        kind: "pane",
+        id: "p1",
+        revision: 1,
+        workspaceId: "w1",
+        tabId: "t1",
+        paneId: "p1",
+        agentStatus: "idle",
+        stateChangeSeq: 1,
+      }),
+      input: { paneId: "p1", text: "é".repeat(10_001) },
+    });
+    expect(result.details.status).toBe("failed");
+    expect(calls).toBe(1);
+  });
+
+  test("keeps start and profile unavailable without stable identity/readiness proof", async () => {
+    const discovery: HerdrDiscovery = {
+      version: "0.9.1",
+      commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+      schema: "{}",
+    };
+    for (const [capabilityId, input] of [
+      [
+        "herdr.0.9.1.agent.start",
+        { name: "worker", kind: "codex", paneId: "p1", timeoutMs: 30_000 },
+      ],
+      [
+        "herdr.0.9.1.agent.profile-launch",
+        { profile: "codex-review", paneId: "p1", timeoutMs: 30_000 },
+      ],
+    ] as const) {
+      const tools = new Map<
+        string,
+        {
+          execute: (
+            id: string,
+            params: unknown,
+          ) => Promise<{ details: { status: string } }>;
+        }
+      >();
+      let call = 0;
+      registerHerdrTools(
+        {
+          registerTool(definition: { name: string; execute?: unknown }) {
+            tools.set(definition.name, definition as never);
+          },
+        },
+        {
+          discovery: async () => discovery,
+          env: { HERDR_ENV: "1", HERDR_PANE_ID: "p1" },
+          runner: async () => {
+            call += 1;
+            return { exitCode: 0, output: "{}", truncated: false };
+          },
+        },
+      );
+      const result = await tools.get("herdr_operation")!.execute("id", {
+        capabilityId,
+        correlationId: "launch",
+        targetSnapshot: target(),
+        input,
+      });
+      expect(result.details.status).toBe("unavailable");
+      expect(call).toBe(0);
+    }
   });
 
   test("rejects stale target and caps agent prompt bytes", () => {
@@ -188,10 +754,7 @@ describe("Herdr extension tools", () => {
         env: { HERDR_ENV: "1", HERDR_PANE_ID: "p1" },
       },
     );
-    for (const capabilityId of [
-      "herdr.0.9.1.agent.prompt",
-      "herdr.0.9.1.worktree.create",
-    ]) {
+    for (const capabilityId of ["herdr.0.9.1.worktree.create"]) {
       const result = await tools.get("herdr_operation")?.execute("id", {
         capabilityId,
         correlationId: capabilityId,

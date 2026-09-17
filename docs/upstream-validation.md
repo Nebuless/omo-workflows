@@ -74,7 +74,7 @@ verification date.
 - Local runtime: OMO `5.0.0-0.beta.68` (engine Senpi `2026.9.16-3`); repository Senpi `2026.9.13`; Bun `1.3.14`; Herdr `0.9.1`; terminal-browser `0.8.1`.
 - OMO evidence: https://github.com/code-yeongyu/oh-my-openagent/tree/main/packages/omo-senpi
 - Senpi evidence: https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/extensions/types.ts
-- Local proof: `herdr --version`, `herdr --help` family discovery, `herdr api schema --json`, focused Herdr tests, `bun run typecheck`, and `bun run build`.
+- Local proof: `herdr --version` returned `herdr 0.9.1`; `herdr agent --help`, `herdr agent prompt --help`, and `herdr agent start --help` passed; `herdr api schema --json` returned protocol `22`, schema version `1`, pane revision, agent status, and `state_change_seq` while observed agent readback exposed no stable agent ID or `interactive_ready`; missing-argument prompt/start invocations rejected nonzero without mutation; read-only `herdr pane get w1J:p1` and `herdr agent get w1J:p1` passed; `omo list --approve` discovered project package `/home/egsox/.herdr/worktrees/omo-workflows/feat-herdr-agent-controls`. `bun test test/herdr.test.ts test/herdr-tools.test.ts test/herdr-runner.test.ts test/extension-load.test.ts` passed (38 tests, 118 assertions), `bun run typecheck`, `bun run build`, and `bun run validate:package` passed. No prompt/start mutation was dispatched; no browser rendering behavior is claimed. Start/profile mappings remain unavailable until stable identity/readiness proof exists.
 - Revalidate: OMO or Senpi upgrade, lifecycle-event or tool-registration API change, Herdr command inventory/version change, or terminal-browser Herdr-tab rendering proof.
 - Status: current.
 

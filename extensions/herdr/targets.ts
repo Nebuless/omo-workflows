@@ -17,6 +17,7 @@ export interface TargetSnapshot {
   readonly agentId?: OpaqueTargetId;
   readonly interactiveReady?: boolean;
   readonly agentStatus?: AgentStatus;
+  readonly stateChangeSeq?: number;
 }
 
 export interface TargetSnapshotInput {
@@ -30,6 +31,7 @@ export interface TargetSnapshotInput {
   readonly agentId?: string;
   readonly interactiveReady?: boolean;
   readonly agentStatus?: AgentStatus;
+  readonly stateChangeSeq?: number;
 }
 
 const TARGET_KINDS: Record<TargetKind, true> = {
@@ -77,6 +79,15 @@ function parseRevision(value: unknown): string {
   );
 }
 
+function parseOptionalSequence(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0)
+    return value;
+  throw new Error(
+    "Target state change sequence must be a non-negative integer.",
+  );
+}
+
 export function parseOpaqueTargetId(
   value: unknown,
   field = "target ID",
@@ -120,6 +131,7 @@ export function createTargetSnapshot(
     agentId: parseOptionalOpaqueTargetId(input.agentId, "agent ID"),
     interactiveReady: input.interactiveReady,
     agentStatus: input.agentStatus,
+    stateChangeSeq: parseOptionalSequence(input.stateChangeSeq),
   };
   assertTargetSnapshotAncestry(snapshot);
   return Object.freeze(snapshot);
@@ -141,6 +153,7 @@ export function parseTargetSnapshot(value: unknown): TargetSnapshot {
     agentId: input.agentId as string | undefined,
     interactiveReady: input.interactiveReady,
     agentStatus: input.agentStatus,
+    stateChangeSeq: input.stateChangeSeq,
   });
 }
 
@@ -193,6 +206,9 @@ export function serializeTargetSnapshot(snapshot: TargetSnapshot): string {
     ...(parsed.agentStatus === undefined
       ? {}
       : { agentStatus: parsed.agentStatus }),
+    ...(parsed.stateChangeSeq === undefined
+      ? {}
+      : { stateChangeSeq: parsed.stateChangeSeq }),
   });
 }
 

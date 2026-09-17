@@ -6,6 +6,7 @@ import {
   capabilitiesForDiscovery,
   discoverHerdrCapabilities,
   getCapability,
+  HERDR_EXTERNAL_AGENT_PROFILES,
   type CapabilityDefinition,
   type HerdrDiscovery,
 } from "./capabilities.ts";
@@ -44,6 +45,7 @@ export interface R12Result {
   readonly stage: string;
   readonly exitCode: number | null;
   readonly output: string;
+  readonly truncated: boolean;
   readonly targetSnapshot?: TargetSnapshot;
   readonly readback?: unknown;
   readonly status: R12Status;
@@ -100,6 +102,7 @@ function envelope(
   return {
     exitCode: null,
     output: "",
+    truncated: false,
     status: "unknown",
     retrySafety: "unknown",
     nextSafeAction: "Inspect returned state before any retry.",
@@ -228,6 +231,16 @@ export function decodeHerdrTargetReadback(
   if (kind === "pane") {
     const paneId = text("pane_id");
     const tabId = text("tab_id");
+    const status = value.agent_status;
+    const stateChangeSeq = value.state_change_seq;
+    const agentStatus =
+      status === "idle" ||
+      status === "working" ||
+      status === "blocked" ||
+      status === "done" ||
+      status === "unknown"
+        ? status
+        : undefined;
     return parseTargetSnapshot({
       kind,
       id: paneId,
@@ -235,6 +248,11 @@ export function decodeHerdrTargetReadback(
       workspaceId,
       tabId,
       paneId,
+      ...(agentStatus === undefined ? {} : { agentStatus }),
+      ...(stateChangeSeq === undefined ? {} : { stateChangeSeq }),
+      ...(typeof value.interactive_ready === "boolean"
+        ? { interactiveReady: value.interactive_ready }
+        : {}),
     });
   }
   throw new Error(`Herdr ${kind} readback decoder is unavailable.`);
@@ -263,6 +281,115 @@ function filtered(
         (value) => value.domain === intent || value.id.includes(intent),
       )
     : values;
+}
+
+function inputPaneId(input: unknown): string | undefined {
+  return input &&
+    typeof input === "object" &&
+    !Array.isArray(input) &&
+    typeof (input as Record<string, unknown>).paneId === "string"
+    ? (input as Record<string, string>).paneId
+    : undefined;
+}
+
+function proveAgentStart(
+  output: string,
+  pane: TargetSnapshot,
+  input: unknown,
+): {
+  readonly name: string;
+  readonly kind: string;
+  readonly paneId: string;
+  readonly interactiveReady: boolean;
+} {
+  if (pane.kind !== "pane")
+    throw new Error("Agent start readback does not identify a pane.");
+  let value: unknown;
+  try {
+    value = JSON.parse(output);
+  } catch {
+    throw new Error(
+      "Agent start result is not valid JSON; agent identity is unknown.",
+    );
+  }
+  const result =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>).result
+      : undefined;
+  const agent =
+    result && typeof result === "object"
+      ? (result as Record<string, unknown>).agent
+      : undefined;
+  const profile =
+    input &&
+    typeof input === "object" &&
+    (input as Record<string, unknown>).profile
+      ? HERDR_EXTERNAL_AGENT_PROFILES[
+          (input as { profile: keyof typeof HERDR_EXTERNAL_AGENT_PROFILES })
+            .profile
+        ]
+      : undefined;
+  const name =
+    profile?.name ??
+    (input && typeof input === "object"
+      ? (input as Record<string, unknown>).name
+      : undefined);
+  const kind =
+    profile?.kind ??
+    (input && typeof input === "object"
+      ? (input as Record<string, unknown>).kind
+      : undefined);
+  if (
+    !agent ||
+    typeof agent !== "object" ||
+    (agent as Record<string, unknown>).name !== name ||
+    (agent as Record<string, unknown>).agent !== kind ||
+    (agent as Record<string, unknown>).pane_id !== pane.paneId ||
+    (agent as Record<string, unknown>).interactive_ready !== true
+  ) {
+    throw new Error(
+      "Agent start result does not prove expected agent name and kind.",
+    );
+  }
+  return {
+    name: String(name),
+    kind: String(kind),
+    paneId: String(pane.paneId),
+    interactiveReady: true,
+  };
+}
+
+function proveAgentReadback(
+  output: string,
+  expected: { name: string; kind: string; paneId: string },
+): void {
+  let value: unknown;
+  try {
+    value = JSON.parse(output);
+  } catch {
+    throw new Error("Agent readback is not valid JSON.");
+  }
+  const wrapper =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : undefined;
+  const result = wrapper?.result;
+  const agent =
+    result && typeof result === "object"
+      ? (result as Record<string, unknown>).agent
+      : undefined;
+  if (
+    !agent ||
+    typeof agent !== "object" ||
+    (agent as Record<string, unknown>).name !== expected.name ||
+    (agent as Record<string, unknown>).agent !== expected.kind ||
+    (agent as Record<string, unknown>).pane_id !== expected.paneId ||
+    (agent as Record<string, unknown>).interactive_ready !== true
+  ) {
+    throw new Error(
+      "Agent readback does not prove expected identity and readiness.",
+    );
+  }
 }
 
 export function registerHerdrTools(
@@ -305,7 +432,15 @@ export function registerHerdrTools(
           stage: "query",
           exitCode: result.exitCode,
           output: result.output,
-          status: result.exitCode === 0 ? "completed" : "failed",
+          truncated: result.truncated,
+          status: result.truncated
+            ? "unknown"
+            : result.exitCode === 0
+              ? "completed"
+              : "failed",
+          nextSafeAction: result.truncated
+            ? "Repeat read-only inspection; output was truncated."
+            : "Inspect returned read-only state.",
           retrySafety: "safe",
         }),
       );
@@ -394,9 +529,30 @@ export function registerHerdrTools(
               "Choose available routine or high-impact capability.",
           }),
         );
+      let operationTruncated = false;
+      let mutationResult: Awaited<ReturnType<HerdrRunner>> | undefined;
+      let live: TargetSnapshot | undefined;
+      let readback: TargetSnapshot | undefined;
+      let uncertainOutcome:
+        | "mutation-truncated"
+        | "readback-truncated"
+        | "proof-unavailable"
+        | undefined;
       try {
         requireHerdrEnvironment(env);
         const expected = parseTargetSnapshot(params.targetSnapshot);
+        if (expected.paneId !== env.HERDR_PANE_ID)
+          throw new Error(
+            "Target pane must match current Herdr pane authority.",
+          );
+        const requestedPaneId = inputPaneId(params.input);
+        if (
+          requestedPaneId !== undefined &&
+          requestedPaneId !== expected.paneId
+        )
+          throw new Error(
+            "Typed operation paneId must match targetSnapshot paneId.",
+          );
         const targetArgv = targetGetArgv(expected);
         const inspectedResult = await run(
           [env.HERDR_BIN_PATH || "herdr", ...targetArgv],
@@ -408,7 +564,17 @@ export function registerHerdrTools(
           inspectedResult.output,
           expected.kind,
         );
-        const live = assertTargetSnapshotFresh(expected, inspected);
+        live = assertTargetSnapshotFresh(expected, inspected);
+        if (found.id === "herdr.0.9.1.agent.prompt") {
+          if (
+            live.kind !== "pane" ||
+            (live.agentStatus !== "idle" && live.agentStatus !== "done")
+          ) {
+            throw new Error(
+              "Agent prompt requires a fresh pane with detected idle or done agent state.",
+            );
+          }
+        }
         if (found.safety === "high-impact") {
           if (!params.approvalNonce)
             return textResult(
@@ -437,17 +603,71 @@ export function registerHerdrTools(
           ],
           signal,
         );
+        mutationResult = result;
+        operationTruncated = result.truncated;
+        if (result.truncated) {
+          uncertainOutcome = "mutation-truncated";
+          throw new Error(
+            "Herdr mutation output was truncated; completion is unknown.",
+          );
+        }
+        if (result.exitCode !== 0)
+          return textResult(
+            envelope({
+              capabilityId: found.id,
+              correlationId: params.correlationId,
+              stage: "operation",
+              exitCode: result.exitCode,
+              output: result.output,
+              truncated: false,
+              targetSnapshot: live,
+              status: "failed",
+              retrySafety: "unsafe",
+              nextSafeAction:
+                "Inspect target state before retrying; mutation failed.",
+            }),
+          );
         const readbackResult = await run(
           [env.HERDR_BIN_PATH || "herdr", ...targetGetArgv(live)],
           signal,
         );
         if (readbackResult.exitCode !== 0)
           throw new Error("Post-mutation target readback failed.");
-        const readback = decodeHerdrTargetReadback(
-          readbackResult.output,
-          live.kind,
-        );
+        if (readbackResult.truncated) {
+          uncertainOutcome = "readback-truncated";
+          throw new Error("Post-mutation target readback was truncated.");
+        }
+        readback = decodeHerdrTargetReadback(readbackResult.output, live.kind);
         assertTargetSnapshotIdentity(live, readback);
+        if (
+          found.id === "herdr.0.9.1.agent.start" ||
+          found.id === "herdr.0.9.1.agent.profile-launch"
+        ) {
+          const started = proveAgentStart(
+            result.output,
+            readback,
+            params.input,
+          );
+          const agentResult = await run(
+            [env.HERDR_BIN_PATH || "herdr", "agent", "get", started.name],
+            signal,
+          );
+          if (agentResult.exitCode !== 0 || agentResult.truncated)
+            throw new Error("Agent get readback is unavailable after launch.");
+          proveAgentReadback(agentResult.output, started);
+        }
+        if (
+          found.id === "herdr.0.9.1.agent.prompt" &&
+          (readback.agentStatus !== "working" ||
+            live.stateChangeSeq === undefined ||
+            readback.stateChangeSeq === undefined ||
+            readback.stateChangeSeq <= live.stateChangeSeq)
+        ) {
+          uncertainOutcome = "proof-unavailable";
+          throw new Error(
+            "Agent prompt readback does not prove increasing working state sequence.",
+          );
+        }
         return textResult(
           envelope({
             capabilityId: found.id,
@@ -455,6 +675,7 @@ export function registerHerdrTools(
             stage: "operation",
             exitCode: result.exitCode,
             output: result.output,
+            truncated: operationTruncated,
             targetSnapshot: live,
             readback,
             status: result.exitCode === 0 ? "completed" : "failed",
@@ -462,17 +683,26 @@ export function registerHerdrTools(
           }),
         );
       } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Inspect target and retry safely.";
+        const unknown = uncertainOutcome !== undefined;
         return textResult(
           envelope({
             capabilityId: found.id,
             correlationId: params.correlationId,
             stage: "operation",
-            status: "failed",
+            exitCode: mutationResult?.exitCode ?? null,
+            output: mutationResult?.output ?? "",
+            truncated: mutationResult?.truncated ?? false,
+            targetSnapshot: live,
+            readback,
+            status: unknown ? "unknown" : "failed",
             retrySafety: "unsafe",
-            nextSafeAction:
-              error instanceof Error
-                ? error.message
-                : "Inspect target and retry safely.",
+            nextSafeAction: unknown
+              ? "Inspect target state before retrying; mutation outcome is unknown."
+              : message,
           }),
         );
       }

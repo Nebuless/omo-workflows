@@ -78,8 +78,53 @@ const agentInput = Type.Object(
 );
 export const agentPromptInputSchema = Type.Object(
   {
-    agentId: Type.String({ minLength: 1, maxLength: 256 }),
+    paneId: Type.String({ minLength: 1, maxLength: 256 }),
     text: Type.String({ minLength: 1, maxLength: 20_000 }),
+  },
+  { additionalProperties: false },
+);
+export const agentStartInputSchema = Type.Object(
+  {
+    name: Type.String({ minLength: 1, maxLength: 32 }),
+    kind: Type.Union([
+      Type.Literal("pi"),
+      Type.Literal("claude"),
+      Type.Literal("codex"),
+      Type.Literal("gemini"),
+      Type.Literal("cursor"),
+      Type.Literal("devin"),
+      Type.Literal("agy"),
+      Type.Literal("cline"),
+      Type.Literal("omp"),
+      Type.Literal("mastracode"),
+      Type.Literal("opencode"),
+      Type.Literal("copilot"),
+      Type.Literal("kimi"),
+      Type.Literal("kiro"),
+      Type.Literal("droid"),
+      Type.Literal("amp"),
+      Type.Literal("grok"),
+      Type.Literal("hermes"),
+      Type.Literal("kilo"),
+      Type.Literal("qodercli"),
+      Type.Literal("qwen"),
+      Type.Literal("letta"),
+      Type.Literal("maki"),
+      Type.Literal("muse"),
+    ]),
+    paneId: Type.String({ minLength: 1, maxLength: 256 }),
+    timeoutMs: Type.Integer({ minimum: 1, maximum: 300_000 }),
+  },
+  { additionalProperties: false },
+);
+export const agentProfileInputSchema = Type.Object(
+  {
+    profile: Type.Union([
+      Type.Literal("omo-review"),
+      Type.Literal("codex-review"),
+    ]),
+    paneId: Type.String({ minLength: 1, maxLength: 256 }),
+    timeoutMs: Type.Integer({ minimum: 1, maximum: 300_000 }),
   },
   { additionalProperties: false },
 );
@@ -95,6 +140,8 @@ export const worktreeCreateInputSchema = Type.Object(
 );
 
 export type AgentPromptInput = Static<typeof agentPromptInputSchema>;
+export type AgentStartInput = Static<typeof agentStartInputSchema>;
+export type AgentProfileInput = Static<typeof agentProfileInputSchema>;
 export type WorktreeCreateInput = Static<typeof worktreeCreateInputSchema>;
 
 function pathKey(path: readonly string[]): string {
@@ -269,10 +316,85 @@ function requireOpaqueId(input: unknown, name: string): string {
 }
 
 function requirePromptInput(input: unknown): AgentPromptInput {
-  const value = requireExactObject(input, ["agentId", "text"]);
+  const value = requireExactObject(input, ["paneId", "text"]);
   return {
-    agentId: parseOpaqueTargetId(value.agentId, "agentId"),
+    paneId: parseOpaqueTargetId(value.paneId, "paneId"),
     text: assertAgentPrompt(value.text),
+  };
+}
+
+const SUPPORTED_AGENT_KINDS = new Set([
+  "pi",
+  "claude",
+  "codex",
+  "gemini",
+  "cursor",
+  "devin",
+  "agy",
+  "cline",
+  "omp",
+  "mastracode",
+  "opencode",
+  "copilot",
+  "kimi",
+  "kiro",
+  "droid",
+  "amp",
+  "grok",
+  "hermes",
+  "kilo",
+  "qodercli",
+  "qwen",
+  "letta",
+  "maki",
+  "muse",
+]);
+
+export const HERDR_EXTERNAL_AGENT_PROFILES = {
+  "omo-review": { kind: "omp", name: "omo-review" },
+  "codex-review": { kind: "codex", name: "codex-review" },
+} as const;
+
+function requireAgentStartInput(input: unknown): AgentStartInput {
+  const value = requireExactObject(input, [
+    "name",
+    "kind",
+    "paneId",
+    "timeoutMs",
+  ]);
+  if (
+    typeof value.name !== "string" ||
+    !/^[a-z][a-z0-9_-]{0,31}$/u.test(value.name) ||
+    typeof value.kind !== "string" ||
+    !SUPPORTED_AGENT_KINDS.has(value.kind) ||
+    typeof value.timeoutMs !== "number" ||
+    !Number.isInteger(value.timeoutMs) ||
+    value.timeoutMs < 1 ||
+    value.timeoutMs > 300_000
+  )
+    throw new Error("Agent start input is not a supported typed launch.");
+  return {
+    name: value.name,
+    kind: value.kind as AgentStartInput["kind"],
+    paneId: parseOpaqueTargetId(value.paneId, "paneId"),
+    timeoutMs: value.timeoutMs,
+  };
+}
+
+function requireAgentProfileInput(input: unknown): AgentProfileInput {
+  const value = requireExactObject(input, ["profile", "paneId", "timeoutMs"]);
+  if (
+    (value.profile !== "omo-review" && value.profile !== "codex-review") ||
+    typeof value.timeoutMs !== "number" ||
+    !Number.isInteger(value.timeoutMs) ||
+    value.timeoutMs < 1 ||
+    value.timeoutMs > 300_000
+  )
+    throw new Error("Agent profile is not registered or timeout is invalid.");
+  return {
+    profile: value.profile,
+    paneId: parseOpaqueTargetId(value.paneId, "paneId"),
+    timeoutMs: value.timeoutMs,
   };
 }
 
@@ -484,11 +606,79 @@ const overrides = new Map<string, CapabilityDefinition>([
   ],
   [
     "agent prompt",
-    unavailableWithReason(
-      ["agent", "prompt"],
-      "Herdr 0.9.1 agent readback does not prove opaque agent identity from its wrapper fields.",
-      "Use read-only agent inspection until typed prompt identity is proven.",
-    ),
+    {
+      id: capabilityId(["agent", "prompt"]),
+      path: ["agent", "prompt"],
+      domain: "agent",
+      safety: "routine",
+      availability: "available",
+      inputSchema: agentPromptInputSchema,
+      requiredTargetContext: ["pane"],
+      expectedReadback: ["pane"],
+      buildArgv: (input) => [
+        "agent",
+        "prompt",
+        String(input.paneId),
+        String(input.text),
+        "--wait",
+        "--until",
+        "working",
+        "--timeout",
+        "30000",
+      ],
+    } as CapabilityDefinition,
+  ],
+  [
+    "agent start",
+    {
+      id: capabilityId(["agent", "start"]),
+      path: ["agent", "start"],
+      domain: "agent",
+      safety: "routine",
+      availability: "unavailable",
+      inputSchema: agentStartInputSchema,
+      requiredTargetContext: ["pane"],
+      expectedReadback: ["pane", "agent"],
+      buildArgv: (input) => [
+        "agent",
+        "start",
+        String(input.name),
+        "--kind",
+        String(input.kind),
+        "--pane",
+        String(input.paneId),
+        "--timeout",
+        String(input.timeoutMs),
+      ],
+    } as CapabilityDefinition,
+  ],
+  [
+    "agent profile-launch",
+    {
+      id: capabilityId(["agent", "profile-launch"]),
+      path: ["agent", "profile-launch"],
+      domain: "agent",
+      safety: "routine",
+      availability: "unavailable",
+      inputSchema: agentProfileInputSchema,
+      requiredTargetContext: ["pane"],
+      expectedReadback: ["pane", "agent"],
+      buildArgv: (input) => {
+        const typed = input as AgentProfileInput;
+        const profile = HERDR_EXTERNAL_AGENT_PROFILES[typed.profile];
+        return [
+          "agent",
+          "start",
+          profile.name,
+          "--kind",
+          profile.kind,
+          "--pane",
+          String(typed.paneId),
+          "--timeout",
+          String(typed.timeoutMs),
+        ];
+      },
+    } as CapabilityDefinition,
   ],
 ]);
 
@@ -538,8 +728,7 @@ export function validateHerdrDiscovery(
     .filter((path) => !expected.has(path))
     .sort();
   const versionMatches = discovery.version === HERDR_CAPABILITY_VERSION;
-  const commandPathsMatch =
-    missingPaths.length === 0 && unexpectedPaths.length === 0;
+  const commandPathsMatch = missingPaths.length === 0;
   return {
     versionMatches,
     commandPathsMatch,
@@ -553,18 +742,33 @@ export function capabilitiesForDiscovery(
   discovery: HerdrDiscovery,
 ): readonly CapabilityDefinition[] {
   const validation = validateHerdrDiscovery(discovery);
-  if (validation.available) return HERDR_0_9_1_CAPABILITIES;
-  const reason = !validation.versionMatches
-    ? `Installed Herdr version ${discovery.version ?? "unknown"} does not match ${HERDR_CAPABILITY_VERSION}.`
-    : `Herdr command-path discovery differs: missing ${validation.missingPaths.join(", ") || "none"}; unexpected ${validation.unexpectedPaths.join(", ") || "none"}.`;
-  return HERDR_0_9_1_CAPABILITIES.map((capability) => ({
-    ...capability,
-    availability: "unavailable" as const,
-    buildArgv: undefined,
-    unavailableReason: reason,
-    safeAlternative:
-      "Inspect installed Herdr help and update typed capability metadata.",
-  }));
+  if (!validation.versionMatches) {
+    const reason = `Installed Herdr version ${discovery.version ?? "unknown"} does not match ${HERDR_CAPABILITY_VERSION}.`;
+    return HERDR_0_9_1_CAPABILITIES.map((capability) => ({
+      ...capability,
+      availability: "unavailable" as const,
+      buildArgv: undefined,
+      unavailableReason: reason,
+      safeAlternative:
+        "Inspect installed Herdr help and update typed capability metadata.",
+    }));
+  }
+  const actual = new Set(
+    normalizeCommandPaths(discovery.commandPaths).map(pathKey),
+  );
+  const mapped = HERDR_0_9_1_CAPABILITIES.map((capability) =>
+    actual.has(pathKey(capability.path))
+      ? capability
+      : {
+          ...capability,
+          availability: "unavailable" as const,
+          buildArgv: undefined,
+          unavailableReason:
+            "Mapped Herdr command path is missing from discovery.",
+        },
+  );
+  const profile = overrides.get("agent profile-launch");
+  return profile && actual.has("agent start") ? [...mapped, profile] : mapped;
 }
 
 export function getCapability(
@@ -586,6 +790,12 @@ export function buildCapabilityArgv(
   }
   if (capability.inputSchema === agentPromptInputSchema) {
     return capability.buildArgv(requirePromptInput(input));
+  }
+  if (capability.inputSchema === agentStartInputSchema) {
+    return capability.buildArgv(requireAgentStartInput(input));
+  }
+  if (capability.inputSchema === agentProfileInputSchema) {
+    return capability.buildArgv(requireAgentProfileInput(input));
   }
   if (capability.inputSchema === worktreeCreateInputSchema) {
     return capability.buildArgv(requireWorktreeCreateInput(input));
