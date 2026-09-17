@@ -26,6 +26,7 @@ const extensionEntrypoints = [
   "./extensions/better-custom/src/index.ts",
   "./extensions/compound-engineering/src/index.ts",
   "./extensions/herdr/index.ts",
+  "./extensions/model-routing-advisor/index.ts",
   "./extensions/trim/src/index.ts",
 ] as const;
 if (
@@ -48,6 +49,11 @@ for (const [relativePath, packageName, entrypoint] of [
     "./src/index.ts",
   ],
   ["extensions/herdr/package.json", "@omo-workflows/herdr", "./index.ts"],
+  [
+    "extensions/model-routing-advisor/package.json",
+    "@omo-workflows/model-routing-advisor",
+    "./index.ts",
+  ],
 ] as const) {
   const standalonePath = resolve(root, relativePath);
   if (!existsSync(standalonePath)) {

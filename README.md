@@ -6,7 +6,7 @@ repository or one extension package.
 - Native OMO: [`omo-ai`](https://www.npmjs.com/package/omo-ai) beta
 - Runtime pin: Senpi `2026.9.13`
 - Included packages: [`compound-engineering`](extensions/compound-engineering/README.md), [`better-custom`](extensions/better-custom/AGENTS.md),
-  [`herdr`](extensions/herdr/AGENTS.md), and [`trim`](extensions/trim/AGENTS.md)
+  [`herdr`](extensions/herdr/AGENTS.md), [`model-routing-advisor`](extensions/model-routing-advisor/README.md), and [`trim`](extensions/trim/AGENTS.md)
 
 ## Install with an LLM handoff
 
@@ -80,6 +80,7 @@ omo install .
 omo install -l ./extensions/compound-engineering
 omo install -l ./extensions/better-custom
 omo install -l ./extensions/herdr
+omo install -l ./extensions/model-routing-advisor
 omo install -l ./extensions/trim
 ```
 
@@ -106,6 +107,7 @@ interactive OMO. See [extension authoring and verification](docs/authoring-exten
 - [`extensions/compound-engineering`](extensions/compound-engineering/README.md): Every's 35 Compound Engineering skills through native Senpi discovery. Use `/skill:<name>` for deterministic invocation.
 - [`extensions/better-custom`](extensions/better-custom/AGENTS.md): custom provider CRUD and model browser commands.
 - [`extensions/herdr`](extensions/herdr/AGENTS.md): Herdr lifecycle reporting, skills, and argv-only resource tools. No-op outside Herdr.
+- [`extensions/model-routing-advisor`](extensions/model-routing-advisor/README.md): explicit read-only route availability reports before native work. No routing or task control.
 - [`extensions/trim`](extensions/trim/AGENTS.md): native compaction governor.
 
 ## Repository operations

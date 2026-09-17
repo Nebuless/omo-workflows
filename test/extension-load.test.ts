@@ -72,6 +72,17 @@ describe("OMO extension boundary", () => {
     expect(tools.has("herdr_inspect")).toBe(true);
     expect(tools.has("herdr_control")).toBe(true);
 
+    const advisorTools = new Map<string, unknown>();
+    const advisorExtension = await import(
+      "../extensions/model-routing-advisor/index.ts"
+    );
+    advisorExtension.default({
+      registerTool(definition: { name: string }) {
+        advisorTools.set(definition.name, definition);
+      },
+    } as never);
+    expect([...advisorTools.keys()]).toEqual(["model_route_advice"]);
+
     expect(rootPackage.dependencies).toEqual({
       "@code-yeongyu/senpi": "2026.9.13",
       "@earendil-works/pi-ai": "npm:@code-yeongyu/senpi-ai@2026.9.13",
