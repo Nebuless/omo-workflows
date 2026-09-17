@@ -4,11 +4,14 @@
 
 Report OMO lifecycle state to a containing Herdr pane.
 
-## Ownership
-
 - `package.json` owns standalone local installation through `omo install -l ./extensions/herdr`.
 - `index.ts` owns OMO-to-Herdr lifecycle reporting, skill discovery, and extension registration.
-- `tools.ts` owns LLM-safe Herdr CLI execution.
+- `tools.ts` owns `herdr_inspect`, typed capability/query/operation/approval/preview tools and private Herdr process launch; no public `herdr_control` or raw argv surface.
+- `capabilities.ts` owns Herdr 0.9.1 discovery, typed capability map, and fail-closed mismatch handling.
+- `runner.ts` owns pure bounded-output handling with a 20,000-byte combined cap; it exposes no executable runner.
+- `targets.ts` owns opaque target snapshots, inspect-before-mutate, ancestry, freshness, and prompt readiness.
+- `approval.ts` owns in-memory five-minute one-use approvals and non-authoritative limitation.
+- `preview.ts` owns loopback-only task-owned Preview/Logs policy; unavailable until Herdr-tab rendering is proven.
 - `skills/` owns capability-specific Herdr operating guidance.
 
 ## Local Contracts
@@ -20,8 +23,8 @@ Report OMO lifecycle state to a containing Herdr pane.
 - Use strictly increasing process-local report sequences.
 - Release lifecycle authority only when OMO quits, never during reload or session replacement.
 - Reporting must never block or fail OMO.
-- `herdr_inspect` may run read-only argv outside Herdr; `herdr_control` requires a Herdr pane and explicit user-authorized mutation.
-- Never route shell text through Herdr tools; invoke argv only.
+- All mutations require discovered typed capability availability, opaque target inspection, freshness/ancestry validation, and readback.
+- Never route shell text or raw argv through Herdr tools.
 
 ## Work Guidance
 

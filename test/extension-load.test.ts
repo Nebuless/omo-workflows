@@ -69,8 +69,14 @@ describe("OMO extension boundary", () => {
 
     expect(events.has("session_start")).toBe(true);
     expect(events.has("resources_discover")).toBe(true);
-    expect(tools.has("herdr_inspect")).toBe(true);
-    expect(tools.has("herdr_control")).toBe(true);
+    expect([...tools.keys()]).toEqual([
+      "herdr_inspect",
+      "herdr_capabilities",
+      "herdr_query",
+      "herdr_operation",
+      "herdr_approval",
+      "herdr_preview",
+    ]);
 
     const advisorTools = new Map<string, unknown>();
     const advisorExtension = await import(

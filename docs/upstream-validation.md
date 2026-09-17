@@ -70,12 +70,12 @@ verification date.
 
 ### Herdr
 
-- Verified: `2026-09-16`
-- Local runtime: repository Senpi `2026.9.13`; global OMO `5.0.0-0.beta.68` with Senpi `2026.9.16-3`.
+- Verified: `2026-09-17`
+- Local runtime: OMO `5.0.0-0.beta.68` (engine Senpi `2026.9.16-3`); repository Senpi `2026.9.13`; Bun `1.3.14`; Herdr `0.9.1`; terminal-browser `0.8.1`.
 - OMO evidence: https://github.com/code-yeongyu/oh-my-openagent/tree/main/packages/omo-senpi
 - Senpi evidence: https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/extensions/types.ts
-- Local proof: `bun test test/herdr.test.ts test/herdr-tools.test.ts test/extension-load.test.ts`, `bun run typecheck`, and live global OMO load of all four extensions pass.
-- Revalidate: OMO or Senpi upgrade, lifecycle-event API change, or tool registration API change.
+- Local proof: `herdr --version`, `herdr --help` family discovery, `herdr api schema --json`, focused Herdr tests, `bun run typecheck`, and `bun run build`.
+- Revalidate: OMO or Senpi upgrade, lifecycle-event or tool-registration API change, Herdr command inventory/version change, or terminal-browser Herdr-tab rendering proof.
 - Status: current.
 
 ### Model Routing Advisor

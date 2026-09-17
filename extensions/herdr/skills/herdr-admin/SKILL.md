@@ -10,22 +10,15 @@ Use for Herdr server, config, installation/update, named sessions, remote attach
 
 ## Authority boundaries
 
-- Require `HERDR_ENV=1` before any real operation. Never invoke bare `herdr` as a probe.
-- Inspect installed version and exact command help/schema before mutation: `--version`, `<group> --help`, `api schema --json`.
-- Get explicit user intent before installation, linking, enabling/disabling plugins, integration install/uninstall, server stop/restart, update, remote attach/handoff, exposure/auth changes, session deletion, or restoration.
-- Treat socket access, plugins, hooks, logs, and external integrations as privileged.
-
-## Administration flow
-
-1. Inspect current state: `status server`, `api snapshot`, `session list`, `integration status`, `plugin list`, or relevant logs/help.
-2. Identify exact resource by returned ID/name. Preserve user-owned panes, sessions, plugin dirs, config, and credentials.
-3. Perform one user-requested operation with `herdr_control`.
-4. Inspect result and state after mutation. Record paths, version, and recovery action.
+- `herdr_inspect` remains read-only. Mutations use only typed capability definitions; public raw argv control does not exist.
+- Require Herdr environment for operations. Inspect installed version, complete command help, and `api schema --json` before mutation.
+- Get explicit user intent before high-impact changes. Agent-mediated approval is in-memory, one-use, five-minute, and cannot prove approval origin.
+- Treat socket access, plugins, hooks, logs, and external integrations as privileged and untrusted output.
 
 ## Capability map
 
-- **Server/config:** `server stop`, `server reload-config`, `config`, `channel`, `status`, `api schema/snapshot`.
-- **Sessions/remotes:** `session list/attach/stop/delete`, `machine`, root `--remote`; live `--handoff` is server/client transfer, not task handoff.
-- **Integrations:** `integration status/install/uninstall`; only documented integrations supported by installed version.
-- **Plugins:** `plugin list/install/link/enable/disable/action/log/pane`; plugin code is trusted-code boundary.
-- **Recovery:** inspect logs and snapshot before any restart, restore, or cleanup. Use bundled schema/help as version authority.
+- **Server/config:** typed discovery covers `server`, `config`, `channel`, `status`, and `api schema/snapshot`; mismatches unavailable.
+- **Sessions/remotes:** `session`, `machine`, and root remote paths remain high-impact or unavailable without typed mapping.
+- **Integrations:** `integration install/uninstall`; only documented integrations supported by installed capability map.
+- **Plugins:** plugin paths remain unavailable until dedicated typed input mapping exists.
+- **Recovery:** inspect logs and snapshot before restart, restore, or cleanup. Use `herdr_operation` only after target readback and approval.
