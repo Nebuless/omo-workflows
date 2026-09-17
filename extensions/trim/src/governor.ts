@@ -55,3 +55,10 @@ export function shouldSchedule(
     input.usageTokens >= config.thresholdTokens
   );
 }
+
+export function shouldCancelNativeThreshold(
+  config: TrimConfig,
+  reason: string,
+): boolean {
+  return reason === "threshold" && config.strategy !== "native";
+}

@@ -42,11 +42,12 @@ export function createTrimSettingsHandler(
     }
 
     const policy = await ctx.ui.select("Trim Settings", [
+      "native",
       "automatic",
       "manual",
     ]);
     if (policy === undefined) return;
-    if (policy !== "automatic" && policy !== "manual") {
+    if (policy !== "native" && policy !== "automatic" && policy !== "manual") {
       ctx.ui.notify("Invalid Trim policy selection.", "error");
       return;
     }
@@ -69,7 +70,7 @@ export function createTrimSettingsHandler(
     }
 
     const next: TrimConfig = {
-      strategy: policy === "automatic" ? "settled" : "manual",
+      strategy: policy === "automatic" ? "settled" : policy,
       thresholdTokens,
     };
     if (

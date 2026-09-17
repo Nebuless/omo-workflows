@@ -1,5 +1,13 @@
 # OMO and Senpi Issue Register
 
+## 2026-09-17T21:06:35Z - Trim did not govern native auto-compaction
+
+- **Observed symptom:** Trim exposed modes and a force command, but did not veto native threshold compaction outside `native` mode. `/trim shake` also lacked agent-idle and pending-message guards.
+- **Affected runtime:** repository pin `@code-yeongyu/senpi@2026.9.13`; audited OMO `5.0.0-0.beta.68` using Senpi engine `2026.9.16-3`.
+- **Resolution:** `manual` and `settled` cancel only native `threshold` requests. `settled` later requests native compaction after an eligible settled turn. `native` preserves native automatic behavior. User manual and native overflow requests remain allowed. `/trim shake` now requires idle/no-pending/no-active-compaction state.
+- **Upstream evidence:** Senpi public `SessionBeforeCompactEvent.reason` and `ExtensionContext.compact()` contract: https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/extensions/types.ts
+
+
 Log each user-reported OMO or Senpi problem here in UTC when it is investigated.
 Keep one dated entry per report. State observed behavior, affected runtime, resolution
 state, validation, and upstream issue, pull request, or source. If no upstream

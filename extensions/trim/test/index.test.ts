@@ -74,14 +74,21 @@ function settingsHarness() {
 }
 
 type RegisteredCommand = Parameters<ExtensionAPI["registerCommand"]>[1];
+type EventHandler = (event: unknown, context: unknown) => unknown;
 
 function trimCommandFixture(config: TrimConfig) {
   let command: RegisteredCommand | undefined;
   let compacting = false;
+  let idle = true;
+  let pendingMessages = false;
+  let tokens = 100;
   const compactCalls: unknown[] = [];
   const notices: Notice[] = [];
+  const handlers = new Map<string, EventHandler>();
   const host = {
-    on: () => undefined,
+    on: (event: string, handler: EventHandler) => {
+      handlers.set(event, handler);
+    },
     registerCommand: (_name: string, definition: RegisteredCommand) => {
       command = definition;
     },
@@ -89,10 +96,10 @@ function trimCommandFixture(config: TrimConfig) {
   const context = {
     hasUI: true,
     mode: "tui",
-    isIdle: () => true,
-    hasPendingMessages: () => false,
+    isIdle: () => idle,
+    hasPendingMessages: () => pendingMessages,
     isCompacting: () => compacting,
-    getContextUsage: () => ({ tokens: 100, contextWindow: 200 }),
+    getContextUsage: () => ({ tokens, contextWindow: 200 }),
     getMessageRevision: () => 1,
     compact: (options?: unknown) => compactCalls.push(options),
     sessionManager: {
@@ -120,8 +127,22 @@ function trimCommandFixture(config: TrimConfig) {
     compactCalls,
     context,
     notices,
+    emit(event: string, payload: unknown) {
+      const handler = handlers.get(event);
+      if (handler === undefined) throw new Error(`Missing ${event} handler.`);
+      return handler(payload, context);
+    },
     setCompacting(next: boolean) {
       compacting = next;
+    },
+    setIdle(next: boolean) {
+      idle = next;
+    },
+    setPendingMessages(next: boolean) {
+      pendingMessages = next;
+    },
+    setTokens(next: number) {
+      tokens = next;
     },
   };
 }
@@ -159,18 +180,25 @@ describe("trim command", () => {
     expect(notices[0]?.type).toBe("info");
   });
 
-  test("Given automatic policy and safe threshold, when settings are confirmed, then it persists settled policy", async () => {
-    const { ui } = scriptedUi({
-      selection: "automatic",
-      threshold: "120000",
-      confirmed: true,
-    });
-    const { handler, saved } = settingsHarness();
+  test.each([
+    ["automatic", "settled"],
+    ["manual", "manual"],
+    ["native", "native"],
+  ] as const)(
+    "Given %s policy and safe threshold, when settings are confirmed, then it persists %s strategy",
+    async (selection, strategy) => {
+      const { ui } = scriptedUi({
+        selection,
+        threshold: "120000",
+        confirmed: true,
+      });
+      const { handler, saved } = settingsHarness();
 
-    await handler("", settingsContext(ui, "tui"));
+      await handler("", settingsContext(ui, "tui"));
 
-    expect(saved).toEqual([{ strategy: "settled", thresholdTokens: 120_000 }]);
-  });
+      expect(saved).toEqual([{ strategy, thresholdTokens: 120_000 }]);
+    },
+  );
 
   test("Given failed persistence, when settings are confirmed, then live policy stays unchanged", () => {
     const config = initialConfig;
@@ -243,7 +271,7 @@ describe("trim command", () => {
     expect(saved).toEqual([]);
   });
 
-  test("Given idle native compaction, when shake runs, then it delegates once to Senpi", async () => {
+  test("Given idle settled agent, when shake runs, then it delegates once to Senpi", async () => {
     const fixture = trimCommandFixture({
       strategy: "manual",
       thresholdTokens: 100,
@@ -254,20 +282,39 @@ describe("trim command", () => {
     expect(fixture.compactCalls).toHaveLength(1);
   });
 
-  test("Given native compaction is active, when shake runs, then it preserves session history", async () => {
-    const fixture = trimCommandFixture({
-      strategy: "manual",
-      thresholdTokens: 100,
-    });
-    fixture.setCompacting(true);
+  test.each([
+    [
+      "agent is active",
+      (fixture: ReturnType<typeof trimCommandFixture>) =>
+        fixture.setIdle(false),
+    ],
+    [
+      "messages are pending",
+      (fixture: ReturnType<typeof trimCommandFixture>) =>
+        fixture.setPendingMessages(true),
+    ],
+    [
+      "native compaction is active",
+      (fixture: ReturnType<typeof trimCommandFixture>) =>
+        fixture.setCompacting(true),
+    ],
+  ])(
+    "Given %s, when shake runs, then it preserves session history",
+    async (_condition, arrange) => {
+      const fixture = trimCommandFixture({
+        strategy: "manual",
+        thresholdTokens: 100,
+      });
+      arrange(fixture);
 
-    await fixture.command.handler("shake", fixture.context as never);
+      await fixture.command.handler("shake", fixture.context as never);
 
-    expect(fixture.compactCalls).toEqual([]);
-    expect(fixture.notices[0]?.type).toBe("warning");
-  });
+      expect(fixture.compactCalls).toEqual([]);
+      expect(fixture.notices[0]?.type).toBe("warning");
+    },
+  );
 
-  test("Given manual policy, when settings save automatic policy, then it evaluates safe boundary", async () => {
+  test("Given manual policy, when settings save automatic policy, then it waits for a settled turn", async () => {
     const fixture = trimCommandFixture({
       strategy: "manual",
       thresholdTokens: 100,
@@ -275,7 +322,79 @@ describe("trim command", () => {
 
     await fixture.command.handler("", fixture.context as never);
 
+    expect(fixture.compactCalls).toEqual([]);
+  });
+
+  test("Given a settled high-usage turn, when agent settles, then Trim forces native compaction once", () => {
+    const fixture = trimCommandFixture({
+      strategy: "settled",
+      thresholdTokens: 100,
+    });
+
+    fixture.emit("turn_end", {});
+    fixture.emit("agent_settled", {});
+
     expect(fixture.compactCalls).toHaveLength(1);
+  });
+
+  test("Given no completed turn, when agent settles with high context usage, then Trim does not force compaction", () => {
+    const fixture = trimCommandFixture({
+      strategy: "settled",
+      thresholdTokens: 100,
+    });
+
+    fixture.emit("agent_settled", {});
+
+    expect(fixture.compactCalls).toEqual([]);
+  });
+
+  test("Given a settled low-usage turn, when agent settles, then Trim does not force compaction", () => {
+    const fixture = trimCommandFixture({
+      strategy: "settled",
+      thresholdTokens: 100,
+    });
+    fixture.setTokens(99);
+
+    fixture.emit("turn_end", {});
+    fixture.emit("agent_settled", {});
+
+    expect(fixture.compactCalls).toEqual([]);
+  });
+
+  test.each(["manual", "settled"] as const)(
+    "Given %s policy, when native threshold compaction starts, then Trim cancels it",
+    (strategy) => {
+      const fixture = trimCommandFixture({ strategy, thresholdTokens: 100 });
+
+      expect(
+        fixture.emit("session_before_compact", { reason: "threshold" }),
+      ).toEqual({ cancel: true });
+    },
+  );
+
+  test.each(["manual", "settled"] as const)(
+    "Given %s policy, when native manual or overflow compaction starts, then Trim allows it",
+    (strategy) => {
+      const fixture = trimCommandFixture({ strategy, thresholdTokens: 100 });
+
+      expect(
+        fixture.emit("session_before_compact", { reason: "manual" }),
+      ).toBeUndefined();
+      expect(
+        fixture.emit("session_before_compact", { reason: "overflow" }),
+      ).toBeUndefined();
+    },
+  );
+
+  test("Given native policy, when native threshold compaction starts, then Trim allows it", () => {
+    const fixture = trimCommandFixture({
+      strategy: "native",
+      thresholdTokens: 100,
+    });
+
+    expect(
+      fixture.emit("session_before_compact", { reason: "threshold" }),
+    ).toBeUndefined();
   });
 
   test.each(["status", "config", "compact", "snapshot", "handoff"])(

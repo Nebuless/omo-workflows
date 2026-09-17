@@ -1,6 +1,11 @@
 import type { ExtensionAPI, ExtensionContext } from "@code-yeongyu/senpi";
 import { loadConfig, saveConfig, type TrimConfig } from "./config.ts";
-import { decide, type GovernorOutcome, shouldSchedule } from "./governor.ts";
+import {
+  decide,
+  type GovernorOutcome,
+  shouldCancelNativeThreshold,
+  shouldSchedule,
+} from "./governor.ts";
 import { createTrimSettingsHandler } from "./ui/settings.ts";
 
 interface TrimConfigStore {
@@ -33,7 +38,7 @@ function canRun(
 ): boolean {
   return shouldSchedule(state.config, {
     usageTokens: state.sampledTokens,
-    settled: true,
+    settled: state.pendingIntent,
     idle: ctx.isIdle(),
     pendingMessages: ctx.hasPendingMessages(),
     nativeCompacting: ctx.isCompacting?.() ?? false,
@@ -88,7 +93,7 @@ export function registerTrim(
           ? "DEFERRED"
           : decide(state.config, {
               usageTokens: state.sampledTokens,
-              settled: true,
+              settled: state.pendingIntent,
               idle: ctx.isIdle(),
               pendingMessages: ctx.hasPendingMessages(),
               nativeCompacting: ctx.isCompacting?.() ?? false,
@@ -108,6 +113,10 @@ export function registerTrim(
       state.sampledTokens >= state.config.thresholdTokens;
   });
   pi.on("agent_settled", (_event, ctx) => schedule(ctx));
+  pi.on("session_before_compact", (event) => {
+    if (shouldCancelNativeThreshold(state.config, event.reason))
+      return { cancel: true };
+  });
   pi.on("session_compact", (event, ctx) => {
     if (!event.accepted || !event.compactionEntry?.id) {
       state.outcome = "NATIVE_OUTCOME_OBSERVED";
@@ -167,12 +176,17 @@ export function registerTrim(
     handler: async (args, ctx) => {
       const command = args.trim();
       if (command === "") {
-        const previous = state.config;
         await settings(command, ctx);
-        if (state.config !== previous) schedule(ctx);
         return;
       }
       if (command === "shake") {
+        if (!ctx.isIdle() || ctx.hasPendingMessages()) {
+          ctx.ui.notify(
+            "Trim shake waits until the agent is settled. Session history unchanged.",
+            "warning",
+          );
+          return;
+        }
         if (ctx.isCompacting?.() ?? false) {
           ctx.ui.notify(
             "Trim shake unavailable while native compaction is active. Session history unchanged.",

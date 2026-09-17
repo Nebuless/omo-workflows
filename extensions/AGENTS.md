@@ -35,5 +35,5 @@ Own extension package boundaries and upstream adaptation policy.
 - `better-custom/` — custom provider and model-browser Senpi extension.
 - `herdr/` — OMO lifecycle reporting, skills, and LLM-safe CLI tools for Herdr.
 - `model-routing-advisor/` — standalone read-only route availability evidence before explicit native workflow preflight.
-- `trim/` — native compaction governor; bare `/trim` opens native Settings, while `/trim shake` is evidence-gated all-class operation.
+- `trim/` — native compaction governor; `native` leaves Senpi threshold behavior unchanged, while `settled` and `manual` gate threshold compaction and `/trim shake` forces a safe native request.
 - Shared extension regressions live in `../test/`.

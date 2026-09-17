@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { decide, OUTCOMES, shouldSchedule } from "../src/governor.ts";
+import {
+  decide,
+  OUTCOMES,
+  shouldCancelNativeThreshold,
+  shouldSchedule,
+} from "../src/governor.ts";
 
 const config = { strategy: "settled" as const, thresholdTokens: 100 };
 describe("trim governor", () => {
@@ -75,6 +80,32 @@ describe("trim governor", () => {
           nativeCompacting: false,
           requestLatched: false,
         },
+      ),
+    ).toBe(false));
+  test.each(["manual", "settled"] as const)(
+    "cancels native threshold compaction for %s strategy",
+    (strategy) =>
+      expect(
+        shouldCancelNativeThreshold(
+          { strategy, thresholdTokens: 100 },
+          "threshold",
+        ),
+      ).toBe(true),
+  );
+  test.each(["manual", "settled"] as const)(
+    "preserves native manual and overflow compaction for %s strategy",
+    (strategy) => {
+      const current = { strategy, thresholdTokens: 100 };
+
+      expect(shouldCancelNativeThreshold(current, "manual")).toBe(false);
+      expect(shouldCancelNativeThreshold(current, "overflow")).toBe(false);
+    },
+  );
+  test("preserves native threshold compaction for native strategy", () =>
+    expect(
+      shouldCancelNativeThreshold(
+        { strategy: "native", thresholdTokens: 100 },
+        "threshold",
       ),
     ).toBe(false));
   test("includes superseded or unknown terminal state", () =>

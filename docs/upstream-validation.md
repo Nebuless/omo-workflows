@@ -90,11 +90,11 @@ verification date.
 
 ### Trim
 
-- Verified: `2026-09-16`
-- Local runtime: repository Senpi `2026.9.13`; global OMO `5.0.0-0.beta.68` with Senpi `2026.9.16-3`.
-- OMO evidence: N/A — Trim imports no OMO API.
-- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/extensions/types.ts
-- Local proof: `bun test extensions/trim/test`, `bun run typecheck`, and live global OMO load of all four extensions pass.
+- Verified: `2026-09-17`
+- Local runtime: repository Senpi `2026.9.13`; OMO `5.0.0-0.beta.68` with Senpi engine `2026.9.16-3`; Bun `1.3.14`.
+- OMO evidence: N/A — Trim imports no OMO API; OMO only discovers packaged extension entrypoint.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/extensions/types.ts defines `SessionBeforeCompactEvent.reason`, cancellable compaction handlers, `agent_settled`, and `ExtensionContext.compact()`.
+- Local proof: installed pin declarations expose `threshold`, `manual`, `overflow`, and `extension` reasons; interactive runtime delegates `ctx.compact()` to `AgentSession.compact()`. Focused tests cover threshold veto, preserved manual/overflow compaction, settled forced requests, and safe `/trim shake` guards. Full extension tests, typecheck, build, and live OMO command checks run before closeout.
 - Revalidate: Senpi upgrade or compaction-lifecycle API change.
 - Status: current.
 
