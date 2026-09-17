@@ -5,6 +5,16 @@ Keep one dated entry per report. State observed behavior, affected runtime, reso
 state, validation, and upstream issue, pull request, or source. If no upstream
 reference exists, state that and label any workaround as invented.
 
+## 2026-09-17T19:06:41Z - Herdr approval nonce failed in fresh OMO tool call
+
+- **Reported symptom:** Fresh project-loaded OMO invoked `herdr_approval` with action `request` and failed before creating a nonce: `Expected this to be instanceof Crypto, but received an instance of ApprovalRegistry`.
+- **Affected runtime:** OMO `5.0.0-0.beta.68` (engine Senpi `2026.9.16-3`); repository Senpi `2026.9.13`; Bun `1.3.14`; Herdr `0.9.1`.
+- **Cause:** `ApprovalRegistry` stored detached `crypto.randomUUID` as its default nonce factory. Bun requires the native `Crypto` receiver for this method.
+- **Resolution:** Bound invocation through `() => crypto.randomUUID()` and added regression coverage. Fresh OMO approval request then returned `completed`, a nonce, and `state: "requested"`; it did not confirm approval or dispatch a prompt.
+- **Upstream:** Local extension defect. No matching OMO, Senpi, Bun, or Herdr issue/pull request identified during this repair. Herdr `v0.9.1` command contract remains https://github.com/herdrdev/herdr/releases/tag/v0.9.1.
+- **Validation:** Focused regression initially failed with the exact receiver error, then passed. Full Herdr tool tests passed after repair. Fresh OMO request `approval-fixed` returned one pending approval for typed `agent.prompt`; no `herdr_operation`, agent prompt, or agent start ran.
+- **Revalidation trigger:** Bun `Crypto` API or OMO/Senpi tool-call runtime upgrade; any change to approval nonce injection.
+
 ## 2026-09-17T18:04:44Z - OMO Herdr typed control lacked safe dispatch proof
 
 - **Reported symptom:** OMO Herdr integration exposed no typed direct agent prompt or supported launch; mutation handling could treat zero exit, unchanged readback, or truncated output as completion, and lifecycle reporter failures were silent.

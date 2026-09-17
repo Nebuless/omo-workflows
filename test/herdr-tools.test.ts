@@ -32,6 +32,11 @@ const target = () =>
     paneId: "p1",
   });
 
+function required<T>(value: T | undefined, name: string): T {
+  if (!value) throw new Error(`Missing registered tool: ${name}`);
+  return value;
+}
+
 describe("Herdr extension tools", () => {
   test("registers composable tools and no public raw controller", () => {
     const tools = new Map<string, unknown>();
@@ -180,7 +185,10 @@ describe("Herdr extension tools", () => {
     );
     expect(prompt?.availability).toBe("available");
     expect(
-      buildCapabilityArgv(prompt!, { paneId: "p1", text: "hello" }),
+      buildCapabilityArgv(required(prompt, "herdr.0.9.1.agent.prompt"), {
+        paneId: "p1",
+        text: "hello",
+      }),
     ).toEqual([
       "agent",
       "prompt",
@@ -242,7 +250,10 @@ describe("Herdr extension tools", () => {
         },
       },
     );
-    const result = await tools.get("herdr_operation")!.execute("id", {
+    const result = await required(
+      tools.get("herdr_operation"),
+      "herdr_operation",
+    ).execute("id", {
       capabilityId: "herdr.0.9.1.agent.prompt",
       correlationId: "prompt-unchanged",
       targetSnapshot: createTargetSnapshot({
@@ -291,7 +302,10 @@ describe("Herdr extension tools", () => {
         },
       },
     );
-    const result = await tools.get("herdr_operation")!.execute("id", {
+    const result = await required(
+      tools.get("herdr_operation"),
+      "herdr_operation",
+    ).execute("id", {
       capabilityId: "herdr.0.9.1.agent.prompt",
       correlationId: "mismatch",
       targetSnapshot: target(),
@@ -331,7 +345,10 @@ describe("Herdr extension tools", () => {
         },
       },
     );
-    const result = await tools.get("herdr_operation")!.execute("id", {
+    const result = await required(
+      tools.get("herdr_operation"),
+      "herdr_operation",
+    ).execute("id", {
       capabilityId: "herdr.0.9.1.agent.prompt",
       correlationId: "authority",
       targetSnapshot: target(),
@@ -387,7 +404,10 @@ describe("Herdr extension tools", () => {
         },
       },
     );
-    const result = await tools.get("herdr_operation")!.execute("id", {
+    const result = await required(
+      tools.get("herdr_operation"),
+      "herdr_operation",
+    ).execute("id", {
       capabilityId: "herdr.0.9.1.agent.prompt",
       correlationId: "no-seq",
       targetSnapshot: createTargetSnapshot({
@@ -470,7 +490,10 @@ describe("Herdr extension tools", () => {
         },
       },
     );
-    const result = await tools.get("herdr_operation")!.execute("id", {
+    const result = await required(
+      tools.get("herdr_operation"),
+      "herdr_operation",
+    ).execute("id", {
       capabilityId: "herdr.0.9.1.agent.prompt",
       correlationId: "prompt-success",
       targetSnapshot: createTargetSnapshot({
@@ -541,7 +564,7 @@ describe("Herdr extension tools", () => {
         {
           discovery: async () => discovery,
           env: { HERDR_ENV: "1", HERDR_PANE_ID: "p1" },
-          runner: async (argv) => {
+          runner: async () => {
             call += 1;
             if (call === 1)
               return { exitCode: 0, output: pane(1, "idle"), truncated: false };
@@ -562,7 +585,10 @@ describe("Herdr extension tools", () => {
           },
         },
       );
-      const result = await tools.get("herdr_operation")!.execute("id", {
+      const result = await required(
+        tools.get("herdr_operation"),
+        "herdr_operation",
+      ).execute("id", {
         capabilityId: "herdr.0.9.1.agent.prompt",
         correlationId: `case-${call}`,
         targetSnapshot: target(),
@@ -616,7 +642,10 @@ describe("Herdr extension tools", () => {
         },
       },
     );
-    const result = await tools.get("herdr_operation")!.execute("id", {
+    const result = await required(
+      tools.get("herdr_operation"),
+      "herdr_operation",
+    ).execute("id", {
       capabilityId: "herdr.0.9.1.agent.prompt",
       correlationId: "oversized",
       targetSnapshot: createTargetSnapshot({
@@ -676,7 +705,10 @@ describe("Herdr extension tools", () => {
           },
         },
       );
-      const result = await tools.get("herdr_operation")!.execute("id", {
+      const result = await required(
+        tools.get("herdr_operation"),
+        "herdr_operation",
+      ).execute("id", {
         capabilityId,
         correlationId: "launch",
         targetSnapshot: target(),
@@ -702,6 +734,18 @@ describe("Herdr extension tools", () => {
       ),
     ).toThrow("revision changed");
     expect(() => assertAgentPrompt("é".repeat(10_001))).toThrow("UTF-8 bytes");
+  });
+
+  test("uses default crypto nonce with its required receiver", () => {
+    const approvals = new ApprovalRegistry();
+    expect(() =>
+      approvals.request({
+        capabilityId: "herdr.0.9.1.agent.prompt",
+        correlationId: "default-crypto-nonce",
+        parameters: { paneId: "p1", text: "not-sent" },
+        target: target(),
+      }),
+    ).not.toThrow();
   });
 
   test("approval nonce is bound, non-authoritative, and single-use", () => {

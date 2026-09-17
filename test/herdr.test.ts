@@ -269,7 +269,7 @@ describe("herdr reporter", () => {
     });
     const run = createSerialRunner(
       async (argv) => {
-        order.push(argv[0]!);
+        order.push(argv[0] ?? "");
         if (argv[0] === "bad") throw new Error("nonzero exit");
         if (order.length === 2) resolveCompletion();
       },

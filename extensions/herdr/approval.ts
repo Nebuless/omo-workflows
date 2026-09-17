@@ -121,7 +121,7 @@ export class ApprovalRegistry {
 
   constructor(options: ApprovalRegistryOptions = {}) {
     this.#now = options.now ?? Date.now;
-    this.#createNonce = options.createNonce ?? crypto.randomUUID;
+    this.#createNonce = options.createNonce ?? (() => crypto.randomUUID());
     this.#ttlMs = options.ttlMs ?? APPROVAL_TTL_MS;
     if (!Number.isSafeInteger(this.#ttlMs) || this.#ttlMs < 1) {
       throw new Error("Approval TTL must be a positive integer.");
