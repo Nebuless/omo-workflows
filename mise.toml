@@ -22,7 +22,7 @@ run = "bun test"
 
 [tasks.build]
 description = "Bundle the OMO extension with Bun"
-run = "bun build extensions/better-custom/src/index.ts extensions/compound-engineering/src/index.ts extensions/herdr/index.ts extensions/trim/src/index.ts --outdir .build-check --target bun && rm -rf .build-check"
+run = "bun build extensions/better-custom/src/index.ts extensions/compound-engineering/src/index.ts extensions/herdr/index.ts extensions/model-routing-advisor/index.ts extensions/trim/src/index.ts --outdir .build-check --target bun && rm -rf .build-check"
 
 [tasks.quality]
 description = "Validate sources with Biome and run Qlty checks"

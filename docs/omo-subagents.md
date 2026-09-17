@@ -186,6 +186,13 @@ Never solve route failure by adding blind fallback chains. First prove model ID 
 
 For ordinary delegated work, the active `task` tool exposes task launch, output/status, steering, and cancellation. Inspect its live schema rather than copying parameters from an older session or a different harness. Read status before a control action. Cancellation is destructive task control; require explicit user confirmation.
 
+When caller needs availability evidence before a native launch, use the optional
+[`model-routing-advisor`](../extensions/model-routing-advisor/README.md) tool
+explicitly. Pass caller-normalized candidate IDs and retain its report or
+reference before direct task, workpool, team, mass/DAG, or ULW launch. It has no
+universal hook and never chooses a model, changes route order, or controls a
+task. See [model routing preflight](model-routing.md#explicit-route-advice-preflight).
+
 ## Custom providers and extension-added capabilities
 
 Subagent routing accepts any provider/model registered in active OMO/Senpi runtime. Native providers come from OMO setup and provider credentials. Extensions may register providers, models, tools, commands, skills, task agents, or custom categories. Therefore a provider list is runtime inventory, not fixed repository policy.

@@ -34,5 +34,6 @@ Own extension package boundaries and upstream adaptation policy.
 - `compound-engineering/` — pinned Every Compound Engineering skills through native Senpi discovery.
 - `better-custom/` — custom provider and model-browser Senpi extension.
 - `herdr/` — OMO lifecycle reporting, skills, and LLM-safe CLI tools for Herdr.
+- `model-routing-advisor/` — standalone read-only route availability evidence before explicit native workflow preflight.
 - `trim/` — native compaction governor; bare `/trim` opens native Settings, while `/trim shake` is evidence-gated all-class operation.
 - Shared extension regressions live in `../test/`.
