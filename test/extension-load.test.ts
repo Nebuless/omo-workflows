@@ -40,7 +40,7 @@ describe("OMO extension boundary", () => {
     expect(providers.size).toBe(0);
 
     let compoundDiscover:
-      | (() => { readonly skillPaths: readonly string[] })
+      | ((event: unknown, ctx: unknown) => { readonly skillPaths?: string[] })
       | undefined;
     const compoundHost = {
       on(name: string, handler: typeof compoundDiscover) {
@@ -52,13 +52,31 @@ describe("OMO extension boundary", () => {
     );
     compoundExtension.default(compoundHost as never);
 
-    expect((await compoundDiscover?.())?.skillPaths).toHaveLength(1);
+    expect(
+      (
+        await compoundDiscover?.(
+          {
+            type: "resources_discover",
+            cwd: "/workspace",
+            reason: "startup",
+            scopedEntries: true,
+          },
+          {
+            loadedExtensionPaths: [
+              "/packages/compound-engineering/src/index.ts",
+            ],
+          },
+        )
+      )?.skillPaths,
+    ).toEqual(["/packages/compound-engineering/skills"]);
 
     const events = new Map<string, unknown>();
     const tools = new Map<string, unknown>();
+    let herdrDiscover: ((event: unknown, ctx: unknown) => unknown) | undefined;
     const herdrHost = {
-      on(name: string, handler: unknown) {
+      on(name: string, handler: (event: unknown, ctx: unknown) => unknown) {
         events.set(name, handler);
+        if (name === "resources_discover") herdrDiscover = handler;
       },
       registerTool(definition: { name: string }) {
         tools.set(definition.name, definition);
@@ -69,6 +87,25 @@ describe("OMO extension boundary", () => {
 
     expect(events.has("session_start")).toBe(true);
     expect(events.has("resources_discover")).toBe(true);
+    expect(
+      herdrDiscover?.(
+        {
+          type: "resources_discover",
+          cwd: "/workspace",
+          reason: "startup",
+          scopedEntries: true,
+        },
+        { loadedExtensionPaths: ["/packages/herdr/index.ts"] },
+      ),
+    ).toEqual({
+      skillPaths: [
+        "/packages/herdr/skills/herdr/SKILL.md",
+        "/packages/herdr/skills/herdr-agent-management/SKILL.md",
+        "/packages/herdr/skills/herdr-handoff/SKILL.md",
+        "/packages/herdr/skills/herdr-orchestration/SKILL.md",
+        "/packages/herdr/skills/herdr-admin/SKILL.md",
+      ],
+    });
     expect([...tools.keys()]).toEqual([
       "herdr_inspect",
       "herdr_capabilities",

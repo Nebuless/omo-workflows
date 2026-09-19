@@ -82,6 +82,8 @@ function trimCommandFixture(config: TrimConfig) {
   let idle = true;
   let pendingMessages = false;
   let tokens = 100;
+  let revision = 1;
+  let branch = [{ id: "leaf-a", type: "message" }];
   const compactCalls: unknown[] = [];
   const notices: Notice[] = [];
   const handlers = new Map<string, EventHandler>();
@@ -100,11 +102,13 @@ function trimCommandFixture(config: TrimConfig) {
     hasPendingMessages: () => pendingMessages,
     isCompacting: () => compacting,
     getContextUsage: () => ({ tokens, contextWindow: 200 }),
-    getMessageRevision: () => 1,
+    getMessageRevision: () => revision,
     compact: (options?: unknown) => compactCalls.push(options),
     sessionManager: {
       getSessionId: () => "session-a",
       getLeafId: () => "leaf-a",
+      getEntry: (id: string) => branch.find((entry) => entry.id === id),
+      getBranch: () => branch,
     },
     ui: {
       select: async () => "automatic",
@@ -143,6 +147,12 @@ function trimCommandFixture(config: TrimConfig) {
     },
     setTokens(next: number) {
       tokens = next;
+    },
+    setRevision(next: number) {
+      revision = next;
+    },
+    setBranch(next: typeof branch) {
+      branch = next;
     },
   };
 }
@@ -335,6 +345,40 @@ describe("trim command", () => {
     fixture.emit("agent_settled", {});
 
     expect(fixture.compactCalls).toHaveLength(1);
+  });
+
+  test("Given a stale compaction event, when it does not advance active state, then it cannot create a duplicate request", () => {
+    const fixture = trimCommandFixture({
+      strategy: "settled",
+      thresholdTokens: 100,
+    });
+
+    fixture.emit("turn_end", {});
+    fixture.emit("agent_settled", {});
+    fixture.setBranch([{ id: "compact-a", type: "compaction" }]);
+    fixture.emit("session_compact", {
+      accepted: true,
+      compactionEntry: { id: "compact-a" },
+    });
+    fixture.emit("agent_settled", {});
+
+    expect(fixture.compactCalls).toHaveLength(1);
+  });
+
+  test("Given shutdown after an in-flight request, when a new settled turn starts, then Trim can schedule again", () => {
+    const fixture = trimCommandFixture({
+      strategy: "settled",
+      thresholdTokens: 100,
+    });
+
+    fixture.emit("turn_end", {});
+    fixture.emit("agent_settled", {});
+    fixture.emit("session_shutdown", {});
+    fixture.setRevision(2);
+    fixture.emit("turn_end", {});
+    fixture.emit("agent_settled", {});
+
+    expect(fixture.compactCalls).toHaveLength(2);
   });
 
   test("Given no completed turn, when agent settles with high context usage, then Trim does not force compaction", () => {

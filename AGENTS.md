@@ -170,6 +170,7 @@ trigger.
 - `.omo/` — project-local OMO package settings; runtime task state remains
   ignored.
 - `.qlty/` — committed Qlty configuration.
+- `biome.json` — Biome source scope; excludes ignored generated local runtime state.
 - `templates/` — portable OMO preference templates plus complete balanced and GPT-heavy `9router` routing profiles.
 - `README.md` — concise native OMO, LLM handoff, and extension installation entrypoint; routes to complete local and upstream documentation.
 - `customizations/` — policy-only scaffolds for OMO and Senpi capability domains; runnable behavior belongs in `extensions/`. Read [`customizations/AGENTS.md`](customizations/AGENTS.md) and [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) before creating a new customization.

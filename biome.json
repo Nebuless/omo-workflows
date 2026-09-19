@@ -1,6 +1,13 @@
 {
   "files": {
-    "includes": ["**", "!!extensions/compound-engineering/skills"]
+    "includes": [
+      "**",
+      "!!extensions/compound-engineering/skills",
+      "!!.omo",
+      "!!.omp",
+      "!!.codesight",
+      "!!backlog/cook-state.json"
+    ]
   },
   "formatter": {
     "enabled": true,

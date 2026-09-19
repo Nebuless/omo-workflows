@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import type { ExtensionAPI } from "@code-yeongyu/senpi";
-import { herdrSkillPaths } from "./skills.ts";
+import { herdrSkillPathsForLoadedExtensions } from "./skills.ts";
 import { registerHerdrTools } from "./tools.ts";
 
 export type HerdrState = "idle" | "working" | "blocked" | "unknown";
@@ -196,7 +196,9 @@ const defaultRun = createSerialRunner(spawnOnce, (message) => {
 
 export default function herdrIntegration(pi: ExtensionAPI): void {
   registerHerdrTools(pi);
-  pi.on("resources_discover", () => ({ skillPaths: herdrSkillPaths() }));
+  pi.on("resources_discover", (_event, ctx) => ({
+    skillPaths: herdrSkillPathsForLoadedExtensions(ctx),
+  }));
   const reporter = createHerdrReporter({ env: captureHerdrEnv(process.env) });
   pi.on("session_start", () => reporter.onSessionStart());
   pi.on("agent_start", () => reporter.onAgentStart());

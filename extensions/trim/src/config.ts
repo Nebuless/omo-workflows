@@ -1,4 +1,10 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { getAgentDir } from "@code-yeongyu/senpi";
 
@@ -13,19 +19,20 @@ const DEFAULT_CONFIG: TrimConfig = {
   thresholdTokens: 100000,
 };
 const pathFor = (): string => join(getAgentDir(), "trim.json");
+function isConfig(value: unknown): value is TrimConfig {
+  if (typeof value !== "object" || value === null || Array.isArray(value))
+    return false;
+  const { strategy, thresholdTokens } = value as Record<string, unknown>;
+  return (
+    STRATEGIES.includes(strategy as TrimStrategy) &&
+    typeof thresholdTokens === "number" &&
+    Number.isSafeInteger(thresholdTokens) &&
+    thresholdTokens >= 1
+  );
+}
+
 function parse(value: unknown): TrimConfig {
-  if (typeof value !== "object" || value === null) return DEFAULT_CONFIG;
-  const record = value as Record<string, unknown>;
-  const strategy = record.strategy;
-  const thresholdTokens = record.thresholdTokens;
-  if (
-    !STRATEGIES.includes(strategy as TrimStrategy) ||
-    typeof thresholdTokens !== "number" ||
-    !Number.isInteger(thresholdTokens) ||
-    thresholdTokens < 1
-  )
-    return DEFAULT_CONFIG;
-  return { strategy: strategy as TrimStrategy, thresholdTokens };
+  return isConfig(value) ? value : DEFAULT_CONFIG;
 }
 export function loadConfig(path = pathFor()): TrimConfig {
   try {
@@ -40,8 +47,24 @@ export function loadConfig(path = pathFor()): TrimConfig {
   }
 }
 export function saveConfig(config: TrimConfig, path = pathFor()): void {
+  if (!isConfig(config))
+    throw new TypeError(
+      "Trim policy requires a supported strategy and positive safe integer threshold.",
+    );
   mkdirSync(dirname(path), { recursive: true });
   const temporary = `${path}.${process.pid}.${crypto.randomUUID()}.tmp`;
-  writeFileSync(temporary, `${JSON.stringify(config, null, 2)}\n`, "utf8");
-  renameSync(temporary, path);
+  try {
+    writeFileSync(temporary, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+    renameSync(temporary, path);
+  } catch (error) {
+    try {
+      rmSync(temporary, { force: true });
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        "Trim policy save and cleanup failed.",
+      );
+    }
+    throw error;
+  }
 }
