@@ -24,6 +24,18 @@ reviewed source.
 are catalog aliases. Price equivalence is an operational assumption, not a
 separate public SKU.
 
+## 9router CX native thinking profiles
+
+Better Custom static profiles apply only when provider ID is `9router` and model ID exactly matches one row. Values are provider-facing efforts for canonical OMO keys; `compat.supportsReasoningEffort` is model-scoped. This persisted metadata contract is not current live request proof.
+
+| Provider/model ID | `off` | `minimal` | `low` | `medium` | `high` | `xhigh` | `max` | `compat.supportsReasoningEffort` | Evidence |
+|---|---|---|---|---|---|---|---|---|---|
+| `9router/cx/gpt-5.6-luna` | `none` | `low` | `low` | `medium` | `high` | `max` | `max` | `true` | [9router CX reasoning design](https://github.com/decolua/9router/blob/a8c9d3802c5933500fba95416f5bf0c130581396/docs/superpowers/specs/2026-08-02-gpt-5-6-codex-reasoning-overrides-design.md) |
+| `9router/cx/gpt-5.6-sol` | `none` | `minimal` | `low` | `medium` | `high` | `ultra` | `max` | `true` | [9router CX reasoning design](https://github.com/decolua/9router/blob/a8c9d3802c5933500fba95416f5bf0c130581396/docs/superpowers/specs/2026-08-02-gpt-5-6-codex-reasoning-overrides-design.md) |
+| `9router/cx/gpt-5.6-terra` | `none` | `minimal` | `low` | `medium` | `high` | `ultra` | `max` | `true` | [9router CX reasoning design](https://github.com/decolua/9router/blob/a8c9d3802c5933500fba95416f5bf0c130581396/docs/superpowers/specs/2026-08-02-gpt-5-6-codex-reasoning-overrides-design.md) |
+
+Profile defaults are lowest precedence: observed native metadata wins, then stored native metadata, then this exact profile, then generic defaults. Existing maps are preserved as complete maps; profiles do not partially merge into them. Better Custom passes map and compatibility through; Senpi owns request construction.
+
 ## Benchmarks
 
 | Model | Terminal-Bench 2.1 | Terminal-Bench 3.0 | DeepSWE v1.1 | Tool/agent evidence | SWE-bench Verified | SkateBench | Source |

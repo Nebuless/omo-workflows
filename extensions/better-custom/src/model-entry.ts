@@ -1,4 +1,3 @@
-import { PI_THINKING_LEVELS, REASONING_LEVELS } from "./types.ts";
 import { serializeApiKey } from "./api-key.ts";
 import type {
   ModelOptions,
@@ -9,6 +8,7 @@ import type {
   ReasoningCeiling,
   ThinkingLevelMap,
 } from "./types.ts";
+import { PI_THINKING_LEVELS, REASONING_LEVELS } from "./types.ts";
 
 export interface HostModelEntry extends Record<string, unknown> {
   id: string;
@@ -20,6 +20,8 @@ export interface HostModelEntry extends Record<string, unknown> {
   input?: Array<"text" | "image">;
   reasoning?: boolean;
   thinking?: HostThinkingConfig;
+  thinkingLevelMap?: ThinkingLevelMap;
+  compat?: Record<string, unknown>;
 }
 
 export interface HostThinkingConfig {
@@ -40,6 +42,7 @@ export interface ModelProbeMetadata extends Partial<ModelProbeInfo> {
   input?: readonly string[];
   baseUrl?: string;
   headers?: Record<string, string>;
+  compat?: Record<string, unknown>;
 }
 
 export type LocalModelInfo = Partial<ModelProbeMetadata>;
@@ -191,9 +194,55 @@ const KNOWN_MODEL_RULES: readonly KnownRule[] = [
     contextWindow: 1000000,
     vision: true,
   },
+
   { pattern: /^llama(3|4)/i, contextWindow: 131072 },
   { pattern: /^mistral-(large|small|medium)/i, contextWindow: 128000 },
 ];
+const NATIVE_LEVELS = {
+  off: "none",
+  minimal: "minimal",
+  low: "low",
+  medium: "medium",
+  high: "high",
+  xhigh: "xhigh",
+  max: "max",
+} as const;
+
+const NATIVE_9ROUTER_PROFILES: Readonly<Record<string, ModelOptions>> = {
+  "cx/gpt-5.6-luna": {
+    thinkingLevelMap: {
+      ...NATIVE_LEVELS,
+      minimal: "low",
+      xhigh: "max",
+    },
+    compat: { supportsReasoningEffort: true },
+  },
+  "cx/gpt-5.6-sol": {
+    thinkingLevelMap: { ...NATIVE_LEVELS, xhigh: "ultra" },
+    compat: { supportsReasoningEffort: true },
+  },
+  "cx/gpt-5.6-terra": {
+    thinkingLevelMap: { ...NATIVE_LEVELS, xhigh: "ultra" },
+    compat: { supportsReasoningEffort: true },
+  },
+};
+
+function staticProfile(
+  providerId: string | undefined,
+  api: ProviderApi | undefined,
+  modelId: string,
+): ModelOptions | undefined {
+  if (providerId !== "9router" || api !== "openai-completions")
+    return undefined;
+  const profile = NATIVE_9ROUTER_PROFILES[modelId.trim()];
+  return profile
+    ? {
+        ...profile,
+        thinkingLevelMap: normalizeThinkingLevelMap(profile.thinkingLevelMap),
+        compat: { ...profile.compat },
+      }
+    : undefined;
+}
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value !== null && typeof value === "object"
@@ -275,18 +324,34 @@ export function applyKnownModelFallback(
   return resolveModelInfo(modelId, detected);
 }
 
-function copyThinkingLevelMap(value: unknown): ThinkingLevelMap | undefined {
+export function normalizeThinkingLevelMap(
+  value: unknown,
+): ThinkingLevelMap | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value))
     return undefined;
-  const map: ThinkingLevelMap = {};
-  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    if (raw === null || typeof raw === "string") map[key] = raw;
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record);
+  if (
+    keys.length !== PI_THINKING_LEVELS.length ||
+    PI_THINKING_LEVELS.some((level) => !Object.hasOwn(record, level))
+  )
+    return undefined;
+  const map = Object.fromEntries(
+    PI_THINKING_LEVELS.map((level) => [level, null]),
+  ) as ThinkingLevelMap;
+  for (const level of PI_THINKING_LEVELS) {
+    const raw = record[level];
+    if (raw === null) continue;
+    if (typeof raw !== "string" || raw.trim().length === 0) return undefined;
+    map[level] = raw.trim();
   }
   return map;
 }
 
 function mapFromEffortOptions(options: readonly string[]): ThinkingLevelMap {
-  const map: ThinkingLevelMap = {};
+  const map = Object.fromEntries(
+    PI_THINKING_LEVELS.map((level) => [level, null]),
+  ) as ThinkingLevelMap;
   const chosen = new Map<ReasoningEffort | "off", string>();
   for (const raw of options) {
     const value = typeof raw === "string" ? raw.trim() : "";
@@ -394,21 +459,16 @@ function infoFromMap<T>(
   return (source as Readonly<Record<string, T>>)[id];
 }
 
-/**
- * Resolve model options with explicit precedence: detected probe metadata >
- * caller-explicit fallback options > local known-model rules > defaults.
- * Local/default values fill only fields omitted by both higher-priority tiers.
- */
 function modelOptionsWithInfo(
   id: string,
   fallback: ModelOptions,
   detected?: ModelProbeMetadata,
+  providerId?: string,
 ): ModelOptions {
   const info = resolveModelInfo(id, detected);
+  const profile = staticProfile(providerId, fallback.api ?? info.api, id);
   const options: ModelOptions = { ...fallback };
   const detectedRecord = detected;
-  // Preserve caller intent unless a detected field is present; otherwise local
-  // rules and then defaults fill the omitted option.
   if (
     info.vision !== undefined &&
     (fallback.vision === undefined || detectedRecord?.vision !== undefined)
@@ -441,25 +501,49 @@ function modelOptionsWithInfo(
     (fallback.api === undefined || detectedRecord?.api !== undefined)
   )
     options.api = normalizeApi(info.api);
-  const exactMap = copyThinkingLevelMap(info.thinkingLevelMap);
+  const detectedMap = normalizeThinkingLevelMap(detected?.thinkingLevelMap);
+  const fallbackMap = normalizeThinkingLevelMap(fallback.thinkingLevelMap);
+  const hasExplicitMap =
+    detected?.thinkingLevelMap !== undefined ||
+    fallback.thinkingLevelMap !== undefined;
+  const hasExplicitCompat =
+    detected?.compat !== undefined || fallback.compat !== undefined;
+  const nativeMap = detectedMap ?? fallbackMap;
+  const compat =
+    detected?.compat !== undefined
+      ? asRecord(detected.compat)
+      : fallback.compat !== undefined
+        ? asRecord(fallback.compat)
+        : undefined;
+  if (nativeMap) options.thinkingLevelMap = nativeMap;
+  if (compat) options.compat = { ...compat };
+  if (!hasExplicitMap && !hasExplicitCompat && profile) {
+    const profileMap = normalizeThinkingLevelMap(profile.thinkingLevelMap);
+    if (profileMap) options.thinkingLevelMap = profileMap;
+    if (profile.compat) options.compat = { ...profile.compat };
+  }
   const effortOptions = Array.isArray(info.effortOptions)
     ? info.effortOptions
     : Array.isArray(info.reasoningEffortOptions)
       ? info.reasoningEffortOptions
       : undefined;
-  if (exactMap) options.thinkingLevelMap = exactMap;
-  else if (effortOptions && effortOptions.length > 0)
+  if (
+    !hasExplicitMap &&
+    !options.thinkingLevelMap &&
+    effortOptions &&
+    effortOptions.length > 0
+  )
     options.thinkingLevelMap = mapFromEffortOptions(effortOptions);
   if (detectedRecord?.reasoning !== undefined) {
     if (info.reasoning === false) options.reasoning = "off";
     else if (options.reasoning === undefined || options.reasoning === "off")
       options.reasoning = "high";
-  } else if (options.reasoning === undefined) {
+  } else if (options.reasoning === undefined && providerId !== "9router")
     options.reasoning = info.reasoning === false ? "off" : "high";
-  }
   if (info.alwaysThinking === true) {
     options.reasoning = "minimal";
-    options.thinkingLevelMap = { off: null };
+    if (!options.thinkingLevelMap && !hasExplicitMap)
+      options.thinkingLevelMap = mapFromEffortOptions([]);
   }
   return options;
 }
@@ -468,9 +552,10 @@ export function modelOptionsFromProbe(
   info: ModelProbeMetadata | undefined,
   fallback: ModelOptions,
   modelId = "",
+  providerId?: string,
 ): ModelOptions {
   const resolvedId = modelId || info?.id || "";
-  return modelOptionsWithInfo(resolvedId, fallback, info);
+  return modelOptionsWithInfo(resolvedId, fallback, info, providerId);
 }
 
 export function buildModelEntry(
@@ -493,19 +578,22 @@ export function buildModelEntry(
     entry.maxTokens = options.maxTokens;
   if (options.headers && typeof options.headers === "object")
     entry.headers = { ...options.headers };
-  const translated = thinkingFromLevelMap(
-    copyThinkingLevelMap(options.thinkingLevelMap),
-  );
-  if (translated) {
+  const map = normalizeThinkingLevelMap(options.thinkingLevelMap);
+  if (map) entry.thinkingLevelMap = map;
+  if (options.compat) entry.compat = { ...options.compat };
+  if (map && asRecord(options.compat).supportsReasoningEffort === true)
     entry.reasoning = true;
-    entry.thinking = translated;
-  } else if (options.reasoning !== undefined && options.reasoning !== "off") {
+  else if (
+    !map &&
+    options.reasoning !== undefined &&
+    options.reasoning !== "off"
+  )
     applyReasoning(entry, options.reasoning, ceilingOverrides);
-  }
   return entry;
 }
 
 export interface BuildProviderConfigInput extends Omit<ModelOptions, "api"> {
+  providerId?: string;
   style?: ProviderStyle | string;
   api?: ProviderApi | string;
   baseUrl?: string;
@@ -570,6 +658,7 @@ function buildProviderConfigFromInput(
     };
   } else if (input.compat) provider.compat = { ...input.compat };
   const {
+    providerId: _providerId,
     style: _style,
     api: _inputApi,
     baseUrl: _providerBaseUrl,
@@ -593,7 +682,12 @@ function buildProviderConfigFromInput(
       ...baseOptions,
       ...(perModel as ModelOptions | undefined),
     };
-    const withInfo = modelOptionsWithInfo(id, options, detected);
+    const withInfo = modelOptionsWithInfo(
+      id,
+      options,
+      detected,
+      input.providerId,
+    );
     withInfo.api = api;
     return buildModelEntry(id, withInfo, input.ceilingOverrides);
   });
@@ -698,6 +792,10 @@ export function readModelOptions(model: unknown): ModelOptions {
       /* future host API */
     }
   }
+  const nativeMap = normalizeThinkingLevelMap(value.thinkingLevelMap);
+  if (nativeMap) options.thinkingLevelMap = nativeMap;
+  if (value.compat && typeof value.compat === "object")
+    options.compat = { ...(value.compat as Record<string, unknown>) };
   const enabled = enabledEffortsFromThinking(value.thinking);
   for (const effort of enabledEffortsFromLegacyMap(value.thinkingLevelMap))
     enabled.add(effort);
@@ -747,6 +845,20 @@ export type ModelMutationProperty =
   | "thinkingLevelMap"
   | "name";
 
+function finalizeNativeMap(
+  entry: HostModelEntry,
+  fallback?: ThinkingLevelMap,
+): HostModelEntry {
+  const map = normalizeThinkingLevelMap(entry.thinkingLevelMap) ?? fallback;
+  if (!map) return entry;
+  entry.thinkingLevelMap = map;
+  delete entry.thinking;
+  if (asRecord(entry.compat).supportsReasoningEffort === true)
+    entry.reasoning = true;
+  else delete entry.reasoning;
+  return entry;
+}
+
 function applyModelMutation(
   entry: HostModelEntry,
   property: string,
@@ -767,12 +879,15 @@ function applyModelMutation(
     return entry;
   }
   if (property === "thinkingLevelMap") {
-    delete entry.thinkingLevelMap;
-    const translated = thinkingFromLevelMap(copyThinkingLevelMap(value));
-    if (translated) {
-      entry.reasoning = true;
-      entry.thinking = translated;
-    } else delete entry.thinking;
+    if (value === undefined) {
+      delete entry.thinkingLevelMap;
+      return entry;
+    }
+    const map = normalizeThinkingLevelMap(value);
+    if (map) {
+      entry.thinkingLevelMap = map;
+      return finalizeNativeMap(entry);
+    }
     return entry;
   }
   if (property === "thinking") {
@@ -811,11 +926,17 @@ export function mutateModelEntry<T extends HostModelEntry>(
   value?: unknown,
 ): T {
   const next = { ...entry } as T;
-  if (typeof property === "string")
-    return applyModelMutation(next, property, value) as T;
+  if (typeof property === "string") {
+    const originalMap = normalizeThinkingLevelMap(next.thinkingLevelMap);
+    applyModelMutation(next, property, value);
+    return property === "thinkingLevelMap"
+      ? next
+      : (finalizeNativeMap(next, originalMap) as T);
+  }
+  const requestedMap = normalizeThinkingLevelMap(property.thinkingLevelMap);
   for (const [key, nextValue] of Object.entries(property))
     applyModelMutation(next, key, nextValue);
-  return next;
+  return finalizeNativeMap(next, requestedMap) as T;
 }
 
 export function mutateProviderConfig<T extends ProviderConfig>(

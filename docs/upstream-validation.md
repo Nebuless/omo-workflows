@@ -49,32 +49,36 @@ verification date.
 
 ### Better Custom
 
-- Verified: `2026-09-16`
-- Local runtime: repository Senpi `2026.9.13`; global OMO `5.0.0-0.beta.68` with Senpi `2026.9.16-3`.
-- OMO evidence: https://github.com/code-yeongyu/oh-my-openagent/tree/main/packages/omo-senpi
-- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/extensions/types.ts
-- Local proof: `bun test extensions/better-custom/test test/extension-load.test.ts`, `bun run typecheck`, and live global OMO load of all four extensions pass.
-- Revalidate: OMO or Senpi upgrade, provider registration API change, or model-registry API change.
-- Status: current.
+- Verified: `2026-09-18` (native compatibility boundary, documentation, and isolated request proof)
+- Local runtime evidence: global OMO `5.0.0-0.beta.75` with engine Senpi `2026.9.18-4`; repository Senpi `2026.9.13`; Bun `1.3.14`; provider `9router`; model `cx/gpt-5.6-luna`.
+- OMO evidence: https://github.com/code-yeongyu/oh-my-openagent/tree/6fdcacb33c59a869c0b39ac52a89173a3c5ed1f5/packages/omo-senpi — OMO owns extension loading and host packaging; its native request transport is not changed by this profile boundary.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/7d174a98ff6c42a45529e022914c3b9903b6a25c/packages/coding-agent/src/core/extensions/types.ts — public extension and model-host boundary; Senpi owns mapped effort resolution and request construction.
+- Native transport evidence: https://github.com/can1357/oh-my-pi/blob/62a4aa98a4b52f829a3ae9a5247ca8db4e5f810c/packages/ai/src/providers/openai-completions.ts — OpenAI-completions request transport; Better Custom supplies native metadata and does not intercept requests.
+- Gateway evidence: https://github.com/decolua/9router/blob/a8c9d3802c5933500fba95416f5bf0c130581396/docs/superpowers/specs/2026-08-02-gpt-5-6-codex-reasoning-overrides-design.md — CX model effort matrix used for exact profile boundary: `9router/cx/gpt-5.6-luna`, `9router/cx/gpt-5.6-sol`, and `9router/cx/gpt-5.6-terra` only.
+- Local proof: isolated OMO run with `OMO_CODING_AGENT_DIR`, `SENPI_CODING_AGENT_DIR`, and `HOME` under `/home/egsox/.cache/omo-9router-verify` sent one request to a loopback capture proxy and received its synthetic `OK` response. The capture recorded `POST /v1/chat/completions` for `cx/gpt-5.6-luna` with `reasoning_effort: "low"` when invoked with `--thinking minimal`. This proves outbound payload construction only. In contrast, a live authenticated global OMO run of the same model with `--thinking minimal` exited `1` with OMO `503` wrapping a 9router `400` that rejected `minimal`. The active `~/.omo/agent/models.json` Luna entry lacks `thinkingLevelMap`, so that run did not receive persisted native-map metadata. `bun test extensions/better-custom/test test/extension-load.test.ts` passed 40 tests and 169 assertions; `bun run typecheck` and `bun run build` passed.
+- Boundary: generic per-model `thinkingLevelMap` uses canonical OMO keys `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`; model-scoped `compat.supportsReasoningEffort: true` enables native mapped effort for OpenAI-completions entries. Observed or persisted map/compatibility metadata takes precedence over static defaults. Senpi owns request construction.
+- Incident: 9router rejected Luna provider-facing `minimal` with HTTP `400`; the direct authenticated run revalidated that response. Better Custom maps Luna `minimal → low` and `xhigh → max`; Sol/Terra map `xhigh → ultra` and preserve `max`.
+- Revalidate: 9router gateway or model effort-contract change; profile identity/map change; OMO, Senpi, or Oh My Pi upgrade; request-construction or model-compatibility change; active configuration migration; or new server-side request/fetch diagnostics.
+- Status: direct gateway-response proof complete; active global configuration still lacks the native map, so the live compatibility path fails.
 
 ### Compound Engineering
 
-- Verified: `2026-09-16`
-- Local runtime: repository Senpi `2026.9.13`; global OMO `5.0.0-0.beta.68` with Senpi `2026.9.16-3`.
-- OMO evidence: https://github.com/code-yeongyu/oh-my-openagent/tree/main/packages/omo-senpi
-- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/extensions/types.ts
+- Verified: `2026-09-18`
+- Local runtime: repository Senpi `2026.9.13`; global OMO `5.0.0-0.beta.72` with Senpi `2026.9.18-2`; Bun `1.3.14`.
+- OMO evidence: N/A — this repair uses only Senpi's public resource-discovery callback; OMO loads the standalone package but does not own its resource-path resolution.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/7d174a98ff6c42a45529e022914c3b9903b6a25c/packages/coding-agent/src/core/extensions/types.ts defines `resources_discover` and the resolved `loadedExtensionPaths` context used by this package.
 - Adapted upstream evidence: https://github.com/EveryInc/compound-engineering-plugin/tree/44d65ad64a0ac8e542eabee31ce031a7aeb41b28
-- Local proof: `bun test extensions/compound-engineering/test`, an offline OMO invocation discovers packaged `ce-*` skills, and live global OMO load of all four extensions passes.
+- Local proof: Focused regression first proved checkout-relative discovery wrong, then `bun test extensions/compound-engineering/test/extension.test.ts test/extension-load.test.ts test/herdr-tools.test.ts` passed 28 tests and 98 assertions. Live `omo -e ./extensions/compound-engineering --print ...` exited `0`, listed packaged `ce-*` skills, and emitted no resource-path or extension-load error.
 - Revalidate: OMO or Senpi upgrade, resource-discovery contract change, or Compound Engineering refresh.
 - Status: current.
 
 ### Herdr
 
-- Verified: `2026-09-17`
-- Local runtime: OMO `5.0.0-0.beta.68` (engine Senpi `2026.9.16-3`); repository Senpi `2026.9.13`; Bun `1.3.14`; Herdr `0.9.1`; terminal-browser `0.8.1`.
-- OMO evidence: https://github.com/code-yeongyu/oh-my-openagent/tree/main/packages/omo-senpi
-- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/extensions/types.ts
-- Local proof: `herdr --version` returned `herdr 0.9.1`; `herdr agent --help`, `herdr agent prompt --help`, and `herdr agent start --help` passed; `herdr api schema --json` returned protocol `22`, schema version `1`, pane revision, agent status, and `state_change_seq` while observed agent readback exposed no stable agent ID or `interactive_ready`; missing-argument prompt/start invocations rejected nonzero without mutation; read-only `herdr pane get w1J:p1` and `herdr agent get w1J:p1` passed; `omo list --approve` discovered project package `/home/egsox/.herdr/worktrees/omo-workflows/feat-herdr-agent-controls`. Initial focused validation passed 38 tests and 118 assertions. On `2026-09-17`, fresh OMO loaded the merged `herdr` package and registered all six tools: `herdr_inspect`, `herdr_capabilities`, `herdr_query`, `herdr_operation`, `herdr_approval`, and `herdr_preview`. Capability discovery returned Herdr `0.9.1`; typed `pane.get` read-only queries completed; Preview correctly returned unavailable; unavailable start and cross-pane prompt paths rejected before mutation. Reporter state advanced from working seq `221` to done seq `225`. A fresh approval request initially exposed detached `crypto.randomUUID` receiver failure; after local repair and reload, it returned one pending nonce (`requested`) without confirmation or prompt dispatch. `bun test test/herdr-tools.test.ts` and `bun run typecheck` passed after repair. No prompt/start mutation was dispatched; no browser rendering behavior is claimed. Start/profile mappings remain unavailable until stable identity/readiness proof exists.
+- Verified: `2026-09-18`
+- Local runtime: OMO `5.0.0-0.beta.72` (engine Senpi `2026.9.18-2`); repository Senpi `2026.9.13`; Bun `1.3.14`; Herdr `0.9.1`; terminal-browser `0.8.1`.
+- OMO evidence: N/A — this repair uses only Senpi's public resource-discovery callback; OMO loads the standalone package but does not own its resource-path resolution.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/7d174a98ff6c42a45529e022914c3b9903b6a25c/packages/coding-agent/src/core/extensions/types.ts defines `resources_discover` and the resolved `loadedExtensionPaths` context used by this package.
+- Local proof: Existing Herdr command and capability evidence remains current. Focused regression first proved checkout-relative discovery wrong, then `bun test extensions/compound-engineering/test/extension.test.ts test/extension-load.test.ts test/herdr-tools.test.ts` passed 28 tests and 98 assertions. Live `omo -e ./extensions/herdr --print ...` exited `0`, listed packaged Herdr skills and tools, and emitted no resource-path or extension-load error. No prompt/start mutation was dispatched; no browser rendering behavior is claimed. Start/profile mappings remain unavailable until stable identity/readiness proof exists.
 - Revalidate: OMO or Senpi upgrade, lifecycle-event or tool-registration API change, Herdr command inventory/version change, or terminal-browser Herdr-tab rendering proof.
 - Status: current.
 
@@ -93,7 +97,7 @@ verification date.
 - Verified: `2026-09-17`
 - Local runtime: repository Senpi `2026.9.13`; OMO `5.0.0-0.beta.68` with Senpi engine `2026.9.16-3`; Bun `1.3.14`.
 - OMO evidence: N/A — Trim imports no OMO API; OMO only discovers packaged extension entrypoint.
-- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/extensions/types.ts defines `SessionBeforeCompactEvent.reason`, cancellable compaction handlers, `agent_settled`, and `ExtensionContext.compact()`.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/7d174a98ff6c42a45529e022914c3b9903b6a25c/packages/coding-agent/src/core/extensions/types.ts defines `SessionBeforeCompactEvent.reason`, cancellable compaction handlers, `agent_settled`, and `ExtensionContext.compact()`.
 - Local proof: installed pin declarations expose `threshold`, `manual`, `overflow`, and `extension` reasons; interactive runtime delegates `ctx.compact()` to `AgentSession.compact()`. Focused tests cover threshold veto, preserved manual/overflow compaction, settled forced requests, and safe `/trim shake` guards. Full extension tests, typecheck, build, and live OMO command checks run before closeout.
 - Revalidate: Senpi upgrade or compaction-lifecycle API change.
 - Status: current.

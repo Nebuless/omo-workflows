@@ -1,4 +1,5 @@
 import { getBuiltinProviders } from "@earendil-works/pi-ai/providers/all";
+import { normalizeThinkingLevelMap } from "./model-entry.ts";
 import { BUILTIN_PROVIDER_IDS } from "./config.ts";
 import type { ModelEntry, ModelsConfig, ProviderConfig } from "./types.ts";
 
@@ -195,19 +196,37 @@ function normalizeModelForRegistration(
   entry: Record<string, unknown>,
   provider: ProviderConfig,
 ): Record<string, unknown> {
+  const hasNativeMapProperty = Object.hasOwn(entry, "thinkingLevelMap");
   const {
     api: _modelApi,
     baseUrl: _modelBaseUrl,
     compat: _modelCompat,
     ...otherFields
   } = entry;
+  const {
+    thinkingLevelMap: _nativeMap,
+    thinking: _privateThinking,
+    ...nativeMapFields
+  } = otherFields;
+  const fields = hasNativeMapProperty ? nativeMapFields : otherFields;
   const id = entry.id as string;
   const api = nonEmptyString(entry.api) ?? nonEmptyString(provider.api);
   const baseUrl =
     nonEmptyString(entry.baseUrl) ?? nonEmptyString(provider.baseUrl);
-  const compat = mergeCompat(provider.compat, entry.compat);
+  const nativeMap = normalizeThinkingLevelMap(entry.thinkingLevelMap);
+  let compat = mergeCompat(provider.compat, entry.compat);
+  const modelCompat = isRecord(entry.compat) ? entry.compat : undefined;
+  if (
+    nativeMap &&
+    !Object.hasOwn(modelCompat ?? {}, "supportsReasoningEffort")
+  ) {
+    if (compat) {
+      delete compat.supportsReasoningEffort;
+      if (Object.keys(compat).length === 0) compat = undefined;
+    }
+  }
   const model: Record<string, unknown> = {
-    ...otherFields,
+    ...fields,
     id,
     name: nonEmptyString(entry.name) ?? id,
     reasoning: typeof entry.reasoning === "boolean" ? entry.reasoning : false,
@@ -216,6 +235,12 @@ function normalizeModelForRegistration(
     contextWindow: finiteNumber(entry.contextWindow, 128_000, 1),
     maxTokens: finiteNumber(entry.maxTokens, 16_384, 1),
   };
+  if (nativeMap) {
+    model.thinkingLevelMap = nativeMap;
+    delete model.thinking;
+    if (compat?.supportsReasoningEffort === true) model.reasoning = true;
+    else delete model.reasoning;
+  }
   if (api) model.api = api;
   if (baseUrl) model.baseUrl = baseUrl;
   if (compat) model.compat = compat;
