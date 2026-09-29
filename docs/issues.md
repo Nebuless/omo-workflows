@@ -161,3 +161,19 @@ reference exists, state that and label any workaround as invented.
 - **Affected runtime:** OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`.
 - **Resolution:** Historical record. The extension and related staged-workflow implementation were removed from this repository on 2026-09-16.
 - **Upstream source:** [OMO package install CLI](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/packages/omo-senpi/src/cli.ts); [Senpi package settings](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/packages.md).
+
+## 2026-09-29T15:44:01Z - Native migration, Pi, and Kibitzer warnings
+
+- Runtime: OMO `5.1.2`, Senpi `2026.9.29-3`, Bun `1.3.14`.
+- Symptom: startup reported retired `deep`, OpenCode-only agent choices,
+  edits in `~/.pi/agent`, and an unavailable `memory-reflection` chain.
+- Resolution: Native-only global routing uses registered 9router GPT-6 models;
+  reflection and recall pin `9router/cx/gpt-6-luna` at `xhigh`. Removed stale
+  OpenCode routing block; preserved scanner-visible migration backup as
+  `oh-my-openagent.json.retired`. Pi files were not imported or modified;
+  after active model registration, detector reports no remaining Pi edits.
+- Upstream sources:
+  https://github.com/code-yeongyu/oh-my-openagent/blob/dev/bin/lib/setup-opencode-models.js
+  and https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/legacy-pi-edits.ts.
+  No exact matching upstream issue found. Retiring the archive filename is an
+  invented local workaround, not an upstream opt-out setting.

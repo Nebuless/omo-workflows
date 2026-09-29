@@ -9,6 +9,7 @@ Store portable, merge-safe OMO configuration templates.
 - `omo-agent-settings.json` owns global Senpi preferences applied by the OMO bootstrap script.
 - `omo.jsonc.balanced` owns the portable balanced `9router` task-routing profile.
 - `omo.jsonc.gpt-heavy` owns the portable CX-first `9router` task-routing profile.
+- `omo.jsonc.native-9router` owns the current Native OMO/Senpi GPT-6 routing profile, including seven built-in agents.
 
 ## Local Contracts
 
@@ -16,8 +17,9 @@ Store portable, merge-safe OMO configuration templates.
 - Routing templates contain only canonical model IDs verified by `omo --list-models 9router`.
 - `omo-agent-settings.json` keeps native Senpi startup and working tips disabled.
 - Routing templates are complete replacement profiles, not additive JSON fragments.
-- Both routing templates keep every execution category in shared top-level `categories`; parent OMO runs, Senpi children, reflection, and Kibitzer use same routing map. `memory.reflection.category` and `memory.recall.category` select `memory-reflection` explicitly.
-- Both routing templates disable reflection sandboxing until upstream merges a fix for missing `runtime/reflection-sessions`; see `docs/issues.md`.
+- `omo.jsonc.native-9router` copies active agent/category/memory routes, not local migration bookkeeping; it requires an authenticated Better Custom `9router` provider.
+- All routing templates keep execution categories in shared top-level `categories`; parent OMO runs, Senpi children, reflection, and Kibitzer use same routing map. `memory.reflection.category` and `memory.recall.category` select `memory-reflection` explicitly.
+- All routing templates disable reflection sandboxing until upstream merges a fix for missing `runtime/reflection-sessions`; see `docs/issues.md`.
 
 ## Work Guidance
 

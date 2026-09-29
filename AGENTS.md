@@ -89,10 +89,15 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Model Routing Preference
 
-For OMO routing on this workstation, `templates/omo.jsonc.gpt-heavy` is the
-global default: installed `9router/cx/*` models lead every route; targeted
-`9router/ollama-cloud/*` models provide fallbacks. Keep
-`templates/omo.jsonc.balanced` as cost/capability alternative. Record model
+This workstation uses Native OMO with Senpi, not OpenCode or a Codex harness.
+Better Custom registers `9router`; use its current catalog, not stale template
+IDs. Active routing uses GPT-6 Luna, Sol, and Astra. Memory reflection and
+recall/Kibitzer use `9router/cx/gpt-6-luna` at `xhigh`. Do not import Pi config.
+Configure all seven native subagent profiles globally under shared `agents`;
+`docs/omo-subagents.md` owns their route table and native role boundaries.
+Keep `templates/omo.jsonc.native-9router` as the portable copy of active global
+routes. Keep `templates/omo.jsonc.gpt-heavy` and `templates/omo.jsonc.balanced` as
+historical profiles, not current workstation replacements. Record model
 availability, cost, benchmark evidence, and routing rationale in
 `docs/model-matrix.md` and active policy in `docs/model-routing.md`; never
 commit credentials or endpoint secrets.
@@ -171,7 +176,7 @@ trigger.
   ignored.
 - `.qlty/` — committed Qlty configuration.
 - `biome.json` — Biome source scope; excludes ignored generated local runtime state.
-- `templates/` — portable OMO preference templates plus complete balanced and GPT-heavy `9router` routing profiles.
+- `templates/` — portable OMO preferences, current Native OMO `9router` agent routes, and historical balanced/GPT-heavy routing profiles.
 - `README.md` — concise native OMO, LLM handoff, and extension installation entrypoint; routes to complete local and upstream documentation.
 - `customizations/` — policy-only scaffolds for OMO and Senpi capability domains; runnable behavior belongs in `extensions/`. Read [`customizations/AGENTS.md`](customizations/AGENTS.md) and [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) before creating a new customization.
 - `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, customization, upstream-validation, requirements plans, and user-reported issue guidance. `docs/issues.md` is timestamped register for OMO/Senpi user reports and upstream references. `docs/model-matrix.md` owns model pricing, benchmark evidence, and profile mappings; `docs/model-routing.md` owns active routing policy. `docs/plans/` owns requirements-only CE unified plan artifacts. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) for the upstream-backed capability map and creation rules; read [`docs/upstream-validation.md`](docs/upstream-validation.md) before relying on OMO or Senpi runtime behavior; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.

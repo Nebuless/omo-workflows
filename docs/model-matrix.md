@@ -56,23 +56,30 @@ missing score as zero or infer one from model tier or price.
 
 ## Routing profiles
 
+`templates/omo.jsonc.native-9router` copies current Native OMO/Senpi routing:
+seven named agents, 11 categories, and memory reflection/recall use the
+authenticated 9router GPT-6 Luna, Sol, and Astra catalog. See
+[OMO subagents](omo-subagents.md#named-agents) for exact agent assignments.
+
 `templates/omo.jsonc.balanced` is cost/capability mix. It puts GLM-5.3-Flash
 first for scout and visual categories, keeps DeepSeek V4 Flash as cheap text
 fallback, and reserves GPT-6 Astra for hard reasoning.
 
-`templates/omo.jsonc.gpt-heavy` is global default. It puts CX models first for
-every category. GPT-5.6 Luna handles cheap quick work and all memory
-reflection; GPT-5.6 Terra handles general and visual work; GPT-6 Astra handles
+`templates/omo.jsonc.gpt-heavy` is a historical CX-first profile. It puts CX
+models first for every category. GPT-5.6 Luna handles cheap quick work and all
+memory reflection; GPT-5.6 Terra handles general and visual work; GPT-6 Astra handles
 deep reasoning. Ollama Cloud models remain fallback where they add long
 context, cost control, or a stronger specialty.
 
-Both profiles declare `memory-reflection` at the shared config base, then set
+All profiles declare `memory-reflection` at the shared config base, then set
 `memory.reflection.category` to it. OMO's reflection child runs as Senpi, so an
 `[opencode]`-only `quick` route cannot govern it.
 
-Copy exactly one template to `~/.omo/omo.jsonc` only after verifying every
-model with `omo --list-models 9router`. The files replace the routing block;
-they contain no credentials or endpoint configuration.
+After verifying every model with `omo --list-models 9router`, use one complete
+template for a fresh `~/.omo/omo.jsonc`; for an existing config, merge its
+`agents`, `categories`, and `memory` keys while preserving unrelated settings
+and local `_migrations` bookkeeping. Templates contain no credentials or
+endpoint configuration.
 
 ## OMO behavior
 

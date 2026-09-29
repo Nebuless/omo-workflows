@@ -96,6 +96,7 @@ interactive OMO. See [extension authoring and verification](docs/authoring-exten
 | Add one installable extension | [Authoring extensions](docs/authoring-extensions.md) |
 | Configure global rules and prompt overlays | [Global instructions](docs/customizations.md#global-agent-instructions) |
 | Configure providers and model routing | [Model matrix and profiles](docs/model-matrix.md) |
+| Reproduce current Native OMO subagent routes | [9router template](templates/omo.jsonc.native-9router) and [setup steps](docs/omo-subagents.md#setup-procedure) |
 | Set up or troubleshoot delegated work | [OMO/Senpi subagents](docs/omo-subagents.md) |
 | Configure OMO preferences or repair runtime gaps | [Runtime repairs](docs/runtime-repairs.md) |
 | Check OMO/Senpi version-sensitive claims | [Upstream validation](docs/upstream-validation.md) |

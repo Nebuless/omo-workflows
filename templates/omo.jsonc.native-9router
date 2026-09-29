@@ -1,0 +1,30 @@
+// Native OMO/Senpi routing for authenticated 9router GPT-6 models.
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/dev/assets/omo.schema.json",
+  "categories": {
+    "memory-reflection": { "model": "9router/cx/gpt-6-luna", "reasoning": "xhigh" },
+    "visual-engineering": { "model": "9router/cx/gpt-6-sol", "reasoning": "medium" },
+    "ultrabrain": { "model": "9router/cx/gpt-6-astra", "reasoning": "max" },
+    "deep-low": { "model": "9router/cx/gpt-6-sol", "reasoning": "medium" },
+    "deep-high": { "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" },
+    "architect": { "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" },
+    "artistry": { "model": "9router/cx/gpt-6-sol", "reasoning": "medium" },
+    "quick": { "model": "9router/cx/gpt-6-luna", "reasoning": "medium" },
+    "unspecified-low": { "model": "9router/cx/gpt-6-luna", "reasoning": "low" },
+    "unspecified-high": { "model": "9router/cx/gpt-6-sol", "reasoning": "high" },
+    "writing": { "model": "9router/cx/gpt-6-sol", "reasoning": "medium" }
+  },
+  "memory": {
+    "reflection": { "category": "memory-reflection", "sandbox": "off" },
+    "recall": { "category": "memory-reflection" }
+  },
+  "agents": {
+    "explore": { "model": "9router/cx/gpt-6-luna", "reasoning": "medium" },
+    "librarian": { "model": "9router/cx/gpt-6-sol", "reasoning": "xhigh" },
+    "plan-consultant": { "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" },
+    "plan-reviewer": { "model": "9router/cx/gpt-6-sol", "reasoning": "high" },
+    "omo-native-code-reviewer": { "model": "9router/cx/gpt-6-sol", "reasoning": "high" },
+    "omo-native-gate-reviewer": { "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" },
+    "omo-native-qa-executor": { "model": "9router/cx/gpt-6-sol", "reasoning": "high" }
+  }
+}

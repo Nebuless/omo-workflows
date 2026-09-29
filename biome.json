@@ -21,5 +21,11 @@
       "semicolons": "always",
       "trailingCommas": "all"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["test/omo-preferences.test.ts"],
+      "formatter": { "indentStyle": "tab" }
+    }
+  ]
 }
