@@ -39,8 +39,14 @@ surface is `/skill:<name>`; model routing can select visible skills naturally.
 
 ## Compatibility
 
-Verified against OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`, and Bun
-`1.3.14`. Upstream version and immutable revision are in [UPSTREAM.md](UPSTREAM.md).
+Target pairing: OMO `5.1.34` with bundled Senpi `2026.10.16`. The current OMO
+RPC smoke loaded the extension and discovered its 35 packaged skills after
+replacing unsupported `import.meta.dirname` path resolution. Focused package
+tests, extension loading, build, and typecheck passed. The complete suite has
+497 passing tests and three historical repair failures requiring an absent old
+global artifact; see [compatibility](../../docs/compatibility.md).
+Standalone Senpi `2026.10.16-3` is not the OMO pairing.
+Upstream skill version and immutable revision are in [UPSTREAM.md](UPSTREAM.md).
 
 ## Verify
 

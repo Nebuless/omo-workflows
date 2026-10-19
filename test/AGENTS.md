@@ -12,6 +12,7 @@ Own regression tests spanning package boundaries and Senpi public contracts.
 
 - Test observable host behavior, not prose or implementation formatting.
 - Isolate agent state in temporary directories.
+- Load extension modules in bounded suite setup before exercising registration; restore environment overrides and remove temporary state after the suite.
 - Keep tests deterministic; await exact state rather than using timing delays.
 
 ## Work Guidance

@@ -5,6 +5,46 @@ Keep one dated entry per report. State observed behavior, affected runtime, reso
 state, validation, and upstream issue, pull request, or source. If no upstream
 reference exists, state that and label any workaround as invented.
 
+## 2026-10-16T21:58:33Z - Mutation formatter overrides repository indentation
+
+- **Observed symptom:** Applying a two-space Biome-formatted patch immediately
+  rewrites TypeScript to tabs. The resulting source parses, but Qlty reports 24
+  `biome:fmt` failures. Reproduced on the Compound Engineering entrypoint.
+- **Affected runtime:** OMO `5.1.34`, paired Senpi `2026.10.16`; packaged LSP
+  formatter runs after `apply_patch`.
+- **Cause and upstream:** The [mutation formatter](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-senpi/src/components/formatter/formatter.ts)
+  tries the resident daemon before the project CLI. Its [default formatting
+  options](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/lsp-core/src/lsp/format-document.ts)
+  explicitly request `insertSpaces: false` and `tabSize: 4`. No matching upstream
+  issue or PR has been established; the exact source explains the local result.
+- **Resolution:** User approved the local workaround: set supported
+  `formatOnMutation.mode` to `off` in global OMO configuration. A fresh child
+  preserved repository formatting; existing sessions retain the cached hook.
+  Qlty now reports no issues. Quality policy, model routes, and services were
+  not changed. This is an invented local workaround, not an upstream fix.
+
+## 2026-10-16T21:49:00Z - Extensions use outdated OMO compatibility guidance
+
+- **Reported symptom:** Shared setup and compatibility documentation still
+  instructed users to install the beta channel and described older OMO/Senpi
+  versions as current; current OMO also rejected `import.meta.dirname` in
+  extension resource paths.
+- **Affected runtime:** Target OMO `5.1.34`, paired Senpi `2026.10.16`; current
+  binary RPC smoke. Standalone Senpi `2026.10.16-3` is newer but is not the OMO
+  pairing.
+- **Resolution:** Updated install guidance to stable `npm i -g omo-ai`, with
+  `omo setup` marked optional; refreshed compatibility pins and clarified that
+  remaining historical CI failures are explicit. Extension paths use
+  `fileURLToPath(new URL(..., import.meta.url))`. Independent installed OMO
+  offline RPC loaded all four extensions; discovered
+  35 Compound Engineering skills and 5 Herdr skills; and reported zero
+  extension errors. A configured authored workflow persisted and resumed its
+  final result in a fresh installed OMO process. Historical DAG, journal, and mouse repairs
+  remain hash/version locked. The historical comment-checker task is an
+  unconditional global install. None is supported for the current binary.
+- **Upstream:** [OMO 5.1.34 installation guide](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/guide/installation.md), [OMO 5.1.34 package pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-senpi/package.json), and [paired Senpi loader](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/src/core/extensions/loader.ts). No matching upstream issue or PR was identified in the captured audit.
+- **Validation:** Approved installation exited 0 and regenerated matching lock pins. Installed OMO RPC loaded all four extensions and passed authored-program persistence/reopen. `mise ci` passed typecheck, build, package, hooks, Biome parsing, and Qlty; its test task has 497 passes and three preserved historical DAG repair failures (`ENOENT` for old global `omo-task.js`). Native journal and structured mouse integration pass. Fifteen renderer frames at 40/80/120 columns were inspected in xterm. Physical terminal mouse input and credential-backed provider mutation were not exercised.
+
 ## 2026-09-13T13:35:12Z - Namespaced model IDs disable native apply_patch
 
 - **Reported symptom:** SHPRD terminal, runtime, and services workers stopped because required `apply_patch` was registered but inactive, and no executable existed on `PATH`. Redispatching all three saved sessions in their existing Herdr worktrees did not restore access.

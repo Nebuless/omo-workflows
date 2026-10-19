@@ -1,0 +1,12 @@
+{
+  "name": "@omo-workflows/better-custom",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Native OMO/Senpi custom provider and model browser extension.",
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  }
+}

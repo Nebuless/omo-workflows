@@ -43,6 +43,11 @@ for (const entrypoint of extensionEntrypoints) {
 
 for (const [relativePath, packageName, entrypoint] of [
   [
+    "extensions/better-custom/package.json",
+    "@omo-workflows/better-custom",
+    "./src/index.ts",
+  ],
+  [
     "extensions/compound-engineering/package.json",
     "@omo-workflows/compound-engineering",
     "./src/index.ts",
@@ -75,8 +80,8 @@ for (const [relativePath, packageName, entrypoint] of [
 }
 
 const senpiVersion = manifest.dependencies?.["@code-yeongyu/senpi"];
-if (senpiVersion !== "2026.9.10-2") {
-  errors.push("Senpi must remain pinned to 2026.9.10-2");
+if (senpiVersion !== "2026.10.16") {
+  errors.push("Senpi must remain pinned to 2026.10.16");
 }
 
 const sourceFiles = [

@@ -1,20 +1,21 @@
 # Atomic workflow parity
 
 Status: staged native adaptation implemented; literal Atomic parity remains
-limited by the public native APIs listed below. Attempt 2 closes discovery/catalog
-and design completion omissions from the prior rejected gate. Final delta review
-APPROVE confirms bounded native completion. Runtime hooks remain explicit opt-in repairs.
+limited by the public native APIs listed below. Historical validation belongs
+to its dated runtime and is not current-runtime verification. OMO 5.1.34 with
+paired Senpi 2026.10.16 is the current target; see the evidence-bounded record
+in [upstream validation](../../docs/upstream-validation.md#2026-10-16-omo-5134-and-paired-senpi-20261016).
 
 ## Source baseline
 
-Verified 2026-09-12 against:
+Historically verified 2026-09-12 against:
 
 - [Atomic ff55b141](https://github.com/bastani-inc/atomic/tree/ff55b141109e3f9f5980c1f0c718dea39f6b2fd9).
 - [OMO e0746bcb](https://github.com/code-yeongyu/oh-my-openagent/tree/e0746bcbcdf6341f697358867b2de436251fa5ad).
 - [Senpi 6db12827](https://github.com/code-yeongyu/senpi/tree/6db12827c7e5f4bc6773fd9f7097b7891d4afd78).
 - Installed OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`, Bun `1.3.14`.
 
-Comparison revisions do not imply installed runtime contains upstream changes.
+These results do not establish current-runtime behavior. Comparison revisions do not imply installed runtime contains upstream changes.
 Adapters discover live schemas and reject missing capabilities. Provenance and
 licenses remain in [UPSTREAM.md](UPSTREAM.md).
 
@@ -26,15 +27,18 @@ decisions admit outputs before cumulative amendment of one native run. Native
 session custom entries store intent, results, human answers, and external events;
 no Atomic DBOS or second state database is installed.
 
-[Explicit repairs](../../docs/runtime-repairs.md#optional-staged-workflow-runtime-hooks)
+[Historical repairs](../../docs/runtime-repairs.md#historical-version-locked-workflow-repairs)
 provide journal acknowledgment, native `/dag` presentation delegation, and
-focused-overlay mouse deferral. Extension loading applies none. Historical
-`2026.9.10-2` hooks remained unmodified during their validation. Current
-authorized `2026.9.13` repair changes only installed Senpi journal files to
-provide async `SessionManager.flushEntries(): Promise<void>`; it does not change
-OMO DAG behavior. Missing journal acknowledgment or a non-persisted session
-rejects launches. `activateInactiveTool: true` uses the public Senpi dispatch
-API; lazy native registration is not missing capability.
+fullscreen mouse interception only for their exact version/hash targets. They
+are unsupported on the current binary and must not be applied. Current journal
+code uses public session-header persistence, native `appendEntry`, and standard
+library file sync. Native SessionManager reopen tests and an installed OMO
+authored-program launch/reopen smoke pass. Current pointer code accepts Senpi's
+structured `TuiMouseEvent`; the unmodified native TuiAltScreen dispatch test
+passes press, release, captured drag, wheel, and transcript isolation checks.
+Renderer frames were inspected in xterm at 40, 80, and 120 columns. This is not
+proof of physical terminal mouse input. `activateInactiveTool: true` uses the
+public Senpi dispatch API.
 
 ## Capability matrix
 
@@ -50,10 +54,10 @@ API; lazy native registration is not missing capability.
 | Composition/admission [A4] | Deterministic wave decisions, bounded fanout/join, fresh cumulative nodes, exact JSON/file/byte validation before dispatch; declared composition uses one instance/root/checkpoint/native run and namespaced RFC 6901 mappings | Arbitrary callbacks, nested continuation, native per-node tools/context settings absent; composition is not cross-run continuation | Composition/controller tests; one-run native receipt |
 | Launch, transfer, and human gates [A5,A6] | `workflow_program` list/reload/start/resume/status/answer/cancel/transfer; `/workflow-run`; unique launch keys; recorded answer provenance; confirmed terminal verified-copy transfer to distinct run | Session-local owner; transfer accepts only current/restored completed source and is not native continuation or arbitrary cross-session history; no native operator pause/resume | Launch races/session-fence/restart and transfer replay tests; real persisted transfer receipt |
 | Durable tools [A6] | Native tasks retain results; controller/helper event replay reuses admitted outputs | Arbitrary callback side effects and their timeout/failure-return semantics have no public native node owner | Native journal reopen; keyed recovery; helper reply replay tests |
-| Budgets and exit [A4] | Source iteration bounds; deterministic approval/stop reducers; native cancel fencing | Cumulative native DAG ceiling is 64; no general Atomic budget, graceful quit, or pause/continue API | Goal/Ralph default-ten capacity rejection; boundary/cancel tests |
+| Budgets and exit [A4] | Source iteration bounds; deterministic approval/stop reducers; native cancel fencing | Native DAG node limit defaults to 64 and is configurable; this extension imposes its own conservative local bound. No general Atomic budget, graceful quit, or pause/continue API | Historical capacity tests; configurable native limit in [OMO graph source](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/senpi-task/src/dag/graph.ts); local policy |
 | Subagents [A7,N2] | Native routes, task sessions, processes, outputs, completion delivery and steering | Atomic per-stage tool/context policy and worktree delegation cannot be expressed by pinned node schema | Live child identities preserved; unsupported target configuration rejected |
 | Parent/peer communication [A7,N2] | Native task completion, workflow send and team messaging retain native owners; admitted results feed next prompts/files | No Atomic supervisor-decision/stage-group actor namespace or attached child custom UI | Native final results and same-run artifacts; ownership/control tests |
-| Recovery [N1,N2] | Native WAL/tasks plus native-session controller checkpoints; exact definition fingerprint; keyed initial recovery; optional acknowledged flush repair | Does not promise restart replay for arbitrary user callbacks or external effects outside helper protocol. Repair hashes and runtime version gate use; broad native static check currently fails from missing upstream test dependencies | Copied real SessionManager reopen; admission/amend/answer/cancel tests; durable-journal repair receipt |
+| Recovery [N1,N2] | Native WAL/tasks plus native-session controller checkpoints; exact definition fingerprint; keyed initial recovery; public header persistence and native append followed by file sync acknowledgement | Does not promise restart replay for arbitrary user callbacks or external effects outside helper protocol. Historical repairs are unsupported on current runtime | Current native SessionManager reopen and installed OMO authored-program launch/reopen pass; journal failure gates pass |
 | Controls [N1] | Native start/attach/snapshot/wait/cancel/retry/send/amend; confirmed cancel and authoritative updates | Public actions exclude pause/resume/quit; program resume restores controller, not paused native scheduler | Live schema validation and foreign-run rejection tests |
 | Herdr | No-focus read-only observer; normalized run/node metadata; fold/run persistence; manual reopen | No scheduler ownership or transcript storage; richer Atomic stage UI not reproduced | Genuine extension-written 16-node projection, terminal captures, cleanup receipts |
 

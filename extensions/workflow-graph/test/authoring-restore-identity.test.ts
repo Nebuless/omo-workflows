@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { appendFileSync } from "node:fs";
+import { mkdtemp, open, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Type } from "typebox";
@@ -10,13 +11,18 @@ import {
   type ProgramRegistry,
 } from "../src/authoring/host.ts";
 
-function fixture(registry: ProgramRegistry) {
+async function fixture(registry: ProgramRegistry, directory: string) {
+  const file = join(directory, "session.jsonl");
+  await writeFile(file, "");
   const entries: unknown[] = [];
   const actions: unknown[] = [];
   const runtime = {
     appendEntry(customType: string, data: unknown) {
-      entries.push({ customType, data: structuredClone(data) });
+      const entry = { customType, data: structuredClone(data) };
+      entries.push(entry);
+      appendFileSync(file, `${JSON.stringify(entry)}\n`);
     },
+    session: { persistHeaderNow: async () => {} },
     getAllTools: () => [
       { name: "workflow", parameters: Type.Object({ action: Type.String() }) },
     ],
@@ -31,8 +37,7 @@ function fixture(registry: ProgramRegistry) {
     isProjectTrusted: () => true,
     sessionManager: {
       getBranch: () => entries,
-      isPersisted: () => true,
-      flushEntries() {},
+      getSessionFile: () => file,
     },
   };
   return {
@@ -41,6 +46,14 @@ function fixture(registry: ProgramRegistry) {
     context,
     runtime,
     host: createProgramHost(runtime, registry, () => {}),
+    async sync() {
+      const handle = await open(file, "r+");
+      try {
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+    },
   };
 }
 
@@ -48,27 +61,27 @@ for (const mode of ["missing-descriptor", "missing-resolver"] as const) {
   test(`rejects explicit restore before importing code when ${mode}`, async () => {
     // Given: durable selection has no verifiable descriptor, but its key resolves to valid code.
     const cwd = await mkdtemp(join(tmpdir(), "workflow-restore-identity-"));
-    const f = fixture({
-      list: () => [],
-      get: () => undefined,
-      ...(mode === "missing-descriptor" ? { identity: () => undefined } : {}),
-    });
+    const f = await fixture(
+      {
+        list: () => [],
+        get: () => undefined,
+        ...(mode === "missing-descriptor" ? { identity: () => undefined } : {}),
+      },
+      cwd,
+    );
     try {
       await writeFile(
         join(cwd, "program.ts"),
         'export const program={key:"replacement",version:1,input:{type:"object"},decide:()=>({kind:"final",result:42})};',
       );
-      f.entries.push({
-        customType: LAUNCH_ENTRY_TYPE,
-        data: {
-          key: "./program.ts",
-          instance: "original",
-          version: 1,
-          inputs: {},
-          artifactRoot: cwd,
-          revision: 1,
-          digest: "original-descriptor",
-        },
+      f.runtime.appendEntry(LAUNCH_ENTRY_TYPE, {
+        key: "./program.ts",
+        instance: "original",
+        version: 1,
+        inputs: {},
+        artifactRoot: cwd,
+        revision: 1,
+        digest: "original-descriptor",
       });
       // When: caller explicitly names recorded path after discovery lost its descriptor.
       const result = await f.host.restore(
@@ -83,6 +96,7 @@ for (const mode of ["missing-descriptor", "missing-resolver"] as const) {
       expect(f.host.status()).toBeUndefined();
       expect(f.entries).toHaveLength(1);
       expect(f.actions).toEqual([]);
+      await f.sync();
     } finally {
       f.host.stop();
       await rm(cwd, { recursive: true, force: true });
@@ -120,7 +134,7 @@ test("restores unchanged builtin before discovery when recorded revision is publ
         : { revision: snapshot.revision, digest: descriptor.digest };
     },
   });
-  const f = fixture(registry(published));
+  const f = await fixture(registry(published), cwd);
   try {
     await published.reload(f.context);
     const descriptor = published.descriptors()[0];
@@ -141,6 +155,7 @@ test("restores unchanged builtin before discovery when recorded revision is publ
         instance.replace(":", "-"),
       ),
     });
+    await f.sync();
     f.host.stop();
     const seeded = createProgramCatalog(options);
     const restored = createProgramHost(f.runtime, registry(seeded), () => {});

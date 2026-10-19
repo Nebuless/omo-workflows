@@ -1,20 +1,18 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
-  cpSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
-  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
+import type { Terminal, TuiMouseEvent } from "@earendil-works/pi-tui";
+import type { OverlayState } from "../src/overlay/model.ts";
 import {
-  POSTIMAGE_SHA256,
-  PREIMAGE_SHA256,
   repairWorkflowMouse,
   SENPI_TUI_VERSION,
-  sha256,
   TUI_ALT_SCREEN_FILE,
 } from "../../../scripts/lib/workflow-mouse-patch.ts";
 
@@ -24,145 +22,185 @@ afterEach(() => {
     rmSync(path, { recursive: true, force: true });
 });
 
-function installedPackage(): string {
-  return dirname(dirname(require.resolve("@earendil-works/pi-tui")));
+class TestTerminal implements Terminal {
+  columns = 100;
+  rows = 18;
+  kittyProtocolActive = true;
+  private input: ((data: string) => void) | undefined;
+  start(input: (data: string) => void) {
+    this.input = input;
+  }
+  stop() {
+    this.input = undefined;
+  }
+  drainInput() {
+    return Promise.resolve();
+  }
+  write() {}
+  moveBy() {}
+  hideCursor() {}
+  showCursor() {}
+  clearLine() {}
+  clearFromCursor() {}
+  clearScreen() {}
+  setTitle() {}
+  setProgress() {}
+  send(data: string) {
+    this.input?.(data);
+  }
 }
 
-function copiedPackage(): string {
-  const root = mkdtempSync(join(tmpdir(), "senpi-mouse-package-"));
+describe("current native Senpi mouse dispatch", () => {
+  test("unmodified TuiAltScreen delivers local press, captured drag and wheel once", async () => {
+    const { TuiAltScreen } = await import("@earendil-works/pi-tui");
+    const { WorkflowGraphComponent } = await import(
+      "../src/overlay/component.ts"
+    );
+    const terminal = new TestTerminal();
+    const tui = new TuiAltScreen(terminal, false, undefined, {
+      wheelScrollLines: 1,
+      copyOnSelect: false,
+    });
+    tui.addChild({
+      render: () =>
+        Array.from({ length: 30 }, (_, i) => `Transcript line ${i}`),
+      invalidate() {},
+    });
+    let state: OverlayState = { query: "", panX: 0, panY: 0 };
+    let updates = 0;
+    class Overlay extends WorkflowGraphComponent {
+      readonly mouse: TuiMouseEvent[] = [];
+      readonly inputs: string[] = [];
+      override handleMouse(event: TuiMouseEvent) {
+        this.mouse.push(event);
+        return super.handleMouse(event);
+      }
+      override handleInput(data: string) {
+        this.inputs.push(data);
+        super.handleInput(data);
+      }
+    }
+    const overlay = new Overlay(
+      {
+        runId: "mouse",
+        name: "Mouse",
+        stale: false,
+        truncated: false,
+        nodes: Array.from({ length: 12 }, (_, i) => ({
+          id: String(i),
+          label: `Node ${i}`,
+          state: "running" as const,
+        })),
+        edges: [],
+        unknownEdges: [],
+      },
+      { terminal: { rows: 14 }, requestRender: () => tui.requestRender() },
+      undefined,
+      undefined,
+      state,
+      (next) => {
+        state = next;
+        updates += 1;
+      },
+      () => {},
+    );
+    tui.start();
+    try {
+      tui.renderNow(true);
+      const handle = tui.showOverlay(overlay, {
+        width: 80,
+        maxHeight: 14,
+        col: 10,
+        row: 2,
+        margin: 0,
+      });
+      tui.renderNow(true);
+      expect(handle.getBounds()).toEqual({
+        col: 10,
+        row: 2,
+        width: 80,
+        height: 14,
+      });
+      const top = tui.viewportTop;
+      terminal.send("\x1b[<65;20;7M");
+      expect(state.panY).toBe(1);
+      expect(overlay.mouse[0]).toMatchObject({
+        type: "wheel",
+        x: 9,
+        y: 4,
+        wheelDelta: 1,
+      });
+      expect(tui.viewportTop).toBe(top);
+
+      terminal.send("\x1b[<0;90;15M");
+      expect(state.panY).toBe(62);
+      terminal.send("\x1b[<32;1;1M");
+      expect(state.panY).toBe(0);
+      terminal.send("\x1b[<0;1;1m");
+      expect(overlay.mouse.at(-1)).toMatchObject({
+        type: "release",
+        x: -10,
+        y: -2,
+      });
+
+      const beforeClick = updates;
+      terminal.send("\x1b[<0;16;8M");
+      terminal.send("\x1b[<0;16;8m");
+      expect(state).toMatchObject({ selectedId: "0", detail: true });
+      expect(updates).toBe(beforeClick + 1);
+      expect(overlay.mouse.slice(-3).map((event) => event.type)).toEqual([
+        "press",
+        "release",
+        "click",
+      ]);
+      expect(overlay.inputs).toEqual([]);
+
+      handle.unfocus({ target: null });
+      terminal.send("\x1b[<65;20;7M");
+      expect(state.panY).toBeGreaterThan(0);
+      expect(handle.isFocused()).toBe(false);
+      expect(tui.viewportTop).toBe(top);
+      const delivered = overlay.mouse.length;
+      terminal.send("\x1b[<0;2;2M");
+      terminal.send("\x1b[<32;8;2M");
+      terminal.send("\x1b[<0;8;2m");
+      expect(tui.hasActiveSelection()).toBe(true);
+      terminal.send("\x1b[<64;2;2M");
+      expect(tui.viewportTop).toBe(top - 1);
+      expect(overlay.mouse).toHaveLength(delivered);
+      expect(overlay.inputs).toEqual([]);
+
+      handle.focus();
+      terminal.send("v");
+      expect(state.orientation).toBe("vertical");
+      expect(overlay.inputs).toEqual(["v"]);
+    } finally {
+      tui.stop();
+    }
+  });
+});
+
+test("historical mouse repair rejects unknown version and hash without old installed packages", () => {
+  const root = mkdtempSync(join(tmpdir(), "senpi-mouse-rejection-"));
   temporaryPaths.push(root);
-  cpSync(installedPackage(), root, { recursive: true });
-  symlinkSync(join(process.cwd(), "node_modules"), join(root, "node_modules"));
-  return root;
-}
-
-async function exerciseNativeTui(packageRoot: string): Promise<unknown> {
-  const runner = join(packageRoot, "native-mouse-runner.mjs");
+  mkdirSync(join(root, "dist"));
+  const target = join(root, TUI_ALT_SCREEN_FILE);
+  const original = "unrecognized runtime bytes";
+  writeFileSync(target, original);
   writeFileSync(
-    runner,
-    String.raw`
-import { TuiAltScreen } from "./dist/tui-alt-screen.js";
-class Terminal {
-  columns = 20; rows = 4; kittyProtocolActive = true; input;
-  start(input) { this.input = input; }
-  stop() { this.input = undefined; }
-  drainInput() { return Promise.resolve(); }
-  write() {} moveBy() {} hideCursor() {} showCursor() {} clearLine() {}
-  clearFromCursor() {} clearScreen() {} setTitle() {} setProgress() {}
-  send(data) { this.input?.(data); }
-}
-class Component {
-  focused = false; inputs = [];
-  constructor(lines) { this.lines = lines; }
-  render() { return this.lines; }
-  invalidate() {}
-  handleInput(data) { this.inputs.push(data); }
-}
-const terminal = new Terminal();
-const tui = new TuiAltScreen(terminal);
-tui.addChild(new Component(["abcdefghij", "line 2", "line 3", "line 4", "line 5", "line 6"]));
-tui.start();
-tui.renderNow(true);
-const overlay = new Component(["overlay"]);
-const handle = tui.showOverlay(overlay);
-tui.renderNow(true);
-const topBeforeFocused = tui.viewportTop;
-const click = "\x1b[<0;2;2M";
-const wheel = "\x1b[<64;2;2M";
-terminal.send(click);
-terminal.send(wheel);
-const focused = { inputs: [...overlay.inputs], topBeforeFocused, topAfterFocused: tui.viewportTop };
-overlay.inputs.length = 0;
-handle.unfocus({ target: null });
-terminal.send("\x1b[<0;2;2M");
-terminal.send("\x1b[<32;5;2M");
-terminal.send("\x1b[<0;5;2m");
-const selected = tui.hasActiveSelection();
-const topBeforeWheel = tui.viewportTop;
-terminal.send(wheel);
-const unfocused = { inputs: [...overlay.inputs], selected, topBeforeWheel, topAfterWheel: tui.viewportTop };
-tui.stop();
-console.log(JSON.stringify({ focused, unfocused }));
-`,
+    join(root, "package.json"),
+    JSON.stringify({ version: "unknown" }),
   );
-  const child = Bun.spawn([process.execPath, runner], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const output = await new Response(child.stdout).text();
-  const error = await new Response(child.stderr).text();
-  if ((await child.exited) !== 0) throw new Error(error);
-  return JSON.parse(output.trim());
-}
-
-describe("native Senpi TUI mouse repair", () => {
-  test("pins installed bytes, defaults to check-only, and applies exact idempotent postimage", () => {
-    const packageRoot = copiedPackage();
-    const target = join(packageRoot, TUI_ALT_SCREEN_FILE);
-    expect(SENPI_TUI_VERSION).toBe("2026.9.10-2");
-    expect(sha256(readFileSync(target))).toBe(PREIMAGE_SHA256);
-
-    const checked = repairWorkflowMouse(packageRoot);
-    expect(checked).toEqual({
-      file: target,
-      version: SENPI_TUI_VERSION,
-      before: PREIMAGE_SHA256,
-      after: POSTIMAGE_SHA256,
-      changed: false,
-    });
-    expect(sha256(readFileSync(target))).toBe(PREIMAGE_SHA256);
-
-    expect(repairWorkflowMouse(packageRoot, true).changed).toBeTrue();
-    expect(sha256(readFileSync(target))).toBe(POSTIMAGE_SHA256);
-    expect(repairWorkflowMouse(packageRoot, true)).toEqual({
-      file: target,
-      version: SENPI_TUI_VERSION,
-      before: POSTIMAGE_SHA256,
-      after: POSTIMAGE_SHA256,
-      changed: false,
-    });
-  });
-
-  test("rejects unknown version and bytes without mutation", () => {
-    const packageRoot = copiedPackage();
-    const target = join(packageRoot, TUI_ALT_SCREEN_FILE);
-    const original = readFileSync(target);
-    writeFileSync(
-      join(packageRoot, "package.json"),
-      JSON.stringify({ version: "unknown" }),
-    );
-    expect(() => repairWorkflowMouse(packageRoot, true)).toThrow(
-      "Expected @earendil-works/pi-tui",
-    );
-    expect(readFileSync(target)).toEqual(original);
-
-    writeFileSync(
-      join(packageRoot, "package.json"),
-      JSON.stringify({ version: SENPI_TUI_VERSION }),
-    );
-    writeFileSync(target, Buffer.concat([original, Buffer.from("corrupt")]));
-    const corrupt = readFileSync(target);
-    expect(() => repairWorkflowMouse(packageRoot, true)).toThrow(
-      "Unknown dist/tui-alt-screen.js SHA-256",
-    );
-    expect(readFileSync(target)).toEqual(corrupt);
-  });
-
-  test("real patched TuiAltScreen defers focused clicks while native unfocused selection and wheel stay owned", async () => {
-    const packageRoot = copiedPackage();
-    repairWorkflowMouse(packageRoot, true);
-    expect(await exerciseNativeTui(packageRoot)).toEqual({
-      focused: {
-        inputs: ["\x1b[<0;2;2M", "\x1b[<64;2;2M"],
-        topBeforeFocused: 2,
-        topAfterFocused: 2,
-      },
-      unfocused: {
-        inputs: [],
-        selected: true,
-        topBeforeWheel: 2,
-        topAfterWheel: 1,
-      },
-    });
-  });
+  expect(() => repairWorkflowMouse(root)).toThrow(
+    "Expected @earendil-works/pi-tui",
+  );
+  expect(readFileSync(target, "utf8")).toBe(original);
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({ version: SENPI_TUI_VERSION }),
+  );
+  expect(() => repairWorkflowMouse(root)).toThrow(
+    "Unknown dist/tui-alt-screen.js SHA-256",
+  );
+  expect(readFileSync(target, "utf8")).toBe(original);
 });

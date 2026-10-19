@@ -1,4 +1,6 @@
-import { expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs";
+import * as filesystem from "node:fs/promises";
 import { Type } from "typebox";
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -12,7 +14,16 @@ import {
 } from "../src/execution/policy.ts";
 import { Value } from "typebox/value";
 
+const sessionDirectories: string[] = [];
+afterEach(() => {
+  for (const directory of sessionDirectories.splice(0))
+    fs.rmSync(directory, { recursive: true, force: true });
+});
+
 function fixture(gate = false) {
+  const directory = fs.mkdtempSync(join(tmpdir(), "authoring-host-journal-"));
+  sessionDirectories.push(directory);
+  const sessionFile = join(directory, "session.jsonl");
   const entries: unknown[] = [];
   const definitions = new Map<string, AuthoredWorkflow>();
   const starts: string[] = [];
@@ -60,7 +71,14 @@ function fixture(gate = false) {
   };
   let completed = false;
   const runtime = {
+    session: {
+      async persistHeaderNow() {
+        if (!fs.existsSync(sessionFile))
+          fs.writeFileSync(sessionFile, "header\n");
+      },
+    },
     appendEntry(type: string, data: unknown) {
+      fs.appendFileSync(sessionFile, `${JSON.stringify({ type, data })}\n`);
       entries.push({
         type: "custom",
         customType: type,
@@ -147,8 +165,7 @@ function fixture(gate = false) {
     isProjectTrusted: () => true,
     sessionManager: {
       getBranch: () => entries,
-      isPersisted: () => true,
-      flushEntries() {},
+      getSessionFile: () => sessionFile,
     },
   };
   const registry = {
@@ -449,23 +466,49 @@ test("persisted stale descriptor revision rejects restore with zero starts", asy
   expect(f.starts).toHaveLength(0);
 });
 
-test("journal flush failure rejects as durability unavailable before native start", async () => {
+test("journal header failure rejects as durability unavailable before native start", async () => {
   const f = fixture();
-  const context = {
-    ...f.context,
-    sessionManager: {
-      ...f.context.sessionManager,
-      flushEntries: () => {
-        throw new Error("disk full");
+  const host = createProgramHost(
+    {
+      ...f.runtime,
+      session: {
+        async persistHeaderNow() {
+          throw new Error("disk full");
+        },
       },
     },
-  };
+    f.registry,
+    () => {},
+  );
   await expect(
-    f.host.start(context, f.selection, { prompt: "task" }),
+    host.start(f.context, f.selection, { prompt: "task" }),
   ).resolves.toEqual({
     kind: "durability-unavailable",
   });
   expect(f.starts).toHaveLength(0);
+  expect(f.entries).toHaveLength(0);
+});
+
+test("journal fsync failure rejects before native start", async () => {
+  const f = fixture();
+  const open = filesystem.open;
+  const syncSpy = spyOn(filesystem, "open").mockImplementation(
+    async (...args: Parameters<typeof open>) => {
+      const file = await open(...args);
+      file.sync = async () => {
+        throw new Error("fsync failed");
+      };
+      return file;
+    },
+  );
+  try {
+    await expect(
+      f.host.start(f.context, f.selection, { prompt: "task" }),
+    ).resolves.toEqual({ kind: "durability-unavailable" });
+    expect(f.starts).toHaveLength(0);
+  } finally {
+    syncSpy.mockRestore();
+  }
 });
 
 test("unexpected launch journal errors propagate before native start", async () => {

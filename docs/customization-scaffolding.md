@@ -46,23 +46,33 @@ path. Create runnable extensions only under [`extensions/`](../extensions/).
 
 ### OMO configuration capabilities
 
-- Verified: `2026-09-11`
-- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`
-- OMO evidence: [configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md), [features reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/features.md), [omo.json reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/omo-json.md)
+- Verified: `2026-10-16`
+- Local/release target: OMO `5.1.34` at `d7e224e478a4a77dba0d2104c336fdc72ad301e3`; paired Senpi `2026.10.16` at `8b62d4a6d16fd1d6d3787d30fbc8e1059b357623`
+- OMO evidence: [configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/reference/configuration.md), [features reference](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/reference/features.md), [omo.json reference](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/reference/omo-json.md)
 - Senpi evidence: N/A — OMO config surfaces are OMO-owned; extension-specific rules are recorded below.
-- Local proof: repository pins `@code-yeongyu/senpi@2026.9.10-2` in `package.json`; current catalog and runtime record agree on `omo.jsonc` and global rules.
+- Local proof: installed OMO reports `5.1.34` with engine Senpi `2026.10.16`; current catalog and runtime record agree on `omo.jsonc` and global rules. Repository package pins were not changed by this guidance update.
 - Revalidate: OMO upgrade
-- Status: current
+- Status: verified for the stated release pair; revalidate on upgrade
 
 ### Senpi extension capabilities
 
-- Verified: `2026-09-11`
-- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`
+- Verified: `2026-10-16`
+- Local/release target: OMO `5.1.34` at `d7e224e478a4a77dba0d2104c336fdc72ad301e3`; paired Senpi `2026.10.16` at `8b62d4a6d16fd1d6d3787d30fbc8e1059b357623`
 - OMO evidence: N/A — package behavior is Senpi-owned; OMO only loads repository extensions through its package manifest.
-- Senpi evidence: [extensions guide](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/extensions.md)
-- Local proof: `extensions/better-custom/src/index.ts` and `extensions/herdr/index.ts` are package entrypoints under the pinned Senpi dependency.
+- Senpi evidence: [extensions guide](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/docs/extensions.md), [theme guide](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/docs/themes.md)
+- Local proof: `extensions/better-custom/src/index.ts` and `extensions/herdr/index.ts` are extension entrypoints; installed OMO 5.1.34's `examples/extensions/dynamic-resources/index.ts` returns extension `themePaths`.
 - Revalidate: Senpi upgrade
-- Status: current
+- Status: verified for the stated release pair; revalidate on upgrade
+
+### Theme discovery
+
+- Verified: `2026-10-16`
+- Local/release target: OMO `5.1.34` and paired Senpi `2026.10.16`
+- Senpi evidence: [theme guide](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/docs/themes.md) documents JSON theme discovery from global, trusted-project, package, settings, and CLI paths.
+- OMO evidence: installed release example `/root/.omo/binary-runtime/5.1.34/examples/extensions/dynamic-resources/index.ts:8-15` contributes `themePaths` from `resources_discover`.
+- Local proof: capability inventory retained the existing 14 policy domains; TUI is the theme policy home.
+- Revalidate: OMO or Senpi upgrade
+- Status: verified for the stated release pair; no separate theme-only scaffold contract is claimed
 
 ## Folder contract
 

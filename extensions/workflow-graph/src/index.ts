@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { registerStagedWorkflows } from "./authoring/index.ts";
 import type {
   ExtensionAPI,
@@ -399,7 +400,7 @@ export default function workflowGraph(pi: ExtensionAPI): void {
           env: { WORKFLOW_GRAPH_STATE: writer.path },
           command: [
             process.execPath,
-            join(import.meta.dirname, "herdr", "viewer.ts"),
+            fileURLToPath(new URL("./herdr/viewer.ts", import.meta.url)),
             "--state",
             writer.path,
           ],

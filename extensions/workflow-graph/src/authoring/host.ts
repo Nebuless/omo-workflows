@@ -54,8 +54,7 @@ export type ProgramContext = Pick<
   };
   readonly sessionManager: {
     getBranch(): readonly unknown[];
-    readonly isPersisted?: unknown;
-    readonly flushEntries?: unknown;
+    readonly getSessionFile?: unknown;
   };
 };
 export type DesignReviewEffectConfig = {
@@ -73,6 +72,7 @@ type ModelWaiter = ReturnType<typeof Promise.withResolvers<ModelEventResult>>;
 export function createProgramHost(
   runtime: WorkflowToolRuntime & {
     appendEntry(type: string, data: unknown): void;
+    readonly session?: { persistHeaderNow(): Promise<void> };
   },
   registry: ProgramRegistry,
   notify: (runId: string | undefined, decision: ControllerDecision) => void,

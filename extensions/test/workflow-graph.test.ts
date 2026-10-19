@@ -431,6 +431,43 @@ describe("workflow graph projection", () => {
     expect(parseGraphMessage({ name: "unsafe", data: {} })).toBeUndefined();
   });
 
+  test("accepts leased snapshots while rejecting unrelated run fields", () => {
+    const run = {
+      run_id: "run-leased",
+      run_key: "graph-leased",
+      name: "Leased graph",
+      status: "paused",
+      created_at: "2026-09-12T00:00:00.000Z",
+      updated_at: "2026-09-12T00:00:01.000Z",
+      counts: { paused: 1 },
+      nodes: [],
+      edges: [],
+      waves: [],
+      lease_holder_pid: 4242,
+    };
+    const leased = parseGraphMessage({
+      name: "omo.dag.updated",
+      data: { parent_session_id: "session-a", runs: [run] },
+    });
+
+    expect(leased?.name).toBe("omo.dag.updated");
+    if (leased?.name !== "omo.dag.updated") {
+      throw new Error("expected leased DAG snapshot");
+    }
+    const projection = reduceGraphMessage(createGraphProjection(), leased);
+    expect(projection.runs.map(({ runId }) => runId)).toEqual(["run-leased"]);
+    expect(JSON.stringify(projection)).not.toContain("lease_holder_pid");
+    expect(
+      parseGraphMessage({
+        name: "omo.dag.updated",
+        data: {
+          parent_session_id: "session-a",
+          runs: [{ ...run, unrelated_field: true }],
+        },
+      }),
+    ).toBeUndefined();
+  });
+
   test("projects complete state variants, truncation, invalid edges, and task replacement", () => {
     const states = [
       "pending",

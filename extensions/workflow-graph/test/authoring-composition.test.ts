@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { appendFileSync } from "node:fs";
+import { mkdtemp, open, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -25,6 +26,35 @@ const identity = {
   preapproved: false,
   planDigest: `sha256:v1:${"a".repeat(64)}`,
 } as const;
+
+async function journalFixture(directory: string) {
+  const file = join(directory, "session.jsonl");
+  await writeFile(file, "");
+  const entries: { readonly customType: string; readonly data: unknown }[] = [];
+  return {
+    entries,
+    runtime: {
+      appendEntry(customType: string, data: unknown) {
+        const entry = { customType, data: structuredClone(data) };
+        entries.push(entry);
+        appendFileSync(file, `${JSON.stringify(entry)}\n`);
+      },
+      session: { persistHeaderNow: async () => {} },
+    },
+    sessionManager: {
+      getBranch: () => entries,
+      getSessionFile: () => file,
+    },
+    async sync() {
+      const fileHandle = await open(file, "r+");
+      try {
+        await fileHandle.sync();
+      } finally {
+        await fileHandle.close();
+      }
+    },
+  };
+}
 
 for (const loader of ["catalog", "explicit"] as const) {
   test(`${loader} preserves composition checkpoint metadata when loading authored export`, async () => {
@@ -51,13 +81,10 @@ for (const loader of ["catalog", "explicit"] as const) {
       // Then: metadata reaches host launch before any native dispatch.
       expect(program?.compositionIdentity).toEqual(identity);
       assert(program !== undefined);
-      const entries: { readonly customType: string; readonly data: unknown }[] =
-        [];
+      const journal = await journalFixture(cwd);
       const host = createProgramHost(
         {
-          appendEntry: (customType, data) => {
-            entries.push({ customType, data: structuredClone(data) });
-          },
+          ...journal.runtime,
           getAllTools: () => [],
           getActiveTools: () => [],
           executeTool: async () => {
@@ -75,26 +102,24 @@ for (const loader of ["catalog", "explicit"] as const) {
         {
           ...context,
           sessionManager: {
-            getBranch: () => entries,
-            isPersisted: () => true,
-            flushEntries() {},
+            ...journal.sessionManager,
           },
         },
         { key: "chain", revision: 1, digest: "entry" },
         {},
       );
       expect(
-        entries.find((entry) => entry.customType === LAUNCH_ENTRY_TYPE)?.data,
+        journal.entries.find((entry) => entry.customType === LAUNCH_ENTRY_TYPE)
+          ?.data,
       ).toMatchObject({ compositionIdentity: identity });
+      await journal.sync();
       host.stop();
       // A launch-only journal must also retain authorization on explicit restore.
       const originalIdentity = program.compositionIdentity;
       assert(originalIdentity !== undefined);
       const changed = createProgramHost(
         {
-          appendEntry: (customType, data) => {
-            entries.push({ customType, data: structuredClone(data) });
-          },
+          ...journal.runtime,
           getAllTools: () => [],
           getActiveTools: () => [],
           executeTool: async () => {
@@ -119,9 +144,7 @@ for (const loader of ["catalog", "explicit"] as const) {
           {
             ...context,
             sessionManager: {
-              getBranch: () => entries,
-              isPersisted: () => true,
-              flushEntries() {},
+              ...journal.sessionManager,
             },
           },
           "chain",
@@ -202,17 +225,14 @@ test.each([false, true])(
       await catalog.reload({ isProjectTrusted: () => true });
       const descriptor = catalog.descriptors()[0];
       assert(descriptor !== undefined);
-      const entries: { readonly customType: string; readonly data: unknown }[] =
-        [];
+      const journal = await journalFixture(cwd);
       const calls: {
         readonly action: string;
         readonly definition: AuthoredWorkflow;
       }[] = [];
       let definition: AuthoredWorkflow | undefined;
       const runtime = {
-        appendEntry: (customType: string, data: unknown) => {
-          entries.push({ customType, data: structuredClone(data) });
-        },
+        ...journal.runtime,
         getAllTools: () => [
           {
             name: "workflow",
@@ -231,7 +251,7 @@ test.each([false, true])(
               );
               definition = params.definition;
               calls.push({ action: params.action, definition });
-              const launch = entries.find(
+              const launch = journal.entries.find(
                 (entry) => entry.customType === LAUNCH_ENTRY_TYPE,
               );
               expect(launch?.data).toMatchObject({
@@ -291,9 +311,7 @@ test.each([false, true])(
         cwd,
         isProjectTrusted: () => true,
         sessionManager: {
-          getBranch: () => entries,
-          isPersisted: () => true,
-          flushEntries() {},
+          ...journal.sessionManager,
         },
       };
       const registry = {
@@ -342,8 +360,11 @@ test.each([false, true])(
       );
       expect(new Set(calls.map((call) => call.definition.key)).size).toBe(1);
       expect(
-        entries.filter((entry) => entry.customType === LAUNCH_ENTRY_TYPE),
+        journal.entries.filter(
+          (entry) => entry.customType === LAUNCH_ENTRY_TYPE,
+        ),
       ).toHaveLength(1);
+      await journal.sync();
       if (missing) expect(resumed).toEqual(first);
       else expect(calls.at(-1)?.definition.nodes.at(-1)?.prompt).toBe("mapped");
       restored.stop();

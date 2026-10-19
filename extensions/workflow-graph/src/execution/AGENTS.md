@@ -11,7 +11,7 @@ Admit validated staged-program results before extending native OMO DAGs.
 
 ## Local Contracts
 
-- Await native session flush before dispatch, gate answer, or external design-review event progression. Both synchronous legacy flush and `Promise<void>` receipts must propagate failure; missing flush capability disables launches.
+- Require public `pi.session.persistHeaderNow()` and `sessionManager.getSessionFile()` for a file-backed native session. Await header persistence, call native `appendEntry`, then use stdlib `open("r+")`, `FileHandle.sync()` (fsync), and `close()` on the existing native session file before dispatch, gate answer, or external design-review event progression. Missing capabilities or file paths disable launches; header, append, open, fsync, and close failures reject progression. Never create a separate journal or require private manager flush methods.
 - Append cumulative same-run definitions with fresh node IDs. Preserve completed nodes byte-for-byte.
 - Match native run identity and definition fingerprint before admission or amendment recovery. Reject stale descriptor or composition identity before dispatch.
 - Recover initial dispatch through native keyed start reuse. Snapshots require run_id, never key lookup.

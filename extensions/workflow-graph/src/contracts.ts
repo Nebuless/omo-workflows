@@ -63,6 +63,7 @@ const DagRunSchema = Type.Object(
     edges: Type.Array(DagEdgeSchema),
     waves: Type.Array(DagWaveSchema),
     amend_count: Type.Optional(Type.Integer({ minimum: 0 })),
+    lease_holder_pid: Type.Optional(Type.Integer()),
   },
   { additionalProperties: false },
 );

@@ -5,6 +5,7 @@ import {
   SessionManager,
   ModelRuntime,
   ModelRegistry,
+  CONFIG_DIR_NAME,
   type ExtensionContext,
 } from "@code-yeongyu/senpi";
 import { Value } from "typebox/value";
@@ -23,7 +24,7 @@ const source = (key: string, result: number = 1) =>
 export async function fixture() {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-entry-"));
   const agentDir = join(cwd, "agent");
-  const nativeSession = SessionManager.inMemory(cwd);
+  const nativeSession = SessionManager.create(cwd, join(cwd, "sessions"));
   const executes = new Map<
     string,
     (params: unknown, context: ExtensionContext) => Promise<unknown>
@@ -38,7 +39,13 @@ export async function fixture() {
         executes.set(value.name, async (params, context) => {
           Value.Assert(value.parameters, params);
           return (
-            await value.execute("qa", params, undefined, undefined, context)
+            await value.execute(
+              "qa",
+              params,
+              undefined,
+              undefined,
+              runner.createToolContext("qa", undefined, { ...context }),
+            )
           ).details;
         });
       },
@@ -46,6 +53,7 @@ export async function fixture() {
       appendEntry(customType: string, data: unknown) {
         nativeSession.appendCustomEntry(customType, structuredClone(data));
       },
+      session: { persistHeaderNow: () => nativeSession.persistHeaderNow() },
       getAllTools: () => [],
       getActiveTools: () => [],
       executeTool: async (_name, params) => {
@@ -80,8 +88,7 @@ export async function fixture() {
     sessionManager: {
       ...nativeContext.sessionManager,
       getBranch: () => nativeSession.getBranch(),
-      isPersisted: () => true,
-      flushEntries() {},
+      getSessionFile: () => nativeSession.getSessionFile(),
     },
   };
   const put = async (path: string, text: string) => {
@@ -98,7 +105,7 @@ export async function fixture() {
       put(
         global
           ? join(agentDir, "settings.json")
-          : join(cwd, ".senpi", "settings.json"),
+          : join(cwd, CONFIG_DIR_NAME, "settings.json"),
         JSON.stringify(data),
       ),
     async call(params: unknown, ctx = context) {

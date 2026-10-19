@@ -1,93 +1,61 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { cpSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { afterEach, expect, test } from "bun:test";
+import { SessionManager } from "@code-yeongyu/senpi";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { repairWorkflowJournal } from "../../../scripts/lib/workflow-journal-patch.ts";
+import { createNativeStagedJournal } from "../src/execution/native-journal.ts";
 
-const temporaryPaths: string[] = [];
+const directories: string[] = [];
 afterEach(() => {
-  for (const path of temporaryPaths.splice(0))
-    rmSync(path, { recursive: true, force: true });
+  for (const directory of directories.splice(0))
+    rmSync(directory, { recursive: true, force: true });
 });
 
-type JournalManager = {
-  appendCustomEntry(customType: string, data?: unknown): string;
-  getSessionFile(): string | undefined;
-};
-type JournalManagerConstructor = {
-  create(cwd: string, sessionDir?: string): JournalManager;
-};
+const runtime = (manager: SessionManager) => ({
+  session: { persistHeaderNow: () => manager.persistHeaderNow() },
+  appendEntry: (type: string, data: unknown) => {
+    manager.appendCustomEntry(type, data);
+  },
+});
 
-function copiedPackage(): string {
-  const target = mkdtempSync(join(tmpdir(), "senpi-journal-package-"));
-  temporaryPaths.push(target);
-  const source = require
-    .resolve("@code-yeongyu/senpi/package.json")
-    .replace(/\/package\.json$/, "");
-  cpSync(source, target, { recursive: true });
-  return target;
-}
+test("unmodified SessionManager persists custom entries before conversation and survives reopen", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "senpi-journal-"));
+  directories.push(directory);
+  const first = SessionManager.create(directory, directory);
+  const file = first.getSessionFile();
+  if (file === undefined) throw new Error("missing session path");
+  expect(existsSync(file)).toBeFalse();
+  const journal = createNativeStagedJournal(runtime(first), first);
+  if (journal === undefined) throw new Error("journal unavailable");
+  await journal.appendEntry("omo-workflow-graph:staged", { intent: "first" });
+  const second = SessionManager.open(file);
+  expect(second.getSessionId()).toBe(first.getSessionId());
+  const resumed = createNativeStagedJournal(runtime(second), second);
+  if (resumed === undefined) throw new Error("reopened journal unavailable");
+  await resumed.appendEntry("omo-workflow-graph:staged", { intent: "second" });
+  const third = SessionManager.open(file);
+  expect(
+    third
+      .getBranch()
+      .filter((entry) => entry.type === "custom")
+      .map((entry) => entry.data),
+  ).toEqual([{ intent: "first" }, { intent: "second" }]);
+  expect(readFileSync(file, "utf8").trim().split("\n")).toHaveLength(3);
+});
 
-async function runPatchedSession(packageRoot: string): Promise<string> {
-  const sessionDir = mkdtempSync(join(tmpdir(), "senpi-journal-session-"));
-  temporaryPaths.push(sessionDir);
-  const runner = join(packageRoot, "workflow-journal-flush-runner.mjs");
-  writeFileSync(
-    runner,
-    `
-import { existsSync, readFileSync } from "node:fs";
-import { SessionManager } from "./dist/core/session-manager.js";
-const sessionDir = process.argv[2];
-const count = (manager, intent) => manager.getBranch().filter((entry) => entry.type === "custom" && entry.customType === "omo-workflow-graph:staged" && entry.data?.intent === intent).length;
-const first = SessionManager.create(sessionDir, sessionDir);
-first.appendCustomEntry("omo-workflow-graph:staged", { intent: "first" });
-const sessionFile = first.getSessionFile();
-if (sessionFile === undefined || existsSync(sessionFile)) throw new Error("custom entry persisted before flush");
-first.flushEntries();
-const second = SessionManager.open(sessionFile);
-if (count(second, "first") !== 1) throw new Error("first intent missing after reopen");
-second.appendCustomEntry("omo-workflow-graph:staged", { intent: "second" });
-second.flushEntries();
-const third = SessionManager.open(sessionFile);
-if (count(third, "first") !== 1 || count(third, "second") !== 1) throw new Error("custom entries duplicated or missing");
-if (readFileSync(sessionFile, "utf8").trim().split("\\n").length !== 3) throw new Error("unexpected journal record count");
-const memory = SessionManager.inMemory();
-try { memory.flushEntries(); throw new Error("in-memory flush unexpectedly succeeded"); } catch (error) { if (!(error instanceof Error) || error.message !== "Cannot flush an in-memory session") throw error; }
-console.log("disk-roundtrip-ok");
-`,
-  );
-  const child = Bun.spawn([process.execPath, runner, sessionDir], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const output = await new Response(child.stdout).text();
-  const errors = await new Response(child.stderr).text();
-  if ((await child.exited) !== 0) throw new Error(errors);
-  return output.trim();
-}
+test("unmodified in-memory SessionManager cannot admit a durable journal", () => {
+  const manager = SessionManager.inMemory();
+  expect(createNativeStagedJournal(runtime(manager), manager)).toBeUndefined();
+  expect(manager.getBranch()).toHaveLength(0);
+});
 
-describe("native Senpi journal flush", () => {
-  test("patched SessionManager flushes custom entries before assistant and survives reopen", async () => {
-    const packageRoot = copiedPackage();
-    const original = await import(
-      pathToFileURL(join(packageRoot, "dist/core/session-manager.js")).href
-    );
-    const OriginalSessionManager: JournalManagerConstructor =
-      original.SessionManager;
-    expect(
-      "flushEntries" in OriginalSessionManager.create(packageRoot, packageRoot),
-    ).toBeFalse();
-    let gap = "";
-    try {
-      await runPatchedSession(packageRoot);
-    } catch (error) {
-      gap = error instanceof Error ? error.message : String(error);
-    }
-    expect(gap).toContain("flushEntries is not a function");
-    const repaired = repairWorkflowJournal(packageRoot, true);
-    expect(await runPatchedSession(packageRoot)).toBe("disk-roundtrip-ok");
-    expect(repairWorkflowJournal(packageRoot, false)).toEqual(repaired);
-    expect(repairWorkflowJournal(packageRoot, true)).toEqual(repaired);
-  });
+test("unmodified SessionManager header failure rejects before append", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "senpi-journal-failure-"));
+  directories.push(directory);
+  const manager = SessionManager.create(directory, directory);
+  const journal = createNativeStagedJournal(runtime(manager), manager);
+  if (journal === undefined) throw new Error("journal unavailable");
+  rmSync(directory, { recursive: true });
+  await expect(journal.appendEntry("intent", {})).rejects.toThrow("ENOENT");
+  expect(manager.getBranch()).toHaveLength(0);
 });

@@ -47,15 +47,35 @@ verification date.
 
 ## Existing validation records
 
+Records dated before 2026-10-16 preserve their historical observations. Any
+`current` status inside those entries means current at that record's date only;
+none establishes behavior on OMO 5.1.34.
+
+### 2026-10-16 OMO 5.1.34 and paired Senpi 2026.10.16
+
+- Verified: `2026-10-16` (source contracts and bounded local checks only)
+- Local runtime: OMO `5.1.34`; engine Senpi `2026.10.16`; Bun `1.3.14`.
+  Standalone Senpi `2026.10.16-3` is a distinct release and is not the OMO
+  pairing.
+- OMO evidence: [immutable 5.1.34 release source](https://github.com/code-yeongyu/oh-my-openagent/tree/d7e224e478a4a77dba0d2104c336fdc72ad301e3), including the [DAG snapshot payload](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-senpi/src/components/task/dag-snapshot-payload.ts), [graph limit settings](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/senpi-task/src/dag/graph.ts), and [release manifest](https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-senpi/package.json).
+- Senpi evidence: [paired public session control](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/src/core/extensions/session-control-types.ts), [session manager](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/src/core/session-manager.ts), [structured mouse API](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/tui/src/tui.ts), and [fullscreen mouse dispatch](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/tui/src/tui-alt-screen.ts).
+- Local proof: `omo --version` reported OMO 5.1.34 / Senpi 2026.10.16. Approved dependency installation regenerated matching lock pins. Installed OMO RPC loaded all four extensions, discovered 35 Compound Engineering and 5 Herdr skills, and returned no extension errors. A configured authored program persisted custom journal entries and resumed its final result in a fresh installed OMO process.
+- Passing checks: `mise ci` typecheck, build, package, hooks, Biome parsing, and Qlty tasks; 497 tests; native SessionManager journal reopen; unmodified TuiAltScreen structured mouse dispatch; four-extension RPC smoke; authored workflow persistence/reopen; and `git diff --check`.
+- Remaining limits: CI exits 1 only for three preserved historical repair tests requiring absent old global `omo-task.js`. Physical terminal mouse input and credential-backed provider mutation were not exercised. Fifteen actual renderer frames at 40/80/120 columns were inspected in xterm; native pointer delivery is separately covered by integration tests.
+- Implemented contracts: optional integer `lease_holder_pid` is accepted without projection; journal admission uses public header persistence, native append, and stdlib file sync/close; pointer handling consumes public structured mouse events. Native node count defaults to configurable 64; the local cap remains policy.
+- Historical scope: earlier `current` labels below refer to their dated records only; they are historical and not revalidated on OMO 5.1.34. DAG UI, journal, and mouse repairs remain version/hash-locked historical opt-ins. The comment-checker task unconditionally installs a global package. None is supported for the current binary; do not run them or retarget guards.
+- Revalidate: OMO/Senpi upgrade, public session persistence or TUI mouse contract change, or package pin change.
+- Status: `current compatibility verified within recorded scope; three historical environment failures retained`
+
 ### Memory reflection shared-category routing
 
 - Verified: `2026-09-13`
 - Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`.
-- OMO evidence: [configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md) documents harness-specific overlays after shared base keys. [Issue #6808](https://github.com/code-yeongyu/oh-my-openagent/issues/6808) confirms Reflection defaults to `quick` and that the shipped quick route can be Kimi-only.
+- OMO evidence: configuration reference inspected at the time documents harness-specific overlays after shared base keys. [Issue #6808](https://github.com/code-yeongyu/oh-my-openagent/issues/6808) confirms Reflection defaults to `quick` and that the shipped quick route can be Kimi-only.
 - Senpi evidence: [Senpi README](https://github.com/code-yeongyu/senpi/blob/main/README.md) establishes Senpi as the runtime under OMO's plugin. The installed OMO reflection child ran through the Senpi view and could not resolve the `[opencode]`-only `quick` route.
 - Local proof: `reflection-run-31/ledger.json` recorded old route `9router/ollama-cloud/kimi-k3`; the active profile and both templates parse to shared `memory-reflection` at `9router/cx/gpt-5.6-luna` with low reasoning. `bun test test/omo-preferences.test.ts` enforces selector and model chain. The post-change `/reflect` run is recorded in `docs/issues.md`.
 - Revalidate: OMO or Senpi upgrade, reflection launch change, config merge-precedence change, or routing-profile change.
-- Status: `current; user-local routing workaround for upstream default`
+- Status: `historical; not revalidated on OMO 5.1.34`
 
 ### Compound Engineering native skill discovery
 
@@ -66,7 +86,7 @@ verification date.
 - Adapted upstream evidence: [Every package manifest](https://github.com/EveryInc/compound-engineering-plugin/blob/44d65ad64a0ac8e542eabee31ce031a7aeb41b28/package.json), [native Pi adapter](https://github.com/EveryInc/compound-engineering-plugin/blob/44d65ad64a0ac8e542eabee31ce031a7aeb41b28/.pi/extensions/compound-engineering.ts), and [skill tree](https://github.com/EveryInc/compound-engineering-plugin/tree/44d65ad64a0ac8e542eabee31ce031a7aeb41b28/skills).
 - Local proof: `bun test extensions/compound-engineering/test` registered one skill root and found 35 frontmatter skill names across 418 byte-matched imported files. `omo -e ./extensions/compound-engineering --offline --print "List installed skills whose names start with ce-. Reply with names only, one per line."` exited 0 and returned discovered `ce-*` names; invalid `/skill:not-a-real-ce-skill` exited cleanly with an explicit not-found result.
 - Revalidate: OMO or Senpi upgrade, upstream Compound Engineering refresh, or resource-discovery contract change.
-- Status: `current`
+- Status: `historical; not revalidated on OMO 5.1.34`
 
 - [Global OMO instructions](customizations.md#verified-runtime-contract) —
   verified 2026-09-11; boundary-crossing prompt overlay behavior.

@@ -81,8 +81,9 @@ export function registerStagedWorkflows(
   pi: Pick<
     ExtensionAPI,
     "cwd" | "registerTool" | "registerCommand" | "appendEntry"
-  > &
-    WorkflowToolRuntime,
+  > & {
+    readonly session?: Pick<ExtensionAPI["session"], "persistHeaderNow">;
+  } & WorkflowToolRuntime,
   store: WorkflowGraphStore,
   onDecision: (runId: string | undefined, decision: ControllerDecision) => void,
   onRecommendations?: (

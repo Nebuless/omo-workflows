@@ -3,8 +3,9 @@
 Portable OMO/Senpi customizations. Install native OMO first, then install this
 repository or one extension package.
 
-- Native OMO: [`omo-ai`](https://www.npmjs.com/package/omo-ai) beta
-- Runtime pin: OMO `5.0.0-0.beta.53`, Senpi `2026.9.10-2`
+- Native OMO: [`omo-ai`](https://www.npmjs.com/package/omo-ai)
+- Target pairing: OMO `5.1.34`, bundled Senpi `2026.10.16`; standalone Senpi
+  `2026.10.16-3` is a separate release, not this OMO pairing.
 - Included packages: [`compound-engineering`](extensions/compound-engineering/README.md), [`better-custom`](extensions/better-custom/AGENTS.md),
   [`herdr`](extensions/herdr/AGENTS.md), and
   [`workflow-graph`](extensions/workflow-graph/AGENTS.md)
@@ -16,11 +17,11 @@ Paste this into coding agent:
 ```text
 Install native OMO and Nebuless/omo-workflows.
 
-1. Read official OMO install guide end to end:
-   https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/refs/heads/dev/docs/guide/installation.md
-2. Install native Senpi OMO exactly as guide says:
-   npm i -g omo-ai@beta
-   omo setup
+1. Read the OMO 5.1.34 install guide end to end:
+   https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/guide/installation.md
+2. Install native OMO:
+   npm i -g omo-ai
+   Optional onboarding: run `omo setup`.
 3. Ask me before provider login, credential import, permission changes, or any
    external write the guide requires.
 4. Clone https://github.com/Nebuless/omo-workflows.git, run its documented
@@ -32,21 +33,22 @@ Install native OMO and Nebuless/omo-workflows.
    https://github.com/Nebuless/omo-workflows/blob/main/docs/authoring-extensions.md
 ```
 
-Guide requires `@beta`. Do not install unrelated npm package named `omo`.
+Use `omo-ai@beta` only when intentionally installing a prerelease. Do not
+install the unrelated npm package named `omo`.
 
 ## Install manually
 
 ### 1. Install native OMO
 
-Follow upstream [Senpi edition guide](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/installation.md#senpi-edition-beta-omo-via-npm-omo-ai):
+Follow the OMO 5.1.34 [Senpi edition guide](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/guide/installation.md#senpi-edition-omo-via-npm-omo-ai):
 
 ```sh
-npm i -g omo-ai@beta
-omo setup
+npm i -g omo-ai
 ```
 
-`omo setup` detects existing provider credentials and asks before importing
-supported API keys. See upstream [setup details](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/guide/installation.md#first-run-omo-setup).
+`omo setup` is optional onboarding, not an installation prerequisite. See the
+pinned upstream
+[setup details](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/guide/installation.md#first-run-omo-setup).
 
 ### 2. Get this repository
 

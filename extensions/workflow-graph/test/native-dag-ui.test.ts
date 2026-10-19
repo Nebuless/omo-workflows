@@ -240,4 +240,26 @@ describe("native /dag TUI delegation", () => {
       await rm(directory, { force: true, recursive: true });
     }
   });
+  test("unknown files reject", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "omo-dag-ui-"));
+    const target = join(directory, "omo-task.js");
+    const packagePath = join(directory, "package.json");
+    const unknownSource = "function unrelated() {}\n";
+    await writeFile(target, unknownSource);
+    await writeFile(packagePath, JSON.stringify({ version: "99.0.0" }));
+    try {
+      await expect(
+        repairNativeDagUi(["--path", target, "--package-path", packagePath]),
+      ).rejects.toThrow(`Refusing OMO package not pinned to ${OMO_VERSION}`);
+      await writeFile(packagePath, JSON.stringify({ version: OMO_VERSION }));
+      await expect(
+        repairNativeDagUi(["--path", target, "--package-path", packagePath]),
+      ).rejects.toThrow(
+        `Refusing unexpected omo-task.js SHA-256: ${sha256(unknownSource)}`,
+      );
+      expect(repairState(await readFile(target, "utf8"))).toBe("invalid");
+    } finally {
+      await rm(directory, { force: true, recursive: true });
+    }
+  });
 });

@@ -14,7 +14,7 @@ Provide workflow graph rendering for native OMO DAG state and a companion Herdr 
 
 ## Local Contracts
 
-- Use public Senpi APIs and runtime-discovered OMO `workflow` capability. Approved optional repairs expose `SessionManager.flushEntries()`, the versioned native `/dag` presentation hook, and fullscreen mouse deferral to focused overlays. Capability-gate journal and presentation hooks; never patch during extension load.
+- Use public Senpi APIs and runtime-discovered OMO `workflow` capability. The current journal adapter uses public session header persistence, native `appendEntry`, and standard-library file sync; structured mouse events use the public `TuiMouseEvent` API. Historical journal, native `/dag`, and mouse repairs are version/hash-locked and unsupported for the current binary. Never apply them to current runtime bytes or patch during extension load.
 - `src/execution/` owns deterministic admission policy, not task scheduling: persist intent and admitted results through native session custom entries, acknowledge flush before dispatch, and amend the same native DAG after validation. No separate state database. Predeclared composition remains one instance, root, checkpoint stream, and native run.
 - Exact native definition fingerprints gate amendment recovery. Initial dispatch recovery uses native keyed `start` reuse. Never invent key-based snapshot calls or per-node fingerprint fields. Descriptor identity is opaque `{key, revision, digest}`; stale identity rejects before dispatch.
 - Never mutate DAG state optimistically or infer dependency edges.

@@ -27,6 +27,7 @@ Report OMO lifecycle state to a containing Herdr pane.
 
 - Keep Herdr CLI invocation isolated from Senpi event wiring.
 - Keep skills grouped by core, agent, handoff, orchestration, and administration boundaries.
+- Resolve packaged skill paths from `import.meta.url`; the bundled loader does not supply `import.meta.dirname`.
 - Do not claim session restoration support until Herdr ships an OMO resume integration.
 
 ## Verification

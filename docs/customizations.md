@@ -29,8 +29,9 @@ model-specific system prompt, tools, skills, and orchestration active.
 
 ### Verified runtime contract
 
-**Verified 2026-09-11** against OMO `5.0.0-0.beta.53`, Senpi
-`2026.9.10-2`, and Bun `1.3.14`:
+**Verified 2026-10-16** against OMO `5.1.34` (release
+`d7e224e478a4a77dba0d2104c336fdc72ad301e3`) and its Senpi `2026.10.16`
+pairing (release `8b62d4a6d16fd1d6d3787d30fbc8e1059b357623`):
 
 - `~/.omo/rules/*.md` is OMO's durable global instruction surface.
 - `--append-system-prompt` adds instructions without replacing the selected
@@ -38,8 +39,8 @@ model-specific system prompt, tools, skills, and orchestration active.
   directive with exit `0`.
 - `--system-prompt` replaces the base prompt. Senpi detects this as a custom
   prompt and does not apply a model prompt preset.
-- OMO's Bun launcher is `/home/egsox/.bun/bin/omo`; it uses Bun unless
-  `OMO_RUNTIME=node` is set.
+- Senpi extensions can add rule resources through `resources_discover`; OMO
+  5.1.34's installed dynamic-resources example also returns `themePaths`.
 
 Recheck this section after every OMO or Senpi upgrade. Prompt assembly and rule
 loading are upstream runtime behavior, not a stable repository guarantee.
@@ -82,8 +83,9 @@ Use full replacement only when that loss is intentional.
 
 Sources:
 
-- [OMO configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md)
-- [Senpi dynamic-prompt changes](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/src/core/dynamic-prompt/changes.md)
+- [OMO configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/reference/configuration.md)
+- [Senpi extension guide](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/docs/extensions.md)
+- [Senpi theme guide](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/docs/themes.md)
 
 ## Capability scaffolds
 
@@ -98,9 +100,12 @@ These folders are not runtime discovery paths. Use them to settle scope,
 permissions, lifecycle, persistence, and verification. Place runnable behavior
 in an independently installable `extensions/<name>/` package.
 
-Terminal themes remain unscaffolded: current cited OMO configuration and Senpi
-extension references establish TUI components and rendering, but not a stable
-theme-package contract. Revisit after upstream exposes one.
+Themes belong under the existing TUI policy domain, not a separate scaffold.
+Senpi loads JSON themes from global and trusted-project locations, package
+`themes/` directories and `pi.themes` entries, configured paths, and CLI paths.
+Extensions may contribute theme resources through the `themePaths` returned
+by `resources_discover`; this resource-discovery behavior is distinct from
+theme-package discovery.
 
 ## Choosing a customization
 

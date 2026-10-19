@@ -2,19 +2,34 @@
 
 ## Runtime relationship
 
-`omo-ai@beta` is the OMO distribution layer. It launches a pinned
-`@code-yeongyu/senpi` runtime and loads OMO's bundled plugin. The current local
-versions are:
+`omo-ai` is the OMO distribution layer. It launches a pinned
+`@code-yeongyu/senpi` runtime and loads OMO's bundled plugin. The target OMO
+release pairing is:
 
 ```text
-omo-ai                  5.0.0-0.beta.53
-@code-yeongyu/senpi     2026.9.10-2
+omo-ai                  5.1.34
+@code-yeongyu/senpi     2026.10.16
 ```
 
-The OMO launcher sets `OMO_CODING_AGENT_DIR` and
-`SENPI_CODING_AGENT_DIR` to OMO's canonical agent directory. Extensions must
-resolve runtime files through Senpi's `getAgentDir()` instead of hard-coding a
-home-directory path.
+Standalone Senpi `2026.10.16-3` is newer but is not the runtime paired with
+OMO 5.1.34. Dependencies and `bun.lock` now match that pairing. Installed OMO RPC
+loaded all four extensions with no extension errors, discovered 35 Compound
+Engineering skills, and launched then reopened a file-backed authored workflow
+with the same final result. Snapshot, structured mouse, native journal reopen,
+authoring, provider, and skill behavior checks pass. Typecheck, build, package,
+hooks, Biome parsing, and Qlty pass.
+
+`mise ci` still exits 1: 497 tests pass and three preserved historical repair
+tests require an absent old global `omo-task.js` artifact. They were not skipped
+or weakened. The approved local mutation-formatter workaround restored repository
+formatting without changing quality policy. See the
+[issue register](issues.md#2026-10-16t215833z---mutation-formatter-overrides-repository-indentation)
+for the formatter evidence.
+
+The OMO runtime directory resolver honors explicit environment overrides for
+`OMO_CODING_AGENT_DIR` and `SENPI_CODING_AGENT_DIR`. Do not assume the launcher
+always sets both variables. Extensions should use Senpi's `getAgentDir()` rather
+than hard-code a home-directory path.
 
 ## Upstream import boundary
 
@@ -46,8 +61,8 @@ The extension's domain behavior remains separate from the host adapter:
 ## Package contract
 
 The root `package.json` uses Senpi's standard `pi.extensions` resource key.
-OMO's installer accepts the local package and writes the project-local
-`.omo/settings.json` entry:
+`omo install -l` registers the package for the current project in
+`.omo/settings.json`. Without `-l`, `omo install` registers it globally:
 
 ```json
 {
@@ -60,7 +75,8 @@ state into the repository.
 
 ## Verification contract
 
-The compatibility gate must prove all of the following:
+The compatibility gate must prove all of the following before claiming full
+checkout compatibility:
 
 1. The manifest points to the extension entrypoint and pins Senpi.
 2. TypeScript resolves the public Senpi extension API.
@@ -69,6 +85,9 @@ The compatibility gate must prove all of the following:
 5. The source bundles through Bun.
 6. OMO can install and list the project package.
 7. `mise ci` runs the full test, build, Biome parse, and Qlty gate.
+
+The captured evidence for 2026-10-16 does not satisfy all these gates; see
+[upstream validation](upstream-validation.md#2026-10-16-omo-5134-and-paired-senpi-20261016).
 
 ## Tooling policy
 

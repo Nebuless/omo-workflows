@@ -2,6 +2,8 @@ import {
   decodeKittyPrintable,
   parseKey,
   type Component,
+  type TuiMouseEvent,
+  type TuiMouseEventResult,
 } from "@earendil-works/pi-tui";
 import type { OverlayActions, OverlayTui } from "./controller.ts";
 import { navigateOverlay } from "./navigation.ts";
@@ -21,6 +23,7 @@ export class WorkflowGraphComponent implements Component {
   private state: OverlayState;
   private notice = "";
   private viewport = { width: 48, height: 22 };
+  private pointerDrag: "x" | "y" | undefined;
   private readonly runs = new Map<string, OverlayGraph>();
 
   constructor(
@@ -109,6 +112,63 @@ export class WorkflowGraphComponent implements Component {
     if (next === undefined) return;
     this.graph = this.onSelectRun?.(next) ?? this.runs.get(next) ?? this.graph;
     this.setState({ query: "", panX: 0, panY: 0 });
+  }
+
+  handleMouse(event: TuiMouseEvent): TuiMouseEventResult | undefined {
+    if (event.type === "release") {
+      this.pointerDrag = undefined;
+      return { handled: true, render: false };
+    }
+    const dragging = event.type === "drag" && this.pointerDrag !== undefined;
+    if (event.type === "drag" && !dragging)
+      return { handled: true, render: false };
+    if (
+      !dragging &&
+      (event.x < 0 ||
+        event.x >= event.width ||
+        event.y < 0 ||
+        event.y >= event.height)
+    )
+      return undefined;
+    const pointer = dragging
+      ? {
+          ...event,
+          x:
+            this.pointerDrag === "y"
+              ? this.viewport.width - 1
+              : Math.max(0, Math.min(event.x, this.viewport.width - 1)),
+          y:
+            this.pointerDrag === "x"
+              ? 2
+              : Math.max(3, Math.min(event.y, this.viewport.height + 2)),
+        }
+      : event;
+    const searching = this.state.searching;
+    const next = pointerOverlay(pointer, this.graph, {
+      state: this.state,
+      viewport: this.viewport,
+    });
+    const changed = next !== this.state;
+    if (changed) this.setState(next);
+    if (
+      changed &&
+      event.type === "press" &&
+      event.button === "left" &&
+      !searching
+    ) {
+      this.pointerDrag =
+        event.y === 2
+          ? "x"
+          : event.x === this.viewport.width - 1
+            ? "y"
+            : undefined;
+    }
+    return {
+      handled: true,
+      capture: this.pointerDrag !== undefined,
+      focus: event.type === "press" && event.button === "left",
+      render: changed,
+    };
   }
 
   handleInput(input: string): void {

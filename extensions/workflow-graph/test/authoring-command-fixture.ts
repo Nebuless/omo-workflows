@@ -11,7 +11,7 @@ import {
 } from "@code-yeongyu/senpi";
 // Runtime exports this constructor only as a type; tests use its shipped implementation.
 import { KeybindingsManager } from "../../../node_modules/@code-yeongyu/senpi/dist/core/keybindings.js";
-import { TUI } from "../../../node_modules/@code-yeongyu/senpi/node_modules/@earendil-works/pi-tui/dist/index.js";
+import { TUI } from "@earendil-works/pi-tui";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -37,7 +37,7 @@ export type FixtureProgram = {
 export async function commandFixture() {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-command-"));
   const agentDir = join(cwd, "agent");
-  const session = SessionManager.inMemory(cwd);
+  const session = SessionManager.create(cwd, join(cwd, "sessions"));
   const modelRuntime = await ModelRuntime.create({
     agentDir,
     allowModelNetwork: false,
@@ -72,6 +72,7 @@ export async function commandFixture() {
       appendEntry(type, data) {
         session.appendCustomEntry(type, structuredClone(data));
       },
+      session: { persistHeaderNow: () => session.persistHeaderNow() },
       getAllTools: () => [
         {
           name: "workflow",
@@ -231,8 +232,7 @@ export async function commandFixture() {
     sessionManager: {
       ...context.sessionManager,
       getBranch: () => session.getBranch(),
-      isPersisted: () => true,
-      flushEntries() {},
+      getSessionFile: () => session.getSessionFile(),
     },
   };
   const call = async (args: string) => {

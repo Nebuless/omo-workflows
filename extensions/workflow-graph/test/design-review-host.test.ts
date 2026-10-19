@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { appendFileSync } from "node:fs";
+import { mkdir, mkdtemp, open, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import {
@@ -64,7 +65,14 @@ afterEach(async () =>
       .map((path) => rm(path, { recursive: true, force: true })),
   ),
 );
-function fixture(events: Array<Record<string, unknown>>, failLive = false) {
+async function fixture(
+  events: Array<Record<string, unknown>>,
+  failLive = false,
+) {
+  const directory = await mkdtemp(join(tmpdir(), "design-review-journal-"));
+  processDirs.push(directory);
+  const sessionFile = join(directory, "session.jsonl");
+  await writeFile(sessionFile, "");
   const entries: unknown[] = [];
   let definition: AuthoredWorkflow | undefined;
   let completed = false;
@@ -87,7 +95,9 @@ function fixture(events: Array<Record<string, unknown>>, failLive = false) {
         crash();
         return;
       }
-      entries.push({ customType, data: structuredClone(data) });
+      const entry = { customType, data: structuredClone(data) };
+      entries.push(entry);
+      appendFileSync(sessionFile, `${JSON.stringify(entry)}\n`);
     },
     getAllTools: () => [{ name: "workflow", parameters: NativeParamsSchema }],
     getActiveTools: () => ["workflow"],
@@ -151,6 +161,10 @@ function fixture(events: Array<Record<string, unknown>>, failLive = false) {
         },
       };
     },
+  };
+  const journalRuntime = {
+    ...runtime,
+    session: { persistHeaderNow: async () => {} },
   };
   const program: StagedProgram = {
     key: "open-claude-design",
@@ -239,12 +253,11 @@ function fixture(events: Array<Record<string, unknown>>, failLive = false) {
     isProjectTrusted: () => true,
     sessionManager: {
       getBranch: () => entries,
-      isPersisted: () => true,
-      flushEntries() {},
+      getSessionFile: () => sessionFile,
     },
   };
   const registry = { list: () => ["open-claude-design"], get: () => program };
-  const host = createProgramHost(runtime, registry, () => {}, {
+  const host = createProgramHost(journalRuntime, registry, () => {}, {
     designReview: effect,
   });
   return {
@@ -253,7 +266,7 @@ function fixture(events: Array<Record<string, unknown>>, failLive = false) {
     entries,
     replies,
     polled,
-    runtime,
+    runtime: journalRuntime,
     registry,
     effect,
     complete() {
@@ -263,10 +276,18 @@ function fixture(events: Array<Record<string, unknown>>, failLive = false) {
     crashOnNextReply(callback: () => void) {
       crashOnReply = callback;
     },
+    async sync() {
+      const handle = await open(sessionFile, "r+");
+      try {
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+    },
   };
 }
 test("live helper event becomes same-run native amendment and actual exit finishes", async () => {
-  const f = fixture([{ type: "generate", id: "g" }, { type: "exit" }]);
+  const f = await fixture([{ type: "generate", id: "g" }, { type: "exit" }]);
   const first = await f.host.start(f.context, "open-claude-design", {});
   if (first.kind !== "active") throw Error("not active");
   f.complete();
@@ -275,9 +296,10 @@ test("live helper event becomes same-run native amendment and actual exit finish
   await f.host.whenIdle();
   expect(f.host.status()?.decision).toEqual({ kind: "final", result: "done" });
   expect(f.replies).toEqual(["g"]);
+  await f.sync();
 });
 test("cancel aborts live poll and never records false exit", async () => {
-  const f = fixture([]);
+  const f = await fixture([]);
   const first = await f.host.start(f.context, "open-claude-design", {});
   if (first.kind !== "active") throw Error("not active");
   f.complete();
@@ -289,6 +311,7 @@ test("cancel aborts live poll and never records false exit", async () => {
   });
   await f.host.whenIdle();
   expect(JSON.stringify(f.entries)).not.toContain('"kind":"exit"');
+  await f.sync();
 });
 
 test("real helper bootstrap and poll processes feed host native model stage", async () => {
@@ -304,7 +327,7 @@ test("real helper bootstrap and poll processes feed host native model stage", as
     pollPath,
     'import{existsSync,readFileSync,writeFileSync}from"node:fs";if(process.argv[2]==="--reply"){}else{const n=existsSync("n")?Number(readFileSync("n","utf8"))+1:1;writeFileSync("n",String(n));console.log(JSON.stringify(n===1?{type:"generate",id:"real"}:{type:"exit"}));}',
   );
-  const f = fixture([]);
+  const f = await fixture([]);
   const bootstrap = await createLiveBootstrapper({
     script: bootstrapPath,
     cwd: dir,
@@ -325,7 +348,7 @@ test("real helper bootstrap and poll processes feed host native model stage", as
 });
 
 test("answer entering design review starts helper effect without human exit assertion", async () => {
-  const f = fixture([{ type: "exit" }]);
+  const f = await fixture([{ type: "exit" }]);
   let approved = false;
   const gated: StagedProgram = {
     key: "open-claude-design",
@@ -370,7 +393,7 @@ test("answer entering design review starts helper effect without human exit asse
 });
 
 test("failed native live model admission rejects waiter and persists terminal failure", async () => {
-  const f = fixture([{ type: "generate", id: "bad" }], true);
+  const f = await fixture([{ type: "generate", id: "bad" }], true);
   const first = await f.host.start(f.context, "open-claude-design", {});
   if (first.kind !== "active") throw Error("not active");
   f.complete();
@@ -390,6 +413,7 @@ test("failed native live model admission rejects waiter and persists terminal fa
 test("actual openClaudeDesign builtin reaches export through real helper processes and per-node artifacts", async () => {
   const cwd = await mkdtemp(join(tmpdir(), "open-design-builtin-"));
   processDirs.push(cwd);
+  await writeFile(join(cwd, "session.jsonl"), "");
   const entries: unknown[] = [];
   let definition: AuthoredWorkflow | undefined;
   const outputs = new Map<string, string>();
@@ -478,8 +502,11 @@ test("actual openClaudeDesign builtin reaches export through real helper process
   };
   const runtime = {
     appendEntry(customType: string, data: unknown) {
-      entries.push({ customType, data: structuredClone(data) });
+      const entry = { customType, data: structuredClone(data) };
+      entries.push(entry);
+      appendFileSync(join(cwd, "session.jsonl"), `${JSON.stringify(entry)}\n`);
     },
+    session: { persistHeaderNow: async () => {} },
     getAllTools: () => [{ name: "workflow", parameters: NativeParamsSchema }],
     getActiveTools: () => ["workflow"],
     async executeTool(_name: string, value: unknown) {
@@ -557,8 +584,7 @@ const preview=readFileSync(target,"utf8");if(!preview.includes("</body>"))throw 
     isProjectTrusted: () => true,
     sessionManager: {
       getBranch: () => entries,
-      isPersisted: () => true,
-      flushEntries() {},
+      getSessionFile: () => join(cwd, "session.jsonl"),
     },
   };
   const registry = {
@@ -639,7 +665,7 @@ const preview=readFileSync(target,"utf8");if(!preview.includes("</body>"))throw 
 });
 
 test("restart replays admitted model result at event ceiling without native dispatch", async () => {
-  const f = fixture([{ type: "generate", id: "same" }, { type: "exit" }]);
+  const f = await fixture([{ type: "generate", id: "same" }, { type: "exit" }]);
   const crashed = deferred<void>();
   const first = await f.host.start(f.context, "open-claude-design", {});
   if (first.kind !== "active") throw Error("not active");
@@ -665,10 +691,11 @@ test("restart replays admitted model result at event ceiling without native disp
     kind: "final",
     result: "done",
   });
+  await f.sync();
 });
 
 test("missing helper configuration returns rejection instead of design-review", async () => {
-  const f = fixture([{ type: "exit" }]);
+  const f = await fixture([{ type: "exit" }]);
   const host = createProgramHost(f.runtime, f.registry, () => {});
   const first = await host.start(f.context, "open-claude-design", {});
   if (first.kind !== "active") throw Error("not active");

@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TSchema } from "typebox";
@@ -10,15 +10,44 @@ import workflowGraphPackage from "../extensions/workflow-graph/package.json" wit
 };
 
 describe("OMO extension boundary", () => {
-  test("loads through Senpi's public ExtensionAPI contract", async () => {
-    const agentDir = mkdtempSync(join(tmpdir(), "omo-workflows-agent-"));
+  const agentDir = mkdtempSync(join(tmpdir(), "omo-workflows-agent-"));
+  const previousSenpiDir = process.env.SENPI_CODING_AGENT_DIR;
+  const previousOmoDir = process.env.OMO_CODING_AGENT_DIR;
+  let providerExtension: typeof import("../extensions/better-custom/src/index.ts");
+  let compoundExtension: typeof import("../extensions/compound-engineering/src/index.ts");
+  let herdrExtension: typeof import("../extensions/herdr/index.ts");
+  let graphExtension: typeof import("../extensions/workflow-graph/src/index.ts");
+  let execution: typeof import("../extensions/workflow-graph/src/execution/index.ts");
+  beforeAll(async () => {
     writeFileSync(
       join(agentDir, "models.json"),
       JSON.stringify({ providers: {} }),
     );
     process.env.SENPI_CODING_AGENT_DIR = agentDir;
     process.env.OMO_CODING_AGENT_DIR = agentDir;
-
+    [
+      providerExtension,
+      compoundExtension,
+      herdrExtension,
+      graphExtension,
+      execution,
+    ] = await Promise.all([
+      import("../extensions/better-custom/src/index.ts"),
+      import("../extensions/compound-engineering/src/index.ts"),
+      import("../extensions/herdr/index.ts"),
+      import("../extensions/workflow-graph/src/index.ts"),
+      import("../extensions/workflow-graph/src/execution/index.ts"),
+    ]);
+  }, 30000);
+  afterAll(() => {
+    if (previousSenpiDir === undefined)
+      delete process.env.SENPI_CODING_AGENT_DIR;
+    else process.env.SENPI_CODING_AGENT_DIR = previousSenpiDir;
+    if (previousOmoDir === undefined) delete process.env.OMO_CODING_AGENT_DIR;
+    else process.env.OMO_CODING_AGENT_DIR = previousOmoDir;
+    rmSync(agentDir, { recursive: true, force: true });
+  });
+  test("loads through Senpi's public ExtensionAPI contract", async () => {
     const commands = new Map<string, unknown>();
     const providers = new Map<string, unknown>();
     const providerHost = {
@@ -35,9 +64,6 @@ describe("OMO extension boundary", () => {
       setModel: async () => true,
     };
 
-    const providerExtension = await import(
-      "../extensions/better-custom/src/index.ts"
-    );
     providerExtension.default(providerHost as never);
 
     expect(commands.has("better-models")).toBe(true);
@@ -52,9 +78,6 @@ describe("OMO extension boundary", () => {
         if (name === "resources_discover") compoundDiscover = handler;
       },
     };
-    const compoundExtension = await import(
-      "../extensions/compound-engineering/src/index.ts"
-    );
     compoundExtension.default(compoundHost as never);
 
     expect((await compoundDiscover?.())?.skillPaths).toHaveLength(1);
@@ -69,7 +92,6 @@ describe("OMO extension boundary", () => {
         tools.set(definition.name, definition);
       },
     };
-    const herdrExtension = await import("../extensions/herdr/index.ts");
     herdrExtension.default(herdrHost as never);
 
     expect(events.has("session_start")).toBe(true);
@@ -100,9 +122,6 @@ describe("OMO extension boundary", () => {
         graphLifecycle.set(name, handler);
       },
     };
-    const graphExtension = await import(
-      "../extensions/workflow-graph/src/index.ts"
-    );
     graphExtension.default(graphHost as never);
     try {
       expect(graphEvents.has("senpi:extension-rpc-event")).toBe(true);
@@ -176,16 +195,13 @@ describe("OMO extension boundary", () => {
       expect(graphLifecycle.has("session_before_fork")).toBe(true);
       expect(graphLifecycle.has("session_shutdown")).toBe(true);
 
-      const execution = await import(
-        "../extensions/workflow-graph/src/execution/index.ts"
-      );
       expect(typeof execution.composeStagedPrograms).toBe("function");
       expect(typeof execution.applyCompositionMapping).toBe("function");
       expect(rootPackage.dependencies).toEqual({
-        "@code-yeongyu/senpi": "2026.9.10-2",
-        "@earendil-works/pi-ai": "npm:@code-yeongyu/senpi-ai@2026.9.10-2",
-        "@earendil-works/pi-tui": "npm:@code-yeongyu/senpi-tui@2026.9.10-2",
-        typebox: "1.3.18",
+        "@code-yeongyu/senpi": "2026.10.16",
+        "@earendil-works/pi-ai": "npm:@code-yeongyu/senpi-ai@2026.10.16",
+        "@earendil-works/pi-tui": "npm:@code-yeongyu/senpi-tui@2026.10.16",
+        typebox: "1.3.34",
         jiti: "2.7.0",
       });
       expect(workflowGraphPackage.dependencies).toEqual({ jiti: "2.7.0" });

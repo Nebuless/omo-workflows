@@ -1,9 +1,8 @@
-import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { ExtensionAPI } from "@code-yeongyu/senpi";
 
-export const compoundEngineeringSkillPath = resolve(
-  import.meta.dirname,
-  "../skills",
+export const compoundEngineeringSkillPath = fileURLToPath(
+  new URL("../skills", import.meta.url),
 );
 
 export default function compoundEngineering(pi: ExtensionAPI): void {

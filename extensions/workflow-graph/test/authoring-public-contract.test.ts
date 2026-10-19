@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { CONFIG_DIR_NAME } from "@code-yeongyu/senpi";
 import { join } from "node:path";
 import { Type } from "typebox";
 import { AssertError, Value } from "typebox/value";
@@ -314,7 +315,7 @@ test("workflow program rejects incomplete start and unconfirmed transfer without
 test("invalid native settings surface config diagnostics without losing builtins", async () => {
   const f = await fixture();
   try {
-    await f.put(join(f.cwd, ".senpi/settings.json"), "{broken");
+    await f.put(join(f.cwd, CONFIG_DIR_NAME, "settings.json"), "{broken");
     expect(await f.call({ action: "list" })).toMatchObject({
       programs: expect.arrayContaining(["goal"]),
       diagnostics: expect.arrayContaining([

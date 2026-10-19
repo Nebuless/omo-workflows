@@ -31,12 +31,20 @@ exist. Writes use a temporary file followed by an atomic rename.
 
 ## Compatibility
 
-The port is tested against:
+The target pairing is:
 
 ```text
-omo-ai 5.0.0-0.beta.53
-@code-yeongyu/senpi 2026.9.10-2
+omo-ai 5.1.34
+@code-yeongyu/senpi 2026.10.16
 ```
+
+The package manifest and standalone package check were updated for this pair.
+Its extension-load test, provider/command regression tests, typecheck, and build
+pass. Installed OMO RPC loaded Better Custom without extension errors.
+Credential-backed provider mutation was not exercised. Repository CI retains
+three historical repair failures unrelated to this extension; see
+[compatibility](../../docs/compatibility.md). Standalone Senpi `2026.10.16-3`
+is not this OMO pair.
 
 Do not replace the Senpi dependency with `@bastani/atomic`; that is the
 upstream host for the original extension and is not part of OMO.

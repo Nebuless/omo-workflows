@@ -316,6 +316,9 @@ describe("workflow graph overlay model", () => {
         isFocused() {
           return false;
         },
+        getBounds() {
+          return undefined;
+        },
       });
       return new Promise<T>(() => {});
     };

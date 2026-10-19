@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { spyOn } from "bun:test";
+import * as filesystem from "node:fs/promises";
+import { appendFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -29,6 +32,8 @@ type Snapshot = Extract<NativeDetails, { kind: "snapshot" }>;
 
 export async function transferFixture(gate = false) {
   const cwd = await mkdtemp(join(tmpdir(), "workflow-transfer-"));
+  const sessionFile = join(cwd, "session.jsonl");
+  await writeFile(sessionFile, "header\n");
   const entries: { readonly customType: string; readonly data: unknown }[] = [];
   const actions: string[] = [];
   // Mutable fake-native state permits exact boundary faults, never timing guesses.
@@ -41,6 +46,20 @@ export async function transferFixture(gate = false) {
   const definitions = new Map<string, AuthoredWorkflow>();
   const destinationRoots: string[] = [];
   const durability = { flush: async (): Promise<void> => {} };
+  const open = filesystem.open;
+  const openSpy = spyOn(filesystem, "open").mockImplementation(
+    async (...args: Parameters<typeof open>) => {
+      const file = await open(...args);
+      if (args[0] === sessionFile) {
+        const sync = file.sync.bind(file);
+        file.sync = async () => {
+          await durability.flush();
+          await sync();
+        };
+      }
+      return file;
+    },
+  );
   let artifactRoot = "";
   const registry = {
     list: () => ["source", "destination"],
@@ -120,7 +139,10 @@ export async function transferFixture(gate = false) {
     },
   };
   const runtime = {
+    session: { async persistHeaderNow() {} },
     appendEntry(customType: string, data: unknown) {
+      // Keep the durability receipt at fsync, after the native append.
+      appendFileSync(sessionFile, `${JSON.stringify({ customType, data })}\n`);
       entries.push({ customType, data: structuredClone(data) });
     },
     getAllTools: () => [
@@ -193,8 +215,7 @@ export async function transferFixture(gate = false) {
     isProjectTrusted: () => true,
     sessionManager: {
       getBranch: () => entries,
-      isPersisted: () => true,
-      flushEntries: () => durability.flush(),
+      getSessionFile: () => sessionFile,
     },
   };
   let host = createProgramHost(runtime, registry, () => {});
@@ -293,11 +314,13 @@ export async function transferFixture(gate = false) {
       },
       async [Symbol.asyncDispose]() {
         host.stop();
+        openSpy.mockRestore();
         await rm(cwd, { recursive: true, force: true });
       },
     };
   } catch (error) {
     host.stop();
+    openSpy.mockRestore();
     await rm(cwd, { recursive: true, force: true });
     throw error;
   }

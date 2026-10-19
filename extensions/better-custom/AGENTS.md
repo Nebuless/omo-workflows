@@ -8,6 +8,7 @@ models.
 ## Ownership
 
 - `src/` owns the extension implementation and Senpi host adapter.
+- `package.json` owns standalone package identity and the `src/index.ts` entrypoint.
 - `test/` owns behavior tests for config persistence and model presentation.
 - `LICENSE` preserves the upstream MIT attribution.
 

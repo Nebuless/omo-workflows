@@ -1,3 +1,4 @@
+import type { TuiMouseEvent } from "@earendil-works/pi-tui";
 import {
   layoutOverlayGraph,
   reduceOverlayInput,
@@ -8,17 +9,39 @@ import {
 import { stageSwitcherNodes } from "./frame.ts";
 
 export function pointerOverlay(
-  data: string,
+  data: string | TuiMouseEvent,
   graph: OverlayGraph,
   view: { readonly state: OverlayState; readonly viewport: OverlayViewport },
 ): OverlayState {
   const { state, viewport } = view;
-  if (!data.startsWith("\u001b[<")) return state;
-  const match = /^(\d+);(\d+);(\d+)M$/.exec(data.slice(3));
+  if (typeof data === "string" && !data.startsWith("\u001b[<")) return state;
+  const match =
+    typeof data === "string"
+      ? /^(\d+);(\d+);(\d+)M$/.exec(data.slice(3))
+      : undefined;
   if (match === null) return state;
-  const button = Number(match[1]);
-  const x = Number(match[2]) - 1;
-  const y = Number(match[3]) - 4;
+  const native = typeof data === "string" ? undefined : data;
+  if (native?.type === "wheel" && !native.wheelDelta) return state;
+  // Native dispatch synthesizes click after press/release; activate only on press.
+  if (
+    native !== undefined &&
+    native.type !== "wheel" &&
+    (native.button !== "left" ||
+      (native.type !== "press" && native.type !== "drag"))
+  )
+    return state;
+  const button =
+    native === undefined
+      ? Number(match?.[1])
+      : native.type === "wheel"
+        ? native.shift
+          ? 67
+          : 65
+        : native.type === "drag"
+          ? 32
+          : 0;
+  const x = native?.x ?? Number(match?.[2]) - 1;
+  const y = native === undefined ? Number(match?.[3]) - 4 : native.y - 3;
   if (x < 0 || x >= viewport.width || y < -1 || y >= viewport.height)
     return state;
   const { cards } = layoutOverlayGraph(graph, {
@@ -45,15 +68,23 @@ export function pointerOverlay(
   )
     return {
       ...state,
-      panX: state.panX + (button === 66 || button === 68 ? -8 : 8),
+      panX:
+        state.panX +
+        (native?.wheelDelta ?? (button === 66 || button === 68 ? -8 : 8)),
     };
   if (button === 64 || button === 65)
     return state.searching
       ? reduceOverlayInput(state, graph, {
           kind: "key",
-          key: button === 64 ? "up" : "down",
+          key:
+            (native?.wheelDelta ?? (button === 64 ? -1 : 1)) < 0
+              ? "up"
+              : "down",
         })
-      : { ...state, panY: state.panY + (button === 64 ? -4 : 4) };
+      : {
+          ...state,
+          panY: state.panY + (native?.wheelDelta ?? (button === 64 ? -4 : 4)),
+        };
   if (
     !state.searching &&
     (button === 0 || button === 32) &&
@@ -63,6 +94,7 @@ export function pointerOverlay(
       0,
       ...cards.map((card) => card.rect.y + card.rect.height),
     );
+    if (contentHeight <= viewport.height) return state;
     const maxPan = Math.max(0, contentHeight - viewport.height);
     return {
       ...state,
