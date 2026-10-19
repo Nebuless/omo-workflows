@@ -7,7 +7,7 @@ Use this guide to configure, verify, and repair delegated OMO/Senpi work. It cov
 A parent session delegates in two ways:
 
 - **Named agent**: `explore`, `librarian`, and other registered agent IDs. Named agents carry a role prompt and resolve their own model chain.
-- **Category**: a `task()` call with a category such as `quick`, `deep`, or `writing`. Categories route work by kind, not by agent name.
+- **Category**: a `task()` call with a category such as `quick`, `deep-low`, `deep-high`, or `writing`. Categories route work by kind, not by agent name.
 
 A configured OMO `models` chain is ordered. First entry is primary; later entries can be selected during child admission or model resolution, including capacity pressure. Senpi retry fallback chains are separate, per-process runtime retry state. A task must resolve to both an available model and valid credentials before it starts. Crossing providers at either stage changes the data boundary; document and approve that decision before routing real task content.
 
@@ -33,12 +33,12 @@ Use shared top-level `categories` for task routes used by OMO and Senpi. Use `[o
   "categories": {
     "quick": {
       "models": [
-        { "model": "9router/cx/gpt-5.6-luna", "reasoning": "low" }
+        { "model": "9router/cx/gpt-6-luna", "reasoning": "low" }
       ]
     },
-    "deep": {
+    "deep-high": {
       "models": [
-        { "model": "9router/cx/gpt-6-astra", "reasoning": "xhigh" }
+        { "model": "9router/cx/gpt-6-astra", "reasoning": "high" }
       ]
     }
   },
@@ -46,12 +46,12 @@ Use shared top-level `categories` for task routes used by OMO and Senpi. Use `[o
     "agents": {
       "explore": {
         "models": [
-          { "model": "9router/cx/gpt-5.6-luna", "reasoning": "medium" }
+          { "model": "9router/cx/gpt-6-luna", "reasoning": "medium" }
         ]
       },
       "librarian": {
         "models": [
-          { "model": "9router/cx/gpt-5.6-terra", "reasoning": "xhigh" }
+          { "model": "9router/cx/gpt-6.1-sol", "reasoning": "high" }
         ]
       }
     }
@@ -90,7 +90,9 @@ Built-in categories route delegated work by task kind:
 | `writing` | documentation and prose |
 | `visual-engineering` | UI, styling, visual QA |
 | `artistry` | unconventional or creative work |
-| `deep` | browser, backend, algorithms, complex investigation |
+| `deep-low` | browser, backend, algorithms, and investigation settled from available evidence |
+| `deep-high` | difficult work with substantial scope or uncertainty |
+| `architect` | system design and boundary decisions |
 | `ultrabrain` | hard reasoning and architecture |
 
 This repository adds shared `memory-reflection` for OMO reflection and Kibitzer recall. Keep it at shared top level, then select it explicitly:
@@ -100,7 +102,7 @@ This repository adds shared `memory-reflection` for OMO reflection and Kibitzer 
   "categories": {
     "memory-reflection": {
       "models": [
-        { "model": "9router/cx/gpt-5.6-luna", "reasoning": "low" }
+        { "model": "9router/cx/gpt-6-luna", "reasoning": "low" }
       ]
     }
   },
@@ -124,7 +126,7 @@ This repository adds shared `memory-reflection` for OMO reflection and Kibitzer 
 
 3. Edit `~/.omo/omo.jsonc` for global behavior, or nearest `.omo/omo.jsonc` for one project.
 4. Configure named agents under `[opencode].agents`; configure categories at shared top-level `categories`.
-5. Use full canonical model IDs: `9router/cx/gpt-5.6-luna`, not aliases or display names.
+5. Use only catalog-verified canonical route IDs: `9router/cx/gpt-6.1-sol`, `9router/cx/gpt-6-luna`, and `9router/cx/gpt-6-astra`, not aliases or display names. Sol supports reasoning through `high`, not `xhigh`.
 6. Include only fallbacks that are present in catalog and have working credentials.
 7. Start a new OMO/Senpi session. A running task launcher may retain routes resolved at startup. `/reload` hot-reloads only auto-discovered extension paths; settings-package and `-e` resources need restart unless runtime proves otherwise. Use fresh session for route smoke tests.
 8. Launch one harmless named-agent task and one category task. Confirm reported agent/category and resolved model match configuration.
@@ -232,9 +234,12 @@ Use public Senpi APIs only. Keep provider registration, persistence, UI, and hos
 
 ## Runtime validation record
 
-- Verified: `2026-09-13`
-- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`.
-- OMO evidence: [configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md) and [core JSON reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/omo-json.md) cover unified config layering, agent/category chains, and child resolution.
+- Verified: `2026-10-16`
+- Local runtime: OMO `5.1.34` at `d7e224e478a4a77dba0d2104c336fdc72ad301e3`; bundled Senpi `2026.10.16` at `8b62d4a6d16fd1d6d3787d30fbc8e1059b357623`.
+- Catalog: `omo --list-models 9router` listed CX Sol 6.1, Luna 6, and Astra 6. This proves catalog visibility only, not credentials or live task completion.
+- OMO category schema: [immutable category.ts](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-config-core/src/schema/category.ts) defines strict category entries with `models` and `reasoning` fields.
+- Standalone Senpi `2026.10.16-3` is newer and is not the Senpi version bundled with this OMO release.
+- Revalidate: OMO or Senpi upgrade, provider catalog change, task execution-mode change, or extension-provider change.
 - Senpi evidence: [extensions](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/extensions.md), [settings](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/settings.md), and [custom providers](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/custom-provider.md) cover extension registration, trust, fallback, and providers.
 - Local proof: `bun test test/omo-preferences.test.ts` passed with 3 tests and 18 assertions. Live category smoke checks recorded CX-backed categories completing; stale Olama fallback credentials failed named-agent smoke before config repair. See [issue register](issues.md).
 - Revalidate: OMO or Senpi upgrade, route merge-precedence change, task execution-mode change, or extension-provider change.
@@ -242,12 +247,8 @@ Use public Senpi APIs only. Keep provider registration, persistence, UI, and hos
 
 ## Sources and revalidation
 
-- [OMO configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/configuration.md)
-- [OMO core JSON reference](https://github.com/code-yeongyu/oh-my-openagent/blob/dev/docs/reference/omo-json.md)
-- [Senpi settings](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/settings.md)
-- [Senpi custom providers](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/custom-provider.md)
-- [Senpi extensions guide](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/extensions.md)
-- [Senpi packages guide](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/packages.md)
+- [OMO category schema at v5.1.34](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-config-core/src/schema/category.ts)
+- [OMO configuration reference at v5.1.34](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/reference/configuration.md)
 - [Repository model routing](model-routing.md)
 - [Repository model matrix](model-matrix.md)
 - [Repository extension authoring](authoring-extensions.md)

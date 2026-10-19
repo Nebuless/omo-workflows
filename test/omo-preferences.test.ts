@@ -50,7 +50,7 @@ describe("OMO preferences bootstrap", () => {
     });
   });
 
-  test("pins reflection to the shared Luna category in portable routing templates", () => {
+  test("uses only verified models and shared current categories in portable profiles", () => {
     const templatesDir = join(
       fileURLToPath(new URL("..", import.meta.url)),
       "templates",
@@ -71,18 +71,42 @@ describe("OMO preferences bootstrap", () => {
           string,
           { models?: readonly { model?: unknown; reasoning?: unknown }[] }
         >;
-        "[opencode]"?: { categories?: unknown };
+        "[opencode]"?: {
+          categories?: unknown;
+          agents?: Record<
+            string,
+            { models?: readonly { model?: unknown; reasoning?: unknown }[] }
+          >;
+        };
       };
 
       expect(config.memory?.reflection?.sandbox).toBe("off");
       expect(config.memory?.reflection?.category).toBe("memory-reflection");
       expect(config.memory?.recall?.category).toBe("memory-reflection");
       expect(config.categories?.["memory-reflection"]?.models).toEqual([
-        { model: "9router/cx/gpt-5.6-luna", reasoning: "low" },
+        { model: "9router/cx/gpt-6-luna", reasoning: "low" },
       ]);
+      const allowedModels = new Set([
+        "9router/cx/gpt-6.1-sol",
+        "9router/cx/gpt-6-luna",
+        "9router/cx/gpt-6-astra",
+      ]);
+      for (const route of [
+        ...Object.values(config.categories ?? {}),
+        ...Object.values(config["[opencode]"]?.agents ?? {}),
+      ]) {
+        for (const model of route.models ?? []) {
+          expect(allowedModels.has(String(model.model))).toBe(true);
+          if (model.model === "9router/cx/gpt-6.1-sol") {
+            expect(model.reasoning).not.toBe("xhigh");
+          }
+        }
+      }
       expect(Object.keys(config.categories ?? {}).sort()).toEqual([
+        "architect",
         "artistry",
-        "deep",
+        "deep-high",
+        "deep-low",
         "memory-reflection",
         "quick",
         "ultrabrain",
@@ -91,6 +115,7 @@ describe("OMO preferences bootstrap", () => {
         "visual-engineering",
         "writing",
       ]);
+      expect(config.categories?.deep).toBeUndefined();
       expect(config["[opencode]"]?.categories).toBeUndefined();
     }
   });

@@ -1,39 +1,42 @@
 # Model Routing
 
-## Policy
+## Portable profiles
 
-On this workstation, OMO's `9router` provider exposes canonical model IDs as
-`9router/<catalog-model-id>`. `templates/omo.jsonc.gpt-heavy` is the global
-default: CX models lead every route; Ollama Cloud models are targeted fallbacks.
+The repository provides two complete, portable routing choices. They do not
+describe or change the active global configuration on any host. GPT-heavy
+remains the recommended default; balanced is the lighter-work alternative:
 
-`templates/omo.jsonc.balanced` is retained for cost/capability mix. It leads
-scout and visual work with `glm-5.3-flash`, retains `deepseek-v4-flash:0731`
-as cheap text fallback, and reserves GPT-6 Astra for hard work.
+- [`omo.jsonc.balanced`](../templates/omo.jsonc.balanced) is Luna-first for
+  lighter work, with Sol for general work and Astra for hardest reasoning.
+- [`omo.jsonc.gpt-heavy`](../templates/omo.jsonc.gpt-heavy) is Sol-first for
+  general implementation, with Astra for hardest reasoning and Luna for quick
+  and memory work.
 
-Full pricing, benchmark evidence, and each profile's agent/category mapping
-live in [model-matrix.md](model-matrix.md).
+The catalog verified on 2026-10-16 lists only these permitted route IDs:
+`9router/cx/gpt-6.1-sol`, `9router/cx/gpt-6-luna`, and
+`9router/cx/gpt-6-astra`. Sol supports reasoning through `high`, not `xhigh`.
+The profiles use `deep-low`, `deep-high`, and `architect`; legacy `deep` is
+removed. All categories remain at shared top level, and reflection and recall
+explicitly select the shared `memory-reflection` category.
+
+The catalog shows model availability, not successful authentication or live
+task resolution. No current pricing or independent benchmark evidence for these
+catalog entries was verified; see [model-matrix.md](model-matrix.md).
 
 ## Configuration
 
-`~/.omo/omo.jsonc` holds routing in shared top-level `categories`, so parent
-OMO runs and Senpi-owned children resolve same models. The active global routing
-is GPT-heavy. `[opencode]` only carries optional host-specific agent overrides;
-it must not contain `categories`. Preserve every field outside `agents.*.models`
-and `categories.*.models`. Model names must be canonical catalog IDs, not
-convenience aliases such as `prx/*`.
+`~/.omo/omo.jsonc` is the global user routing file. Copy a portable profile only
+when that is the desired local configuration. Shared top-level `categories`
+are visible to parent OMO runs and Senpi-owned children. `[opencode]` carries
+optional named-agent overrides and must not contain `categories`. Preserve
+fields outside `agents.*.models` and `categories.*.models` when editing an
+existing configuration. Use canonical catalog IDs, not convenience aliases.
 
-Memory reflection and recall/Kibitzer select shared `memory-reflection`, pinned
-to `9router/cx/gpt-5.6-luna` at low reasoning, via
-`memory.reflection.category` and `memory.recall.category`.
-
-Inspect availability before changing routes:
+Inspect catalog visibility before changing routes:
 
 ```sh
 omo --list-models 9router
 ```
-
-The local Ollama daemon was not required or assumed. These routes target the
-installed `9router` Ollama Cloud catalog.
 
 ## Boundaries
 

@@ -89,13 +89,15 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Model Routing Preference
 
-For OMO routing on this workstation, `templates/omo.jsonc.gpt-heavy` is the
-global default: installed `9router/cx/*` models lead every route; targeted
-`9router/ollama-cloud/*` models provide fallbacks. Keep
-`templates/omo.jsonc.balanced` as cost/capability alternative. Record model
-availability, cost, benchmark evidence, and routing rationale in
-`docs/model-matrix.md` and active policy in `docs/model-routing.md`; never
-commit credentials or endpoint secrets.
+Portable routing templates are distinct profiles; neither implies active host
+configuration. `templates/omo.jsonc.gpt-heavy` remains the recommended default;
+`templates/omo.jsonc.balanced` remains the lighter-work alternative. The verified
+2026-10-16 catalog contains only
+`9router/cx/gpt-6.1-sol`, `9router/cx/gpt-6-luna`, and
+`9router/cx/gpt-6-astra`. Use current `deep-low` and `deep-high` categories;
+Sol reasoning is capped at `high`. Record availability, unknown pricing and
+benchmarks, and routing rationale in `docs/model-matrix.md` and
+`docs/model-routing.md`; never commit credentials or endpoint secrets.
 
 ## Repository Hygiene Policy
 
