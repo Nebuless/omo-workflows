@@ -33,8 +33,8 @@ extensions/
 - `src/` owns all runtime modules. Split modules by feature boundary; do not put
   implementation logic in `src/index.ts`.
 - `skills/` holds optional packaged guidance for operational capabilities.
-- `test/` owns package-specific fixtures and regressions. Cross-extension tests
-  may live in `extensions/test/`.
+- `test/` owns package-specific fixtures and regressions. Shared extension
+  boundary tests live in repository `test/`.
 - `AGENTS.md` owns package contracts, source responsibilities, and checks.
 - `package.json` is the direct-install boundary.
 

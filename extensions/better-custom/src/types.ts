@@ -68,6 +68,7 @@ export interface ProbeMetadata {
   reasoning?: boolean;
   reasoningEffortOptions?: string[];
   endpointTypes?: string[];
+  compat?: Record<string, unknown>;
 }
 
 export type ModelProbeInfo = ProbeMetadata;
@@ -103,7 +104,9 @@ export const REASONING_LEVELS = [
 
 export const PI_THINKING_LEVELS = REASONING_LEVELS;
 
-export type ThinkingLevelMap = Record<string, string | null>;
+export type ThinkingLevelMap = {
+  [Level in ReasoningCeiling]: string | null;
+};
 
 /** Per-model values that the wizard may add or edit. */
 export interface ModelOptions {
@@ -112,6 +115,7 @@ export interface ModelOptions {
   contextWindow?: number;
   maxTokens?: number;
   thinkingLevelMap?: ThinkingLevelMap;
+  compat?: Record<string, unknown>;
   headers?: Record<string, string>;
   api?: ProviderApi;
   baseUrl?: string;

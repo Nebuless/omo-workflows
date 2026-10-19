@@ -1,0 +1,12 @@
+{
+  "name": "@omo-workflows/model-routing-advisor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only model route availability advice for OMO and Senpi.",
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  }
+}

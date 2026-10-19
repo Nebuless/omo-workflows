@@ -8,6 +8,8 @@
   TypeScript and JavaScript.
 - `aqua:tamasfe/taplo@0.10.0` serves TOML.
 - `aqua:artempyanykh/marksman@2026-02-08` serves Markdown.
+- `npm:@biomejs/biome@2.5.6` supplies the required parser/quality CLI and Biome
+  language-server executable.
 
 Install them after cloning:
 

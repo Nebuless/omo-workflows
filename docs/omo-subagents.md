@@ -188,7 +188,12 @@ Never solve route failure by adding blind fallback chains. First prove model ID 
 
 For ordinary delegated work, the active `task` tool exposes task launch, output/status, steering, and cancellation. Inspect its live schema rather than copying parameters from an older session or a different harness. Read status before a control action. Cancellation is destructive task control; require explicit user confirmation.
 
-For staged programs, [`workflow-graph`](../extensions/workflow-graph/README.md) uses OMO's native workflow/DAG state. It capability-gates controls against current `workflow` and task schemas. Use `/workflow-run status` to inspect, `/workflow-run answer` for human gates, and confirmed cancellation only when needed. See [workflow parity](../extensions/workflow-graph/PARITY.md) for supported and unavailable semantics.
+When caller needs availability evidence before a native launch, use the optional
+[`model-routing-advisor`](../extensions/model-routing-advisor/README.md) tool
+explicitly. Pass caller-normalized candidate IDs and retain its report or
+reference before direct task, workpool, team, mass/DAG, or ULW launch. It has no
+universal hook and never chooses a model, changes route order, or controls a
+task. See [model routing preflight](model-routing.md#explicit-route-advice-preflight).
 
 ## Custom providers and extension-added capabilities
 
@@ -252,7 +257,6 @@ Use public Senpi APIs only. Keep provider registration, persistence, UI, and hos
 - [Repository model routing](model-routing.md)
 - [Repository model matrix](model-matrix.md)
 - [Repository extension authoring](authoring-extensions.md)
-- [Workflow graph parity](../extensions/workflow-graph/PARITY.md)
 - [Repository issue register](issues.md)
 
 Revalidate this guide after OMO or Senpi upgrade, provider catalog change, new extension provider/agent/category, or any change to configuration merge precedence.

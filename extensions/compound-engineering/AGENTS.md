@@ -22,7 +22,8 @@ Expose Every's Compound Engineering skills through native OMO/Senpi resource dis
 
 - Refresh the whole upstream skill tree together; never mix revisions.
 - Keep host adaptation in `src/index.ts`.
-- Resolve packaged resources from `import.meta.url`; the bundled OMO loader does not supply `import.meta.dirname`.
+- Resolve packaged resources from the native discovery context's
+  `loadedExtensionPaths`; bundled loaders may relocate the entrypoint module.
 
 ## Verification
 

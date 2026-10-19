@@ -1,0 +1,18 @@
+Assessment scope diff
+
+Expected if port had been implemented:
+- extensions/operator-memory/package.json exists
+- source/test files exist below extensions/operator-memory/
+- root build target includes extensions/operator-memory/src/index.ts
+- package registration exposes Operator extension
+- possible compaction hook/config changes require review
+
+Observed:
+- extensions/operator-memory/: absent
+- root build targets exclude Operator Memory
+- .omo/settings.json only registers repository root package
+- global compaction config is {}
+- installed Senpi defaults remain reserveTokens=16384 and keepRecentTokens=20000
+- git status --short is clean
+
+Conclusion: source assessment did not modify adjacent runtime or compaction behavior. A future port must retain native compaction and provide a bounded, read-only preamble only.

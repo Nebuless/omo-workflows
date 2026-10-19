@@ -45,134 +45,75 @@ verification date.
 | OMO extension behavior that depends on Senpi | Both upstreams plus installed runtime |
 | Repository-only docs, tests, or formatting | Neither, unless a runtime claim changes |
 
-## Existing validation records
+## Current integration target
 
-Records dated before 2026-10-16 preserve their historical observations. Any
-`current` status inside those entries means current at that record's date only;
-none establishes behavior on OMO 5.1.34.
+- Verified: `2026-10-19` (upstream pairing and resource-discovery contract).
+- Local runtime: OMO `5.1.34`, paired Senpi `2026.10.16`, mise Bun `1.3.14`.
+- OMO evidence: [release manifest](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-senpi/package.json) pins Senpi `2026.10.16` and TypeBox `1.3.34`.
+- Senpi evidence: [public extension types](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/src/core/extensions/types.ts) expose `resources_discover` and `loadedExtensionPaths`. Compound Engineering and Herdr resolve resources from those paths.
+- Native ownership: the duplicate workflow extension, related repairs, and their tests are removed; no runtime patch is applied.
+- Local proof: `mise install` exposes Biome `2.5.6`; `mise exec -- bun install` regenerated the merged lockfile. `mise ci` exited 0: 149 tests, 475 assertions, typecheck, build, package, hooks, Biome, and Qlty passed. `omo list --approve` resolved the project package. Isolated offline installed OMO loaded all five supported extensions, discovered 35 Compound Engineering skills, and exposed no removed workflow commands; no extension error occurred.
+- Limits: historical authenticated provider and Herdr checks below have not been repeated for this pairing.
+- Revalidate: OMO/Senpi upgrade, resource-discovery change, or package-pin change.
 
-### 2026-10-16 OMO 5.1.34 and paired Senpi 2026.10.16
+## Historical extension compatibility
 
-- Verified: `2026-10-16` (source contracts and bounded local checks only)
-- Local runtime: OMO `5.1.34`; engine Senpi `2026.10.16`; Bun `1.3.14`.
-  Standalone Senpi `2026.10.16-3` is a distinct release and is not the OMO
-  pairing.
-- OMO evidence: [immutable 5.1.34 release source](https://github.com/code-yeongyu/oh-my-openagent/tree/d7e224e478a4a77dba0d2104c336fdc72ad301e3), including the [DAG snapshot payload](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-senpi/src/components/task/dag-snapshot-payload.ts), [graph limit settings](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/senpi-task/src/dag/graph.ts), and [release manifest](https://raw.githubusercontent.com/code-yeongyu/oh-my-openagent/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-senpi/package.json).
-- Senpi evidence: [paired public session control](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/src/core/extensions/session-control-types.ts), [session manager](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/src/core/session-manager.ts), [structured mouse API](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/tui/src/tui.ts), and [fullscreen mouse dispatch](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/tui/src/tui-alt-screen.ts).
-- Local proof: `omo --version` reported OMO 5.1.34 / Senpi 2026.10.16. Approved dependency installation regenerated matching lock pins. Installed OMO RPC loaded all four extensions, discovered 35 Compound Engineering and 5 Herdr skills, and returned no extension errors. A configured authored program persisted custom journal entries and resumed its final result in a fresh installed OMO process.
-- Passing checks: `mise ci` typecheck, build, package, hooks, Biome parsing, and Qlty tasks; 497 tests; native SessionManager journal reopen; unmodified TuiAltScreen structured mouse dispatch; four-extension RPC smoke; authored workflow persistence/reopen; and `git diff --check`.
-- Remaining limits: CI exits 1 only for three preserved historical repair tests requiring absent old global `omo-task.js`. Physical terminal mouse input and credential-backed provider mutation were not exercised. Fifteen actual renderer frames at 40/80/120 columns were inspected in xterm; native pointer delivery is separately covered by integration tests.
-- Implemented contracts: optional integer `lease_holder_pid` is accepted without projection; journal admission uses public header persistence, native append, and stdlib file sync/close; pointer handling consumes public structured mouse events. Native node count defaults to configurable 64; the local cap remains policy.
-- Historical scope: earlier `current` labels below refer to their dated records only; they are historical and not revalidated on OMO 5.1.34. DAG UI, journal, and mouse repairs remain version/hash-locked historical opt-ins. The comment-checker task unconditionally installs a global package. None is supported for the current binary; do not run them or retarget guards.
-- Revalidate: OMO/Senpi upgrade, public session persistence or TUI mouse contract change, or package pin change.
-- Status: `current compatibility verified within recorded scope; three historical environment failures retained`
+The following records apply only to their stated versions and dates.
 
-### Memory reflection shared-category routing
+### Better Custom
 
-- Verified: `2026-09-13`
-- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`.
-- OMO evidence: configuration reference inspected at the time documents harness-specific overlays after shared base keys. [Issue #6808](https://github.com/code-yeongyu/oh-my-openagent/issues/6808) confirms Reflection defaults to `quick` and that the shipped quick route can be Kimi-only.
-- Senpi evidence: [Senpi README](https://github.com/code-yeongyu/senpi/blob/main/README.md) establishes Senpi as the runtime under OMO's plugin. The installed OMO reflection child ran through the Senpi view and could not resolve the `[opencode]`-only `quick` route.
-- Local proof: `reflection-run-31/ledger.json` recorded old route `9router/ollama-cloud/kimi-k3`; the active profile and both templates parse to shared `memory-reflection` at `9router/cx/gpt-5.6-luna` with low reasoning. `bun test test/omo-preferences.test.ts` enforces selector and model chain. The post-change `/reflect` run is recorded in `docs/issues.md`.
-- Revalidate: OMO or Senpi upgrade, reflection launch change, config merge-precedence change, or routing-profile change.
-- Status: `historical; not revalidated on OMO 5.1.34`
+- Verified: `2026-09-18` (native compatibility boundary, documentation, and isolated request proof)
+- Local runtime evidence: global OMO `5.0.0-0.beta.75` with engine Senpi `2026.9.18-4`; repository Senpi `2026.9.13`; Bun `1.3.14`; provider `9router`; model `cx/gpt-5.6-luna`.
+- OMO evidence: https://github.com/code-yeongyu/oh-my-openagent/tree/6fdcacb33c59a869c0b39ac52a89173a3c5ed1f5/packages/omo-senpi — OMO owns extension loading and host packaging; its native request transport is not changed by this profile boundary.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/7d174a98ff6c42a45529e022914c3b9903b6a25c/packages/coding-agent/src/core/extensions/types.ts — public extension and model-host boundary; Senpi owns mapped effort resolution and request construction.
+- Native transport evidence: https://github.com/can1357/oh-my-pi/blob/62a4aa98a4b52f829a3ae9a5247ca8db4e5f810c/packages/ai/src/providers/openai-completions.ts — OpenAI-completions request transport; Better Custom supplies native metadata and does not intercept requests.
+- Gateway evidence: https://github.com/decolua/9router/blob/a8c9d3802c5933500fba95416f5bf0c130581396/docs/superpowers/specs/2026-08-02-gpt-5-6-codex-reasoning-overrides-design.md — CX model effort matrix used for exact profile boundary: `9router/cx/gpt-5.6-luna`, `9router/cx/gpt-5.6-sol`, and `9router/cx/gpt-5.6-terra` only.
+- Local proof: isolated OMO run with `OMO_CODING_AGENT_DIR`, `SENPI_CODING_AGENT_DIR`, and `HOME` under `/home/egsox/.cache/omo-9router-verify` sent one request to a loopback capture proxy and received its synthetic `OK` response. The capture recorded `POST /v1/chat/completions` for `cx/gpt-5.6-luna` with `reasoning_effort: "low"` when invoked with `--thinking minimal`. This proves outbound payload construction only. In contrast, a live authenticated global OMO run of the same model with `--thinking minimal` exited `1` with OMO `503` wrapping a 9router `400` that rejected `minimal`. The active `~/.omo/agent/models.json` Luna entry lacks `thinkingLevelMap`, so that run did not receive persisted native-map metadata. `bun test extensions/better-custom/test test/extension-load.test.ts` passed 40 tests and 169 assertions; `bun run typecheck` and `bun run build` passed.
+- Boundary: generic per-model `thinkingLevelMap` uses canonical OMO keys `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, and `max`; model-scoped `compat.supportsReasoningEffort: true` enables native mapped effort for OpenAI-completions entries. Observed or persisted map/compatibility metadata takes precedence over static defaults. Senpi owns request construction.
+- Incident: 9router rejected Luna provider-facing `minimal` with HTTP `400`; the direct authenticated run revalidated that response. Better Custom maps Luna `minimal → low` and `xhigh → max`; Sol/Terra map `xhigh → ultra` and preserve `max`.
+- Revalidate: 9router gateway or model effort-contract change; profile identity/map change; OMO, Senpi, or Oh My Pi upgrade; request-construction or model-compatibility change; active configuration migration; or new server-side request/fetch diagnostics.
+- Status: direct gateway-response proof complete; active global configuration still lacks the native map, so the live compatibility path fails.
 
-### Compound Engineering native skill discovery
+### Compound Engineering
 
-- Verified: `2026-09-13`
-- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`.
-- OMO evidence: [current OMO Senpi source](https://github.com/code-yeongyu/oh-my-openagent/tree/76e54b0a9bfa7bc730afefa877aea03f2c948b08/packages/omo-senpi); OMO delegates extension resource loading to Senpi.
-- Senpi evidence: [`resources_discover` public contract](https://github.com/code-yeongyu/senpi/blob/ce72afe2b7368d9e19fe6a63abb128dd453591e8/packages/coding-agent/src/core/extensions/types.ts).
-- Adapted upstream evidence: [Every package manifest](https://github.com/EveryInc/compound-engineering-plugin/blob/44d65ad64a0ac8e542eabee31ce031a7aeb41b28/package.json), [native Pi adapter](https://github.com/EveryInc/compound-engineering-plugin/blob/44d65ad64a0ac8e542eabee31ce031a7aeb41b28/.pi/extensions/compound-engineering.ts), and [skill tree](https://github.com/EveryInc/compound-engineering-plugin/tree/44d65ad64a0ac8e542eabee31ce031a7aeb41b28/skills).
-- Local proof: `bun test extensions/compound-engineering/test` registered one skill root and found 35 frontmatter skill names across 418 byte-matched imported files. `omo -e ./extensions/compound-engineering --offline --print "List installed skills whose names start with ce-. Reply with names only, one per line."` exited 0 and returned discovered `ce-*` names; invalid `/skill:not-a-real-ce-skill` exited cleanly with an explicit not-found result.
-- Revalidate: OMO or Senpi upgrade, upstream Compound Engineering refresh, or resource-discovery contract change.
-- Status: `historical; not revalidated on OMO 5.1.34`
+- Verified: `2026-09-18`
+- Local runtime: repository Senpi `2026.9.13`; global OMO `5.0.0-0.beta.72` with Senpi `2026.9.18-2`; Bun `1.3.14`.
+- OMO evidence: N/A — this repair uses only Senpi's public resource-discovery callback; OMO loads the standalone package but does not own its resource-path resolution.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/7d174a98ff6c42a45529e022914c3b9903b6a25c/packages/coding-agent/src/core/extensions/types.ts defines `resources_discover` and the resolved `loadedExtensionPaths` context used by this package.
+- Adapted upstream evidence: https://github.com/EveryInc/compound-engineering-plugin/tree/44d65ad64a0ac8e542eabee31ce031a7aeb41b28
+- Local proof: Focused regression first proved checkout-relative discovery wrong, then `bun test extensions/compound-engineering/test/extension.test.ts test/extension-load.test.ts test/herdr-tools.test.ts` passed 28 tests and 98 assertions. Live `omo -e ./extensions/compound-engineering --print ...` exited `0`, listed packaged `ce-*` skills, and emitted no resource-path or extension-load error.
+- Revalidate: OMO or Senpi upgrade, resource-discovery contract change, or Compound Engineering refresh.
+- Status: current.
 
-- [Global OMO instructions](customizations.md#verified-runtime-contract) —
-  verified 2026-09-11; boundary-crossing prompt overlay behavior.
-- [Customization scaffolding](customization-scaffolding.md#upstream-evidence) —
-  verified 2026-09-11; OMO configuration and Senpi extension capability map.
+### Herdr
 
-### Native workflow graph Wave 0 runtime contract
+- Verified: `2026-09-18`
+- Local runtime: OMO `5.0.0-0.beta.72` (engine Senpi `2026.9.18-2`); repository Senpi `2026.9.13`; Bun `1.3.14`; Herdr `0.9.1`; terminal-browser `0.8.1`.
+- OMO evidence: N/A — this repair uses only Senpi's public resource-discovery callback; OMO loads the standalone package but does not own its resource-path resolution.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/7d174a98ff6c42a45529e022914c3b9903b6a25c/packages/coding-agent/src/core/extensions/types.ts defines `resources_discover` and the resolved `loadedExtensionPaths` context used by this package.
+- Local proof: Existing Herdr command and capability evidence remains current. Focused regression first proved checkout-relative discovery wrong, then `bun test extensions/compound-engineering/test/extension.test.ts test/extension-load.test.ts test/herdr-tools.test.ts` passed 28 tests and 98 assertions. Live `omo -e ./extensions/herdr --print ...` exited `0`, listed packaged Herdr skills and tools, and emitted no resource-path or extension-load error. No prompt/start mutation was dispatched; no browser rendering behavior is claimed. Start/profile mappings remain unavailable until stable identity/readiness proof exists.
+- Revalidate: OMO or Senpi upgrade, lifecycle-event or tool-registration API change, Herdr command inventory/version change, or terminal-browser Herdr-tab rendering proof.
+- Status: current.
 
-- Verified: `2026-09-12`
-- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`; Herdr `0.9.0`.
-- OMO evidence: [`dag-rpc-bridge.ts`](https://github.com/code-yeongyu/oh-my-openagent/blob/10bf3db1d35f47feaf7b473a60e988e12e35a501/packages/omo-senpi/src/components/task/dag-rpc-bridge.ts), [`dag-snapshot-payload.ts`](https://github.com/code-yeongyu/oh-my-openagent/blob/10bf3db1d35f47feaf7b473a60e988e12e35a501/packages/omo-senpi/src/components/task/dag-snapshot-payload.ts), [`dag-tool-params.ts`](https://github.com/code-yeongyu/oh-my-openagent/blob/10bf3db1d35f47feaf7b473a60e988e12e35a501/packages/omo-senpi/src/components/task/dag-tool-params.ts), and [`task-rpc-bridge.ts`](https://github.com/code-yeongyu/oh-my-openagent/blob/10bf3db1d35f47feaf7b473a60e988e12e35a501/packages/omo-senpi/src/components/task/task-rpc-bridge.ts) at immutable OMO revision `10bf3db1d35f47feaf7b473a60e988e12e35a501`.
-- Senpi evidence: [`types.ts`](https://github.com/code-yeongyu/senpi/blob/4f4cd74518749d00674571ff867ce6d53766dde1/packages/coding-agent/src/core/extensions/types.ts), [`runner.ts`](https://github.com/code-yeongyu/senpi/blob/4f4cd74518749d00674571ff867ce6d53766dde1/packages/coding-agent/src/core/extensions/runner.ts), [`loader.ts`](https://github.com/code-yeongyu/senpi/blob/4f4cd74518749d00674571ff867ce6d53766dde1/packages/coding-agent/src/core/extensions/loader.ts), and [`connection-handler.ts`](https://github.com/code-yeongyu/senpi/blob/4f4cd74518749d00674571ff867ce6d53766dde1/packages/coding-agent/src/modes/rpc/connection-handler.ts) at immutable Senpi revision `4f4cd74518749d00674571ff867ce6d53766dde1`.
-- Installed paths: OMO `plugin/extensions/omo.js` and `plugin/extensions/omo-task.js`; Senpi `dist/core/extensions/{types,runner,loader}.d.ts`, `dist/modes/rpc/{rpc-types,connection-handler}.d.ts`, and `dist/core/event-bus.d.ts` beneath their matching global package roots.
-- Local proof: disposable offline RPC process, no saved session or project resource loading:
-  ```text
-  SENPI_RPC_CLIENT_CAPABILITIES=extension_events omo --mode rpc --offline \
-    --no-extensions --no-skills --no-prompt-templates --no-themes \
-    --no-context-files --no-approve --omo-task \
-    -e /tmp/workflow-graph-wave0-diagnostics.ts \
-    --session-dir /tmp/workflow-graph-wave0-session --no-session
-  ```
-  It returned protocol v1 with `extension_events`; `get_loaded_surfaces` rows with canonical `path` and `sourceInfo`; and public tool descriptors from installed OMO `omo.js`. A fresh disposable synthetic capture then received non-empty `omo.dag.updated`, sequenced `omo.dag.event`, coalesced `omo.dag.activity`, `omo.dag.heartbeat`, and `omo.task.updated` envelopes. The final parser verdict was `6/6`, `34/34`, `7/7`, `2/2`, and `25/25` respectively. It also recorded a task-linked two-root/join graph, `workflow` snapshot error, task-output status, and synthetic send/cancel/retry outcomes. Historical receipt path was `.omo/evidence/workflow-graph-wave0-transcript.md`; that ignored artifact is unavailable in this checkout. Do not use these historical counts as current proof. Current native/runtime evidence is recorded below.
+### Model Routing Advisor
 
-  `workflow` allows only `start`, `attach`, `snapshot`, `wait`, `cancel`, `retry`, `send`, and `amend`; no extension control may assume another task-tool name or parameter. `workflow-graph` discovers live schemas through public `pi.getAllTools()` and invokes a control only when active and schema-compatible. Its task transport boundary accepts OMO metadata evolution, but projection retains only task ID, status, timestamp, optional model, and optional turns.
-- Herdr proof: read-only `herdr tab list --workspace wJ`, `herdr pane current --pane wJ:p1`, `herdr pane layout --pane wJ:p1`, and `herdr pane edges --pane wJ:p1` returned opaque IDs and typed JSON. A disposable non-focused tab then proved each required mutating argv/result contract. IDs below are redacted placeholders; only returned IDs were used, and the final tab list contained only pre-existing tabs.
-  ```text
-  herdr tab create --workspace wJ --cwd /home/egsox/repo/omo-workflows \
-    --label workflow-graph-wave0 --env WORKFLOW_GRAPH_WAVE0=1 --no-focus
-  # {"id":"cli:tab:create","result":{"root_pane":{"pane_id":"[root-pane]",...},"tab":{"tab_id":"[tab]",...},"type":"tab_created"}}
+- Verified: `2026-09-16`
+- Local runtime: repository Senpi `2026.9.13`; global OMO `5.0.0-0.beta.68` with Senpi `2026.9.16-3`; Bun `1.3.14`.
+- OMO evidence: https://github.com/code-yeongyu/oh-my-openagent/tree/fbcc57e374c180c41ffc8562c0ab7e7414935811/packages/omo-senpi documents OMO package loading. OMO owns route configuration and task admission, not this read-only tool.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/f32905c8199b70e45acd866159170d390e48715b/packages/coding-agent/src/core/extensions/types.ts exposes `ExtensionAPI.registerTool` and `ExtensionContext.modelRegistry`; https://github.com/code-yeongyu/senpi/blob/f32905c8199b70e45acd866159170d390e48715b/packages/coding-agent/src/core/model-registry.ts exposes catalog/auth access. Neither public surface proves fresh, complete per-provider dispatch availability.
+- Local proof: installed `node_modules/@code-yeongyu/senpi@2026.9.13` declarations expose `registerTool`, `modelRegistry.getAll()`, `find()`, `hasConfiguredAuth()`, and provider-auth access; focused tests prove absent caller observation returns conservative unknown. The adapter never calls model selection, task, config, provider registration, or provider dispatch APIs.
+- Revalidate: OMO or Senpi upgrade, extension tool API change, or model-registry availability/auth contract change.
+- Status: current.
 
-  herdr pane split --pane [root-pane] --direction right --ratio 0.4 \
-    --cwd /home/egsox/repo/omo-workflows --env WORKFLOW_GRAPH_WAVE0=1 --no-focus
-  # {"id":"cli:pane:split","result":{"pane":{"pane_id":"[viewer-pane]",...},"type":"pane_info"}}
+### Trim
 
-  herdr pane run [viewer-pane] printenv WORKFLOW_GRAPH_WAVE0
-  # [no output]
-  herdr pane read --source recent-unwrapped --format text --lines 6 [viewer-pane]
-  # output contained: 1
+- Verified: `2026-09-17`
+- Local runtime: repository Senpi `2026.9.13`; OMO `5.0.0-0.beta.68` with Senpi engine `2026.9.16-3`; Bun `1.3.14`.
+- OMO evidence: N/A — Trim imports no OMO API; OMO only discovers packaged extension entrypoint.
+- Senpi evidence: https://github.com/code-yeongyu/senpi/blob/7d174a98ff6c42a45529e022914c3b9903b6a25c/packages/coding-agent/src/core/extensions/types.ts defines `SessionBeforeCompactEvent.reason`, cancellable compaction handlers, `agent_settled`, and `ExtensionContext.compact()`.
+- Local proof: installed pin declarations expose `threshold`, `manual`, `overflow`, and `extension` reasons; interactive runtime delegates `ctx.compact()` to `AgentSession.compact()`. Focused tests cover threshold veto, preserved manual/overflow compaction, settled forced requests, and safe `/trim shake` guards. Full extension tests, typecheck, build, and live OMO command checks run before closeout.
+- Revalidate: Senpi upgrade or compaction-lifecycle API change.
+- Status: current.
 
-  herdr pane resize --direction right --amount 0.1 --pane [root-pane]
-  # {"id":"cli:pane:resize","result":{"resize":{"changed":true,"pane_id":"[root-pane]","layout":{...}},"type":"pane_resize"}}
-  herdr pane close [viewer-pane]
-  # {"id":"cli:pane:close","result":{"type":"ok"}}
-  herdr tab close [tab]
-  # {"id":"cli:tab:close","result":{"type":"ok"}}
-  ```
-  This proves `--env` augments inherited process environment and reaches split panes; `pane run` has no command-result payload, so `pane read` is required for observed output. `HERDR_ENV=1` only authorizes contextual CLI control; isolated QA still requires a separate returned tab/pane ID set.
-- Redaction and fixtures: persisted samples use synthetic IDs and `[redacted]` session/task/run IDs, prompts, messages, model tokens, task summaries, full responses, and error bodies. Future fixtures remain synthetic and must exclude those bodies. Rendering may cap local detail but must not log it.
-- Provenance and dependencies: no Atomic source has been copied in Wave 0. Repository `package.json` and installed OMO `omo.js` have no `@bastani/atomic` dependency/import. Before any Atomic or `omo-herdr-dag` adaptation is added, `extensions/workflow-graph/UPSTREAM.md` and `LICENSES/` must preserve both immutable revision notices and licenses.
-- Revalidate: OMO or Senpi runtime upgrade, Herdr CLI upgrade, native task-tool schema change, extension transport change, or before broadening controls beyond `workflow` discovery.
-- Status: `current; Wave 0 source-creation gate evidence`
-
-### Workflow graph routing, composition, transfer, and durable journal repair
-
-- Verified: `2026-09-13`
-- Local runtime: OMO `5.0.0-0.beta.62`; Senpi `2026.9.13`; Bun `1.4.1`.
-- OMO evidence: native workflow snapshot/start contract remains runtime authority. This extension reads live schemas, requires native `run_id` snapshot identity, and leaves scheduling, keyed recovery, and DAG mutation with OMO.
-- Senpi evidence: installed extension APIs register `workflow_recommend`, `workflow_program`, `/workflow-run`, and `before_agent_start`. No upstream authority owns extension-local descriptor hashing, URL policy, composition, or transfer filesystem validation.
-- Local proof: `bun test --timeout 30000 extensions/workflow-graph/test/authoring-transfer*.test.ts extensions/workflow-graph/test/authoring-host.test.ts extensions/workflow-graph/test/authoring-command.test.ts extensions/workflow-graph/test/authoring-catalog-entry.test.ts extensions/workflow-graph/test/authoring-composition.test.ts extensions/workflow-graph/test/native-journal*.test.ts` exited 0, 112 pass, 0 fail, 290 assertions. Real persisted OMO transfer created source `dag_d8436985-bc7d-4012-893f-f1f993db59b1` and destination `dag_39797372-4c3c-498a-b2a7-e4c44e901fc4`; one transfer intent and one destination start followed confirmed verified copy, source snapshot stayed unchanged, and declined confirmation made no run. Receipt: `.omo/evidence/st_01a09b74-task-13/task-13-packet.json`.
-- Durable repair: `durable-journal-v1` changed installed Senpi `SessionManager` files from recorded preimage hashes to recorded postimage hashes and exposes `flushEntries(): Promise<void>`. Receipt `.omo/evidence/workflow-graph-natural-routing-chaining-url-policy/20260913T140255Z-native-repair-st_01a09aea/runtime-repair-receipt.json` records version `2026.9.13`, upstream revision `0fb7705500641a43de915e72debdabfdcb00e665`, and matching installed build. It is local repair only. Native broad static check exited 1 because upstream test dependencies, including `vitest`, were absent. It is not a passing static gate.
-- Revalidate: OMO or Senpi upgrade, native workflow/session schema or lifecycle change, repair preimage or postimage hash mismatch, extension registration change, or Linux filesystem behavior change.
-- Status: `current; extension-local policy with native runtime boundaries`
-
-### Native staged workflow runtime hooks
-
-- Verified: `2026-09-12`
-- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`.
-- OMO evidence: [`dag/manager.ts`](https://github.com/code-yeongyu/oh-my-openagent/blob/e0746bcbcdf6341f697358867b2de436251fa5ad/packages/omo-senpi/src/components/task/dag/manager.ts), [`dag/fingerprint.ts`](https://github.com/code-yeongyu/oh-my-openagent/blob/e0746bcbcdf6341f697358867b2de436251fa5ad/packages/omo-senpi/src/components/task/dag/fingerprint.ts), and installed hash-pinned `/dag` handler in `plugin/extensions/omo-task.js`. Native snapshots require run_id and expose definitionFingerprint. Keyed start reuses exact definitions; amendment preserves unchanged completed nodes.
-- Senpi evidence: [`session-manager.ts`](https://github.com/code-yeongyu/senpi/blob/6db12827c7e5f4bc6773fd9f7097b7891d4afd78/packages/coding-agent/src/core/session-manager.ts) and [`extensions/types.ts`](https://github.com/code-yeongyu/senpi/blob/6db12827c7e5f4bc6773fd9f7097b7891d4afd78/packages/coding-agent/src/core/extensions/types.ts). Existing public appendEntry lacks explicit disk acknowledgement before first assistant message.
-- Local repairs: `scripts/repair-omo-dag-ui.ts` adds optional versioned presentation hook; `scripts/repair-senpi-workflow-journal.ts` adds acknowledged native custom-entry flush. Both are invented local workarounds and check-only by default. Neither is a native upstream feature claim.
-- Local proof: `bun test extensions/workflow-graph/test/native-dag-ui.test.ts extensions/workflow-graph/test/native-journal-flush.test.ts extensions/workflow-graph/test/native-journal.test.ts` passed against disposable patched copies. Imported controller run `dag_e9eb5f9a-6fd2-4e75-be5f-e657c3706cd9` completed two waves with first task preserved across native journal reopen and same-run amendment; final parsed total was 18. Receipt: `.omo/evidence/ulw/01a09459-9901-7e95-8ad1-a389346a429a/G001-implement-approved-atomic-workflow-p/a1/imported-controller-native-proof.json`.
-- Boundaries: native tasks own processes and DAG state. Extension owns deterministic validation and durable decisions through native session records. Strict invalid output rejects by default; explicit recovery nodes receive only typed failure records.
-- Revalidate: every OMO or Senpi upgrade, native schema/fingerprint change, session write lifecycle change, or repair hash mismatch.
-- Registered launch proof: `/workflow-run` created `dag_4af1c990-6a58-49fd-abf1-f2f8270679e2`; eight completed nodes paused at controller gate, explicit selector answer admitted one same-run amendment, and all 16 nodes completed. Herdr reported program final separately from native completed. Public `activateInactiveTool: true` resolves lazy workflow registration.
-- Fullscreen mouse owner: [Senpi tui-alt-screen.ts](https://github.com/code-yeongyu/senpi/blob/6db12827c7e5f4bc6773fd9f7097b7891d4afd78/packages/tui/src/tui-alt-screen.ts), `handleViewportInput`. Wheel defers to focused overlay, parsed SGR clicks do not. Optional `repair-senpi-workflow-mouse.ts` applies matching deferral; OMO scheduling is not involved. Real copied-runtime tests cover focused click/wheel and unfocused native selection/scroll.
-- Mouse target: `@earendil-works/pi-tui@2026.9.10-2/dist/tui-alt-screen.js`; preimage `7ffca25def0e5b1a92812163d20224fdaf56a102c37307af3a4a1e73428faf0a`; postimage `aaf31dc01b5038d92fa9f6263c0b1d493b05a7ec2bfaabfe9ed6db2e82800b31`. CLI check-only confirmed global preimage unchanged.
-- Integrated proof: `mise ci` exit 0, 221 tests/0 failures, typecheck/build/package/quality/hooks passed. Source-backed all-nine controller regressions, native success/rejection/reopen, and corrected measured terminal captures are indexed in [PARITY.md](../extensions/workflow-graph/PARITY.md).
-- Status: `focused staged/runtime behavior verified; full gate rejected unfinished discovery/catalog and design final-display/result contract. Native stage-chat, per-node policy, callback, and unbounded-run limits are separate`.
-
-### Atomic discovery and design completion delta
-
-- Verified: `2026-09-12T18:40:43.605Z`
-- Local runtime: OMO `5.0.0-0.beta.53`; Senpi `2026.9.10-2`; Bun `1.3.14`; Jiti `2.7.0`.
-- OMO evidence: [pinned DAG schema](https://github.com/code-yeongyu/oh-my-openagent/blob/e0746bcbcdf6341f697358867b2de436251fa5ad/packages/omo-senpi/src/components/task/dag-tool-params.ts); actual native compiler accepts full 64-node design graph.
-- Senpi evidence: [SettingsManager](https://github.com/code-yeongyu/senpi/blob/6db12827c7e5f4bc6773fd9f7097b7891d4afd78/packages/coding-agent/src/core/settings-manager.ts), [package inventory](https://github.com/code-yeongyu/senpi/blob/6db12827c7e5f4bc6773fd9f7097b7891d4afd78/packages/coding-agent/src/core/package-manager.ts), [public extensions](https://github.com/code-yeongyu/senpi/blob/6db12827c7e5f4bc6773fd9f7097b7891d4afd78/packages/coding-agent/src/core/extensions/types.ts). Fresh immutable API content SHAs: settings `95aecffeba62e616d7b86051067f2f82b6f9c4ea`, package inventory `95b66a49ad4e1b0f4730a148ef2c2bb03809c954`.
-- Adaptation: six-source registry over public native settings/package paths. Native has no workflow resource kind; extension reads installed package `pi.workflows`. Scope trust is checked before project/package code executes. Reload does not install dependencies.
-- Local proof: attempt-2 `catalog-rpc-result.json` shows actual OMO registered list/reload and expected no-session durability rejection; `catalog-native-journal.json` shows exact-key resume through copied repaired native SessionManager and disk reopen; `design-native-proof.json` records actual native exporter/display with independently confirmed browser failure, not successful browser display; `design-native-capacity.json` records native compiler success for 64 nodes.
-- Revalidate: either runtime version, settings selection, package inventory, module loader, or Playwright CLI contract changes.
-- Status: current; full literal native API limits remain in package PARITY.md.
+- [Global OMO instructions](customizations.md#verified-runtime-contract) — verified 2026-09-11; boundary-crossing prompt overlay behavior.
+- [Customization scaffolding](customization-scaffolding.md#upstream-evidence) — verified 2026-09-11; OMO configuration and Senpi extension capability map.

@@ -26,7 +26,8 @@ const extensionEntrypoints = [
   "./extensions/better-custom/src/index.ts",
   "./extensions/compound-engineering/src/index.ts",
   "./extensions/herdr/index.ts",
-  "./extensions/workflow-graph/src/index.ts",
+  "./extensions/model-routing-advisor/index.ts",
+  "./extensions/trim/src/index.ts",
 ] as const;
 if (
   !Array.isArray(extensions) ||
@@ -54,9 +55,9 @@ for (const [relativePath, packageName, entrypoint] of [
   ],
   ["extensions/herdr/package.json", "@omo-workflows/herdr", "./index.ts"],
   [
-    "extensions/workflow-graph/package.json",
-    "@omo-workflows/workflow-graph",
-    "./src/index.ts",
+    "extensions/model-routing-advisor/package.json",
+    "@omo-workflows/model-routing-advisor",
+    "./index.ts",
   ],
 ] as const) {
   const standalonePath = resolve(root, relativePath);
@@ -79,6 +80,30 @@ for (const [relativePath, packageName, entrypoint] of [
   }
 }
 
+const trimPackagePath = resolve(root, "extensions/trim/package.json");
+if (!existsSync(trimPackagePath)) {
+  errors.push("missing standalone Trim package manifest");
+} else {
+  const trimPackage = JSON.parse(
+    readFileSync(trimPackagePath, "utf8"),
+  ) as PackageManifest;
+  if (trimPackage.name !== "@omo-workflows/trim") {
+    errors.push("Trim package name must be @omo-workflows/trim");
+  }
+  if (
+    !Array.isArray(trimPackage.pi?.extensions) ||
+    trimPackage.pi.extensions.length !== 1 ||
+    trimPackage.pi.extensions[0] !== "./src/index.ts"
+  ) {
+    errors.push("Trim package must expose only ./src/index.ts");
+  }
+  if (!existsSync(resolve(root, "extensions/trim/src/index.ts"))) {
+    errors.push(
+      "missing Trim extension entrypoint: extensions/trim/src/index.ts",
+    );
+  }
+}
+
 const senpiVersion = manifest.dependencies?.["@code-yeongyu/senpi"];
 if (senpiVersion !== "2026.10.16") {
   errors.push("Senpi must remain pinned to 2026.10.16");
@@ -89,8 +114,6 @@ const sourceFiles = [
   "extensions/compound-engineering/src/index.ts",
   "extensions/better-custom/src/config.ts",
   "extensions/better-custom/src/model-browser.ts",
-  "extensions/workflow-graph/src/index.ts",
-  "extensions/workflow-graph/src/overlay/controller.ts",
 ];
 const herdrSkillFiles = [
   "extensions/herdr/skills/herdr/SKILL.md",

@@ -25,6 +25,9 @@ customization repository.
 - Record exact versions and immutable upstream revisions.
 - Cite external contracts with stable URLs.
 - Describe verified behavior, not planned behavior.
+- Workflow scheduling and graph presentation belong to native OMO. Keep current
+  setup and compatibility guidance free of removed extension and repair wiring;
+  dated issue records may retain historical references.
 - Keep release procedure aligned with `package.json`, `mise.toml`, `prek.toml`,
   and root `AGENTS.md` in the same change.
 
@@ -47,3 +50,4 @@ No child `AGENTS.md` boundaries exist.
 - `customizations.md` — customization catalog and global OMO instruction setup.
 - `customization-scaffolding.md` — capability map, policy scaffolds, and upstream-backed creation rules.
 - `upstream-validation.md` — OMO/Senpi authority registry and version-sensitive evidence format.
+- `plans/` — requirements-only CE unified plan artifacts; read `plans/AGENTS.md` before editing.

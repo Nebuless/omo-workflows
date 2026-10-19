@@ -8,13 +8,8 @@ Own executable validation and portable runtime-repair scripts.
 
 - `validate-package.ts` validates the public package contract.
 - `omo-preferences.ts` merges portable global OMO preferences.
-- `repair-omo-dag-ui.ts`, `repair-senpi-workflow-journal.ts`, and
-  `repair-senpi-workflow-mouse.ts` are historical version/hash-locked opt-ins.
-  `repair-omo-comment-checker.ts` unconditionally installs a global package.
-  None is supported for the current OMO binary. Never apply them to a current
-  runtime; preserve existing guards.
-- `lib/workflow-journal-patch.ts` and `lib/workflow-mouse-patch.ts` implement
-  those historical repair payloads only.
+- `repair-omo-comment-checker.ts` is a historical unconditional global package
+  install, unsupported for the current OMO binary. Do not run it on current OMO.
 
 ## Local Contracts
 
@@ -26,6 +21,7 @@ Own executable validation and portable runtime-repair scripts.
 
 - Keep scripts Bun-native; add no shell wrapper when Bun APIs suffice.
 - Update package scripts, mise tasks, docs, tests, templates, and this file together when adding a repair.
+- Remove repair scripts when their only supported extension boundary is removed.
 
 ## Verification
 

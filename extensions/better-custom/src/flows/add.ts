@@ -1,11 +1,10 @@
 import { resolveApiKeyForProbe } from "../api-key.ts";
 import type { ModelsConfigTarget } from "../config.ts";
 import { buildProviderConfig } from "../model-entry.ts";
-import { probeDeveloperRole } from "../probe/index.ts";
 import type { DeveloperRoleProbeOptions, ProbeFetch } from "../probe/index.ts";
-import { PROVIDER_STYLES } from "../types.ts";
+import { probeDeveloperRole } from "../probe/index.ts";
 import type { CommandContext, ProviderStyle } from "../types.ts";
-import { normalizeEndpoint } from "../url.ts";
+import { PROVIDER_STYLES } from "../types.ts";
 import {
   promptApiKey,
   promptEndpoint,
@@ -13,6 +12,8 @@ import {
   promptProviderStyle,
   setWorkingMessage,
 } from "../ui/prompts.ts";
+import { normalizeEndpoint } from "../url.ts";
+import type { ProbeRunner } from "./shared.ts";
 import {
   collectProviderModels,
   loadConfigForFlow,
@@ -20,7 +21,6 @@ import {
   uniqueModelIds,
   validateUniqueProviderName,
 } from "./shared.ts";
-import type { ProbeRunner } from "./shared.ts";
 
 export type DeveloperRoleRunner = (
   options: DeveloperRoleProbeOptions,
@@ -157,6 +157,7 @@ export async function addProviderFlow(
   }
 
   const providerConfig = buildProviderConfig({
+    providerId,
     style: styleChoice.style,
     api: styleChoice.api,
     baseUrl: collected.baseUrl,

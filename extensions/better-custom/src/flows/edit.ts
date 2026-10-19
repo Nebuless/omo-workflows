@@ -1,33 +1,37 @@
 import { apiKeyFromProvider, serializeApiKey } from "../api-key.ts";
-import { saveModelsConfig } from "../config.ts";
 import type { ModelsConfigTarget } from "../config.ts";
+import { saveModelsConfig } from "../config.ts";
+import type { HostModelEntry, ModelMutationProperty } from "../model-entry.ts";
 import {
   buildModelEntry,
+  findModel,
   modelIdOf,
   modelOptionsFromProbe,
   mutateModelEntry,
+  normalizeThinkingLevelMap,
   readModelOptions,
 } from "../model-entry.ts";
-import type { HostModelEntry, ModelMutationProperty } from "../model-entry.ts";
 import type { ProbeFetch } from "../probe/index.ts";
-import { PROVIDER_STYLES } from "../types.ts";
 import type {
   CommandContext,
   ProviderConfig,
   ProviderStyle,
 } from "../types.ts";
-import { normalizeEndpoint } from "../url.ts";
+import { PROVIDER_STYLES } from "../types.ts";
 import type { TokenPromptResult } from "../ui/prompts.ts";
 import {
+  builtinOverrideConfirm,
   gateProviderId,
   promptApiKeyEdit,
   promptContextWindow,
   promptMaxTokens,
   promptReasoning,
+  promptThinkingLevelMap,
   promptVision,
 } from "../ui/prompts.ts";
-import { builtinOverrideConfirm } from "../ui/prompts.ts";
 import { selectOne } from "../ui/select.ts";
+import { normalizeEndpoint } from "../url.ts";
+import type { CollectedModels, ProbeRunner } from "./shared.ts";
 import {
   collectProviderModels,
   loadConfigForFlow,
@@ -36,7 +40,6 @@ import {
   providerPickerItems,
   validateUniqueProviderName,
 } from "./shared.ts";
-import type { CollectedModels, ProbeRunner } from "./shared.ts";
 
 export interface EditProviderFlowOptions {
   configTarget?: ModelsConfigTarget;
@@ -67,13 +70,6 @@ function isOpenAiStyle(style: ProviderStyle): boolean {
 
 function modelsOf(provider: ProviderConfig): ProviderModel[] {
   return Array.isArray(provider.models) ? provider.models : [];
-}
-
-function modelForId(
-  provider: ProviderConfig,
-  modelId: string,
-): ProviderModel | undefined {
-  return modelsOf(provider).find((model) => modelIdOf(model) === modelId);
 }
 
 function asStringRecord(value: unknown): Record<string, string> | undefined {
@@ -157,6 +153,13 @@ async function updateModel(
         typeof selected === "string"
           ? { id: modelId }
           : (selected as HostModelEntry);
+      if (property === "reasoning" && entry.thinkingLevelMap !== undefined) {
+        ctx.ui.notify(
+          "Reasoning ceiling edits are unavailable for native-map models. Use the complete native thinking-level map editor.",
+          "warning",
+        );
+        return undefined;
+      }
       const updated = mutateModelEntry(entry, property, value) as ProviderModel;
       const nextModels = [...models];
       nextModels[index] = updated;
@@ -282,13 +285,18 @@ async function editSingleModel(
         );
       return changed;
     }
-    const model = modelForId(provider, modelId);
+    const model = findModel(provider, modelId);
     if (!model) {
       ctx.ui.notify('Model "' + modelId + '" no longer exists.', "warning");
       return changed;
     }
     const settings = readModelOptions(model);
     const action = await selectOne(ctx, "Edit " + modelId, [
+      {
+        value: "thinking-map",
+        label: "Thinking-level map",
+        description: "Set provider values for every native thinking level",
+      },
       {
         value: "reasoning",
         label: "Reasoning ceiling",
@@ -333,7 +341,28 @@ async function editSingleModel(
     if (!action || action === "back") return changed;
 
     let saved = false;
-    if (action === "reasoning") {
+    if (action === "thinking-map") {
+      const result = await promptThinkingLevelMap(
+        ctx,
+        settings.thinkingLevelMap,
+      );
+      if (result.kind === "cancel")
+        saved = unchanged(ctx, "Thinking-level map edit canceled.");
+      else if (result.kind === "invalid")
+        ctx.ui.notify(
+          result.message + " Models configuration is unchanged.",
+          "warning",
+        );
+      else
+        saved = await updateModel(
+          ctx,
+          providerId,
+          modelId,
+          "thinkingLevelMap",
+          result.map,
+          options,
+        );
+    } else if (action === "reasoning") {
       const reasoning = await promptReasoning(ctx, settings.reasoning);
       saved =
         reasoning === null
@@ -749,20 +778,73 @@ function mergeProbedModels(
   models: ProviderModel[],
   collected: CollectedModels,
   currentStyle: ProviderStyle,
+  providerId: string,
 ): ProviderModel[] | undefined {
   const existingIds = new Set(models.map((model) => modelIdOf(model)));
   const additions = collected.ids.filter((id) => !existingIds.has(id));
-  const merged = models.map((model) => {
+  const merged: ProviderModel[] = models.map((model): ProviderModel => {
     const id = modelIdOf(model);
     const info = collected.infoById.get(id);
-    if (!info || typeof model === "string") return model;
-    const settings = readModelOptions(model);
+    const storedObjectModel =
+      typeof model === "object" && model !== null
+        ? (model as HostModelEntry)
+        : undefined;
+    const hasStoredNativeMetadata =
+      storedObjectModel !== undefined &&
+      (Object.hasOwn(storedObjectModel, "thinkingLevelMap") ||
+        Object.hasOwn(storedObjectModel, "compat"));
+    if (!info && hasStoredNativeMetadata) return model;
+    const options = modelOptionsFromProbe(
+      info,
+      storedObjectModel
+        ? { ...readModelOptions(storedObjectModel), api: currentStyle }
+        : { api: currentStyle },
+      id,
+      providerId,
+    );
+    if (
+      !info &&
+      options.thinkingLevelMap === undefined &&
+      options.compat === undefined
+    )
+      return model;
+    if (typeof model === "string")
+      return buildModelEntry(id, options) as ProviderModel;
+    const objectModel = model as HostModelEntry;
+    const settings = readModelOptions(objectModel);
     delete settings.api;
+    const hasStoredThinkingLevelMap = Object.hasOwn(
+      objectModel,
+      "thinkingLevelMap",
+    );
+    const storedThinkingLevelMap = objectModel.thinkingLevelMap;
+    const hasStoredCompat = Object.hasOwn(objectModel, "compat");
+    const storedCompat = objectModel.compat;
     const refreshed = buildModelEntry(
       id,
-      modelOptionsFromProbe(info, { ...settings, api: currentStyle }, id),
-    ) as HostModelEntry;
-    return { ...(model as HostModelEntry), ...refreshed } as ProviderModel;
+      modelOptionsFromProbe(
+        info,
+        { ...settings, api: currentStyle },
+        id,
+        providerId,
+      ),
+    );
+    const mergedEntry: HostModelEntry = { ...objectModel, ...refreshed };
+    if (hasStoredThinkingLevelMap)
+      mergedEntry.thinkingLevelMap = storedThinkingLevelMap;
+    if (hasStoredCompat) mergedEntry.compat = storedCompat;
+    const nativeMap = normalizeThinkingLevelMap(mergedEntry.thinkingLevelMap);
+    if (nativeMap) {
+      mergedEntry.thinkingLevelMap = nativeMap;
+      delete mergedEntry.thinking;
+      if (
+        (mergedEntry.compat as Record<string, unknown> | undefined)
+          ?.supportsReasoningEffort === true
+      )
+        mergedEntry.reasoning = true;
+      else delete mergedEntry.reasoning;
+    }
+    return mergedEntry as ProviderModel;
   });
   if (additions.length === 0 && sameSerializedModels(merged, models))
     return undefined;
@@ -774,6 +856,7 @@ function mergeProbedModels(
           collected.infoById.get(id),
           { api: currentStyle },
           id,
+          providerId,
         ),
       ) as ProviderModel,
   );
@@ -816,6 +899,7 @@ async function refreshProviderModels(
         modelsOf(latest),
         collected,
         currentStyle,
+        providerId,
       );
       if (!models) {
         ctx.ui.notify(

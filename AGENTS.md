@@ -87,6 +87,11 @@ Default section order:
 
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md.
 
+- Use native OMO workflow graphs; do not restore the removed `workflow-graph`
+  extension or its runtime repairs.
+- Declare missing required CLI tools in `mise.toml` and install them through
+  mise. Bun remains the project JavaScript dependency installer under mise.
+
 ## Model Routing Preference
 
 Portable routing templates are distinct profiles; neither implies active host
@@ -172,10 +177,12 @@ trigger.
 - `.omo/` — project-local OMO package settings; runtime task state remains
   ignored.
 - `.qlty/` — committed Qlty configuration.
+- `biome.json` — Biome source scope; excludes ignored generated local runtime state.
 - `templates/` — portable OMO preference templates plus complete balanced and GPT-heavy `9router` routing profiles.
 - `README.md` — concise native OMO, LLM handoff, and extension installation entrypoint; routes to complete local and upstream documentation.
 - `customizations/` — policy-only scaffolds for OMO and Senpi capability domains; runnable behavior belongs in `extensions/`. Read [`customizations/AGENTS.md`](customizations/AGENTS.md) and [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) before creating a new customization.
-- `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, customization, upstream-validation, and user-reported issue guidance. `docs/issues.md` is timestamped register for OMO/Senpi user reports and upstream references. `docs/model-matrix.md` owns model pricing, benchmark evidence, and profile mappings; `docs/model-routing.md` owns active routing policy. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) for the upstream-backed capability map and creation rules; read [`docs/upstream-validation.md`](docs/upstream-validation.md) before relying on OMO or Senpi runtime behavior; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
+- `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, customization, upstream-validation, requirements plans, and user-reported issue guidance. `docs/issues.md` is timestamped register for OMO/Senpi user reports and upstream references. `docs/model-matrix.md` owns model pricing, benchmark evidence, and profile mappings; `docs/model-routing.md` owns active routing policy. `docs/plans/` owns requirements-only CE unified plan artifacts. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) for the upstream-backed capability map and creation rules; read [`docs/upstream-validation.md`](docs/upstream-validation.md) before relying on OMO or Senpi runtime behavior; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
+- `adr/` — immutable repository-level architecture decisions. Read [`adr/AGENTS.md`](adr/AGENTS.md) before creating or superseding an ADR.
 - `extensions/` — extension package ownership boundary.
 - `extensions/compound-engineering/` — native OMO/Senpi package for Every's pinned Compound Engineering skill collection.
 - `extensions/better-custom/` — native Senpi port of upstream provider/model
@@ -183,10 +190,10 @@ trigger.
 - `extensions/better-custom/src/` — runtime implementation guidance.
 - `extensions/better-custom/test/` — provider/model extension regression guidance.
 - `extensions/herdr/` — standalone OMO lifecycle integration, skills, and safe CLI tools for Herdr.
-- `extensions/workflow-graph/` — staged Atomic program admission over native OMO DAGs, graph overlay, and optional Herdr side-pane observer.
-- `extensions/test/` — standalone extension regression coverage.
+- `extensions/model-routing-advisor/` — standalone read-only route availability reports for explicit workflow preflight; native OMO/Senpi retains routing and task control.
+- `extensions/trim/` — native compaction governor with package-local tests.
 - `scripts/` — validation and portable runtime-repair scripts.
-- `test/` — OMO/Senpi boundary regression tests.
+- `test/` — shared OMO/Senpi extension regression coverage.
 
 Extension docs own host adaptation, upstream attribution, runtime assumptions,
 and focused tests. Runtime repairs remain explicit user-invoked tasks.

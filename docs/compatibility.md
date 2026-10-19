@@ -12,19 +12,15 @@ omo-ai                  5.1.34
 ```
 
 Standalone Senpi `2026.10.16-3` is newer but is not the runtime paired with
-OMO 5.1.34. Dependencies and `bun.lock` now match that pairing. Installed OMO RPC
-loaded all four extensions with no extension errors, discovered 35 Compound
-Engineering skills, and launched then reopened a file-backed authored workflow
-with the same final result. Snapshot, structured mouse, native journal reopen,
-authoring, provider, and skill behavior checks pass. Typecheck, build, package,
-hooks, Biome parsing, and Qlty pass.
+OMO 5.1.34. Dependencies and `bun.lock` match that pairing. The root package
+exposes Better Custom, Compound Engineering, Herdr, Model Routing Advisor, and
+Trim. Native OMO owns workflow scheduling and graph presentation; the duplicate
+workflow extension and its repair scripts and tests are removed.
 
-`mise ci` still exits 1: 497 tests pass and three preserved historical repair
-tests require an absent old global `omo-task.js` artifact. They were not skipped
-or weakened. The approved local mutation-formatter workaround restored repository
-formatting without changing quality policy. See the
-[issue register](issues.md#2026-10-16t215833z---mutation-formatter-overrides-repository-indentation)
-for the formatter evidence.
+Extension resources resolve from the host-provided `loadedExtensionPaths`,
+not a source-checkout or synthetic module URL. `mise ci` is the compatibility
+gate for the integrated checkout. Dated runtime checks and their limits live in
+[upstream validation](upstream-validation.md).
 
 The OMO runtime directory resolver honors explicit environment overrides for
 `OMO_CODING_AGENT_DIR` and `SENPI_CODING_AGENT_DIR`. Do not assume the launcher
@@ -86,13 +82,14 @@ checkout compatibility:
 6. OMO can install and list the project package.
 7. `mise ci` runs the full test, build, Biome parse, and Qlty gate.
 
-The captured evidence for 2026-10-16 does not satisfy all these gates; see
-[upstream validation](upstream-validation.md#2026-10-16-omo-5134-and-paired-senpi-20261016).
+Live provider authentication and credential-backed mutations are separate from
+the repository gate and are not established by a passing build or unit suite.
 
 ## Tooling policy
 
 - mise is the tool manager and task runner.
-- Bun installs JavaScript dependencies.
+- Declare required CLI tools, including Biome, in `mise.toml`; install with
+  `mise install`. Run project dependency installation with `mise exec -- bun install`.
 - Qlty is the repository-wide quality gate.
 - Biome performs parser validation without mutating files.
 - prek owns `pre-commit` and `pre-push`.

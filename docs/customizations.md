@@ -12,6 +12,7 @@ Runtime-dependent claims follow the [upstream validation contract](upstream-vali
 | Compound Engineering | Run Every's 35-skill engineering loop natively | `extensions/compound-engineering/` | [Package guide](../extensions/compound-engineering/README.md) |
 | Custom providers and models | Add providers and choose models | `extensions/better-custom/` | [Better Custom contract](../extensions/better-custom/AGENTS.md) |
 | Herdr | Control Herdr resources and agents | `extensions/herdr/` | [Herdr contract](../extensions/herdr/AGENTS.md) |
+| Trim | Govern native compaction | `extensions/trim/` | [Trim contract](../extensions/trim/AGENTS.md) |
 | Toolchain and quality | Set local tools and checks | `mise.toml`, Qlty, Biome, prek | [LSP setup](lsp.md) |
 | Runtime repairs | Repair known OMO runtime gaps | `scripts/` | [Runtime repairs](runtime-repairs.md) |
 | Global agent instructions | Apply durable instructions to every OMO session | `~/.omo/rules/*.md` | [Global instructions](#global-agent-instructions) |

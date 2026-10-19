@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import type { ExtensionAPI } from "@code-yeongyu/senpi";
-import { herdrSkillPaths } from "./skills.ts";
+import { herdrSkillPathsForLoadedExtensions } from "./skills.ts";
 import { registerHerdrTools } from "./tools.ts";
 
 export type HerdrState = "idle" | "working" | "blocked" | "unknown";
@@ -68,7 +68,8 @@ export interface HerdrReporter {
 
 export interface HerdrReporterOptions {
   readonly env: HerdrEnv | null;
-  readonly run?: (argv: string[]) => void;
+  readonly run?: (argv: string[]) => unknown | Promise<unknown>;
+  readonly onDiagnostic?: (message: string) => void;
 }
 
 let seq = 0;
@@ -82,13 +83,25 @@ export function createHerdrReporter(
 ): HerdrReporter {
   const { env } = options;
   const run = options.run ?? defaultRun;
+  const onDiagnostic = options.onDiagnostic ?? (() => undefined);
   let active = false;
   let released = false;
 
   function report(state: HerdrState, message?: string): void {
     if (!env || released) return;
     seq += 1;
-    run(buildReportCommand(env, state, seq, message));
+    try {
+      Promise.resolve(run(buildReportCommand(env, state, seq, message))).catch(
+        (error) =>
+          onDiagnostic(
+            error instanceof Error ? error.message : "Herdr report failed",
+          ),
+      );
+    } catch (error) {
+      onDiagnostic(
+        error instanceof Error ? error.message : "Herdr report failed",
+      );
+    }
   }
 
   return {
@@ -118,7 +131,17 @@ export function createHerdrReporter(
       if (!env || released || reason !== "quit") return;
       released = true;
       seq += 1;
-      run(buildReleaseCommand(env, seq));
+      try {
+        Promise.resolve(run(buildReleaseCommand(env, seq))).catch((error) =>
+          onDiagnostic(
+            error instanceof Error ? error.message : "Herdr release failed",
+          ),
+        );
+      } catch (error) {
+        onDiagnostic(
+          error instanceof Error ? error.message : "Herdr release failed",
+        );
+      }
     },
   };
 }
@@ -127,35 +150,55 @@ const SPAWN_TIMEOUT_MS = 5_000;
 
 export function createSerialRunner(
   runOne: (argv: string[]) => void | Promise<void>,
+  onDiagnostic: (message: string) => void = () => undefined,
 ): (argv: string[]) => void {
   let chain: Promise<void> = Promise.resolve();
   return (argv) => {
     chain = chain
       .catch(() => undefined)
       .then(() => runOne(argv))
-      .catch(() => undefined);
+      .catch((error) => {
+        onDiagnostic(
+          error instanceof Error
+            ? error.message
+            : "Herdr lifecycle report failed",
+        );
+      });
   };
 }
 
 function spawnOnce(argv: string[]): Promise<void> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const child = spawn(argv[0], argv.slice(1), { stdio: "ignore" });
-    child.on("error", () => resolve());
-    const timer = setTimeout(() => child.kill(), SPAWN_TIMEOUT_MS);
+    child.on("error", reject);
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error("Herdr lifecycle report timed out."));
+    }, SPAWN_TIMEOUT_MS);
     timer.unref();
-    child.on("close", () => {
+    child.on("close", (code) => {
       clearTimeout(timer);
-      resolve();
+      if (code === 0) resolve();
+      else
+        reject(
+          new Error(
+            `Herdr lifecycle report exited with code ${code ?? "unknown"}.`,
+          ),
+        );
     });
     child.unref();
   });
 }
 
-const defaultRun = createSerialRunner(spawnOnce);
+const defaultRun = createSerialRunner(spawnOnce, (message) => {
+  console.warn(`Herdr lifecycle report: ${message}`);
+});
 
 export default function herdrIntegration(pi: ExtensionAPI): void {
   registerHerdrTools(pi);
-  pi.on("resources_discover", () => ({ skillPaths: herdrSkillPaths() }));
+  pi.on("resources_discover", (_event, ctx) => ({
+    skillPaths: herdrSkillPathsForLoadedExtensions(ctx),
+  }));
   const reporter = createHerdrReporter({ env: captureHerdrEnv(process.env) });
   pi.on("session_start", () => reporter.onSessionStart());
   pi.on("agent_start", () => reporter.onAgentStart());

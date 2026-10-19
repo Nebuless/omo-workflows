@@ -29,22 +29,42 @@ When the host is standalone Senpi, the normal Senpi agent directory is used.
 JSON and OMP-compatible YAML locations are preserved where they already
 exist. Writes use a temporary file followed by an atomic rename.
 
-## Compatibility
+## Native thinking-level compatibility
 
-The target pairing is:
+Better Custom stores generic, per-model native `thinkingLevelMap` metadata. The
+map has exactly these canonical OMO keys:
 
 ```text
-omo-ai 5.1.34
-@code-yeongyu/senpi 2026.10.16
+off, minimal, low, medium, high, xhigh, max
 ```
 
-The package manifest and standalone package check were updated for this pair.
-Its extension-load test, provider/command regression tests, typecheck, and build
-pass. Installed OMO RPC loaded Better Custom without extension errors.
-Credential-backed provider mutation was not exercised. Repository CI retains
-three historical repair failures unrelated to this extension; see
-[compatibility](../../docs/compatibility.md). Standalone Senpi `2026.10.16-3`
-is not this OMO pair.
+Each key contains the provider-facing effort string or `null` when that level
+is unavailable. For OpenAI-completions models, model-scoped
+`compat.supportsReasoningEffort: true` enables the host's native mapped effort
+field. Senpi and its model transport own request construction; Better Custom
+persists and registers metadata and does not intercept or rewrite requests.
+
+The static 9router profile is deliberately narrow. It matches provider ID
+`9router` and only these exact model IDs:
+
+| Model | Native map differences |
+| --- | --- |
+| `cx/gpt-5.6-luna` | `minimal → low`; `xhigh → max`; `max → max` |
+| `cx/gpt-5.6-sol` | `minimal → minimal`; `xhigh → ultra`; `max → max` |
+| `cx/gpt-5.6-terra` | `minimal → minimal`; `xhigh → ultra`; `max → max` |
+
+All three profiles map `off → none`, retain `low`, `medium`, and `high`, and
+set `supportsReasoningEffort` only on the matching model entry. Observed or
+persisted model maps and compatibility metadata take precedence over profile
+defaults. Other providers, model families, and unknown 9router IDs receive no
+static profile.
+
+## Compatibility
+
+Target pairing: OMO `5.1.34` with bundled Senpi `2026.10.16`.
+The September native thinking-map capture remains historical evidence, not
+a current authenticated request check. See
+[`docs/upstream-validation.md`](../../docs/upstream-validation.md).
 
 Do not replace the Senpi dependency with `@bastani/atomic`; that is the
 upstream host for the original extension and is not part of OMO.

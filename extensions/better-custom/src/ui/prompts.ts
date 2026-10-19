@@ -1,4 +1,5 @@
 import { parseApiKey } from "../api-key.ts";
+import { normalizeThinkingLevelMap } from "../model-entry.ts";
 import type {
   ApiKeyMode,
   ApiKeyValue,
@@ -8,9 +9,11 @@ import type {
   ProviderStyle,
   ReasoningCeiling,
   SelectItem,
+  ThinkingLevelMap,
   UiNoticeType,
 } from "../types.ts";
-import { REASONING_LEVELS } from "../types.ts";
+import { PI_THINKING_LEVELS, REASONING_LEVELS } from "../types.ts";
+
 export { selectOne } from "./select.ts";
 
 /** Native Atomic UI methods, kept at the edge so tests can use a tiny fake context. */
@@ -187,6 +190,41 @@ export async function promptReasoning(
     Math.max(0, initialIndex),
   );
   return (choice as ReasoningCeiling | undefined) ?? null;
+}
+
+export type ThinkingLevelMapPromptResult =
+  | { kind: "cancel" }
+  | { kind: "invalid"; message: string }
+  | { kind: "set"; map: ThinkingLevelMap };
+
+/** Prompt every canonical OMO level and return one validated native map. */
+export async function promptThinkingLevelMap(
+  ctx: CommandContext,
+  current?: ThinkingLevelMap,
+): Promise<ThinkingLevelMapPromptResult> {
+  const map: Record<string, string | null> = {};
+  for (const level of PI_THINKING_LEVELS) {
+    const value = await ctx.ui.input(
+      level + " provider value",
+      current?.[level] === null
+        ? "current: disabled (enter provider value, '-' = disabled)"
+        : current?.[level]
+          ? "current: " + current[level] + " (enter '-' = disabled)"
+          : "provider value (enter '-' = disabled)",
+    );
+    if (value === undefined) return { kind: "cancel" };
+    const trimmed = value.trim();
+    if (!trimmed)
+      return {
+        kind: "invalid",
+        message: "Every thinking level needs a provider value or '-'.",
+      };
+    map[level] = trimmed === "-" ? null : trimmed;
+  }
+  const normalized = normalizeThinkingLevelMap(map);
+  return normalized
+    ? { kind: "set", map: normalized }
+    : { kind: "invalid", message: "Thinking-level map is invalid." };
 }
 
 /** Provider-facing spelling for xhigh/max when a gateway uses a custom name. */

@@ -2,12 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { TSchema } from "typebox";
-import { Value } from "typebox/value";
 import rootPackage from "../package.json" with { type: "json" };
-import workflowGraphPackage from "../extensions/workflow-graph/package.json" with {
-  type: "json",
-};
 
 describe("OMO extension boundary", () => {
   const agentDir = mkdtempSync(join(tmpdir(), "omo-workflows-agent-"));
@@ -16,8 +11,7 @@ describe("OMO extension boundary", () => {
   let providerExtension: typeof import("../extensions/better-custom/src/index.ts");
   let compoundExtension: typeof import("../extensions/compound-engineering/src/index.ts");
   let herdrExtension: typeof import("../extensions/herdr/index.ts");
-  let graphExtension: typeof import("../extensions/workflow-graph/src/index.ts");
-  let execution: typeof import("../extensions/workflow-graph/src/execution/index.ts");
+  let advisorExtension: typeof import("../extensions/model-routing-advisor/index.ts");
   beforeAll(async () => {
     writeFileSync(
       join(agentDir, "models.json"),
@@ -25,19 +19,13 @@ describe("OMO extension boundary", () => {
     );
     process.env.SENPI_CODING_AGENT_DIR = agentDir;
     process.env.OMO_CODING_AGENT_DIR = agentDir;
-    [
-      providerExtension,
-      compoundExtension,
-      herdrExtension,
-      graphExtension,
-      execution,
-    ] = await Promise.all([
-      import("../extensions/better-custom/src/index.ts"),
-      import("../extensions/compound-engineering/src/index.ts"),
-      import("../extensions/herdr/index.ts"),
-      import("../extensions/workflow-graph/src/index.ts"),
-      import("../extensions/workflow-graph/src/execution/index.ts"),
-    ]);
+    [providerExtension, compoundExtension, herdrExtension, advisorExtension] =
+      await Promise.all([
+        import("../extensions/better-custom/src/index.ts"),
+        import("../extensions/compound-engineering/src/index.ts"),
+        import("../extensions/herdr/index.ts"),
+        import("../extensions/model-routing-advisor/index.ts"),
+      ]);
   }, 30000);
   afterAll(() => {
     if (previousSenpiDir === undefined)
@@ -71,7 +59,7 @@ describe("OMO extension boundary", () => {
     expect(providers.size).toBe(0);
 
     let compoundDiscover:
-      | (() => { readonly skillPaths: readonly string[] })
+      | ((event: unknown, ctx: unknown) => { readonly skillPaths?: string[] })
       | undefined;
     const compoundHost = {
       on(name: string, handler: typeof compoundDiscover) {
@@ -80,13 +68,31 @@ describe("OMO extension boundary", () => {
     };
     compoundExtension.default(compoundHost as never);
 
-    expect((await compoundDiscover?.())?.skillPaths).toHaveLength(1);
+    expect(
+      (
+        await compoundDiscover?.(
+          {
+            type: "resources_discover",
+            cwd: "/workspace",
+            reason: "startup",
+            scopedEntries: true,
+          },
+          {
+            loadedExtensionPaths: [
+              "/packages/compound-engineering/src/index.ts",
+            ],
+          },
+        )
+      )?.skillPaths,
+    ).toEqual(["/packages/compound-engineering/skills"]);
 
     const events = new Map<string, unknown>();
     const tools = new Map<string, unknown>();
+    let herdrDiscover: ((event: unknown, ctx: unknown) => unknown) | undefined;
     const herdrHost = {
-      on(name: string, handler: unknown) {
+      on(name: string, handler: (event: unknown, ctx: unknown) => unknown) {
         events.set(name, handler);
+        if (name === "resources_discover") herdrDiscover = handler;
       },
       registerTool(definition: { name: string }) {
         tools.set(definition.name, definition);
@@ -96,117 +102,47 @@ describe("OMO extension boundary", () => {
 
     expect(events.has("session_start")).toBe(true);
     expect(events.has("resources_discover")).toBe(true);
-    expect(tools.has("herdr_inspect")).toBe(true);
-    expect(tools.has("herdr_control")).toBe(true);
-
-    const graphEvents = new Map<string, (data: unknown) => void>();
-    const graphCommands = new Map<string, unknown>();
-    const graphTools = new Map<string, { readonly parameters: TSchema }>();
-    const graphLifecycle = new Map<string, () => Promise<void> | void>();
-    const graphHooks: string[] = [];
-    const graphHost = {
-      registerTool(definition: { name: string; parameters: TSchema }) {
-        graphTools.set(definition.name, definition);
-      },
-      events: {
-        on(channel: string, handler: (data: unknown) => void) {
-          graphEvents.set(channel, handler);
-          return () => graphEvents.delete(channel);
+    expect(
+      herdrDiscover?.(
+        {
+          type: "resources_discover",
+          cwd: "/workspace",
+          reason: "startup",
+          scopedEntries: true,
         },
-      },
-      registerCommand(name: string, definition: unknown) {
-        graphCommands.set(name, definition);
-      },
-      on(name: string, handler: () => Promise<void> | void) {
-        graphHooks.push(name);
-        graphLifecycle.set(name, handler);
-      },
-    };
-    graphExtension.default(graphHost as never);
-    try {
-      expect(graphEvents.has("senpi:extension-rpc-event")).toBe(true);
-      expect(graphCommands.has("workflow-graph")).toBe(true);
-      expect(graphCommands.has("workflow-run")).toBe(true);
-      const workflowProgram = graphTools.get("workflow_program");
-      const workflowRecommend = graphTools.get("workflow_recommend");
-      if (workflowProgram === undefined || workflowRecommend === undefined)
-        throw new Error("missing workflow public tool");
-      const selection = {
-        key: "destination",
-        revision: 1,
-        digest: `sha256:v1:${"a".repeat(64)}`,
-      };
-      const transfer = {
-        action: "transfer",
-        sourceRunId: "source-run",
-        selection,
-        manifest: {
-          schemaVersion: 1,
-          source: {
-            runId: "source-run",
-            workflowKey: "source-workflow",
-            definitionFingerprint: "b".repeat(64),
-            terminal: true,
-          },
-          destination: selection,
-          artifacts: [
-            {
-              canonicalPath: "report.json",
-              destination: "report.json",
-              sha256: "c".repeat(64),
-              size: 1,
-              schemaId: "report",
-            },
-          ],
-          mappings: [{ source: "/report", destination: "/input" }],
-        },
-        confirmed: true,
-      };
-      expect(
-        [
-          { action: "list" },
-          { action: "reload" },
-          { action: "start", selection, inputs: {} },
-          { action: "resume", key: "workflow" },
-          { action: "status" },
-          { action: "answer", gateId: "gate", answer: "continue" },
-          { action: "cancel", confirmed: true },
-          transfer,
-        ].every((params) => Value.Check(workflowProgram.parameters, params)),
-      ).toBe(true);
-      expect(
-        Value.Check(workflowRecommend.parameters, {
-          catalogRevision: 1,
-          proposals: [
-            {
-              key: "workflow",
-              digest: "digest",
-              rationale: "fit",
-              confidence: 0,
-            },
-          ],
-        }),
-      ).toBe(true);
-      expect(graphCommands.has("workflow-graph-pane")).toBe(true);
-      expect(graphHooks).toContain("before_agent_start");
-      expect(graphHooks).toContain("agent_settled");
-      expect(graphLifecycle.has("session_start")).toBe(true);
-      expect(graphLifecycle.has("session_before_switch")).toBe(true);
-      expect(graphLifecycle.has("session_before_fork")).toBe(true);
-      expect(graphLifecycle.has("session_shutdown")).toBe(true);
+        { loadedExtensionPaths: ["/packages/herdr/index.ts"] },
+      ),
+    ).toEqual({
+      skillPaths: [
+        "/packages/herdr/skills/herdr/SKILL.md",
+        "/packages/herdr/skills/herdr-agent-management/SKILL.md",
+        "/packages/herdr/skills/herdr-handoff/SKILL.md",
+        "/packages/herdr/skills/herdr-orchestration/SKILL.md",
+        "/packages/herdr/skills/herdr-admin/SKILL.md",
+      ],
+    });
+    expect([...tools.keys()]).toEqual([
+      "herdr_inspect",
+      "herdr_capabilities",
+      "herdr_query",
+      "herdr_operation",
+      "herdr_approval",
+      "herdr_preview",
+    ]);
 
-      expect(typeof execution.composeStagedPrograms).toBe("function");
-      expect(typeof execution.applyCompositionMapping).toBe("function");
-      expect(rootPackage.dependencies).toEqual({
-        "@code-yeongyu/senpi": "2026.10.16",
-        "@earendil-works/pi-ai": "npm:@code-yeongyu/senpi-ai@2026.10.16",
-        "@earendil-works/pi-tui": "npm:@code-yeongyu/senpi-tui@2026.10.16",
-        typebox: "1.3.34",
-        jiti: "2.7.0",
-      });
-      expect(workflowGraphPackage.dependencies).toEqual({ jiti: "2.7.0" });
-    } finally {
-      await graphLifecycle.get("session_shutdown")?.();
-    }
+    const advisorTools = new Map<string, unknown>();
+    advisorExtension.default({
+      registerTool(definition: { name: string }) {
+        advisorTools.set(definition.name, definition);
+      },
+    } as never);
+    expect([...advisorTools.keys()]).toEqual(["model_route_advice"]);
+
+    expect(rootPackage.dependencies).toEqual({
+      "@code-yeongyu/senpi": "2026.10.16",
+      "@earendil-works/pi-ai": "npm:@code-yeongyu/senpi-ai@2026.10.16",
+      "@earendil-works/pi-tui": "npm:@code-yeongyu/senpi-tui@2026.10.16",
+      typebox: "1.3.34",
+    });
   });
 });
