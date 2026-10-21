@@ -1,5 +1,15 @@
 # OMO and Senpi Issue Register
 
+## 2026-10-21T05:59:11Z - OMO startup reports package and config-watch warnings
+
+- **Reported symptom:** Every startup logged both `user config discovery requires reload` and a host-package warning for `@earendil-works/pi-ai`, `@earendil-works/pi-tui`, and `typebox`.
+- **Affected runtime:** OMO `5.1.40` with Senpi `2026.10.19-2`; repository initially pinned Senpi `2026.10.16`; Bun `1.4.2`.
+- **Cause:** The repository root declared host-provided packages as dependencies instead of wildcard peers, producing duplicate-module warnings. The config-watch warning is separate; the installed OMO component still reports `reload_required` and registers zero targets after the repository Senpi pin is aligned. Its precise local cause was not established.
+- **Resolution state:** Moved the three host packages to `peerDependencies: "*"` and aligned the repository Senpi pin with OMO `5.1.40`. A fresh terminal load no longer shows the host-package warning. The config-watch warning remains in the installed runtime; no user agent-directory migration or local runtime patch was applied.
+- **Upstream:** Senpi's [package dependency guidance](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/packages.md) requires host-provided packages to be wildcard peers. OMO [issue #7064](https://github.com/code-yeongyu/oh-my-openagent/issues/7064) was closed as fixed through Senpi [issue #1136](https://github.com/code-yeongyu/senpi/issues/1136) and OMO [PR #7389](https://github.com/code-yeongyu/oh-my-openagent/pull/7389). The OMO `5.1.40` source includes the protected-path filter, but this installed runtime still emits the warning.
+- **Validation:** `bun install` exited `0` and installed 316 packages; `bun run validate` passed with 149 tests across 17 files, and `bun run build` passed. The interactive OMO terminal was captured before and after the manifest update. The extension-package warning and its TUI issue panel disappeared; `reload_required` remained.
+- **Revalidation trigger:** Recheck after an OMO package reinstall or upgrade, Senpi package-contract change, or config-watch warning fix in the installed runtime.
+
 ## 2026-10-19 - Native workflow ownership restored during main integration
 
 - **Resolution:** Preserved remote removal of the duplicate workflow extension,

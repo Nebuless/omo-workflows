@@ -47,14 +47,14 @@ verification date.
 
 ## Current integration target
 
-- Verified: `2026-10-19` (upstream pairing and resource-discovery contract).
-- Local runtime: OMO `5.1.34`, paired Senpi `2026.10.16`, mise Bun `1.3.14`.
-- OMO evidence: [release manifest](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/packages/omo-senpi/package.json) pins Senpi `2026.10.16` and TypeBox `1.3.34`.
-- Senpi evidence: [public extension types](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/src/core/extensions/types.ts) expose `resources_discover` and `loadedExtensionPaths`. Compound Engineering and Herdr resolve resources from those paths.
+- Verified: `2026-10-21` (installed runtime pairing, package host contract, and startup diagnostics).
+- Local runtime: OMO `5.1.40`, paired Senpi `2026.10.19-2`; repository pin `2026.10.19-2`; Bun `1.4.2`. The repository toolchain still pins Bun `1.3.14` in `mise.toml`; `mise` was unavailable in this environment.
+- OMO evidence: [release manifest](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/packages/omo-senpi/package.json) pins Senpi `2026.10.19-2`; [config-watch target resolver](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/packages/omo-senpi/src/components/config-watch/paths.ts) checks anchored globs against protected paths.
+- Senpi evidence: [package dependency guidance](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/packages.md) requires host-provided `@earendil-works/pi-ai`, `@earendil-works/pi-agent-core`, `@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`, and `typebox` to be wildcard peers. Public extension types at the [pinned resource-discovery source](https://github.com/code-yeongyu/senpi/blob/8b62d4a6d16fd1d6d3787d30fbc8e1059b357623/packages/coding-agent/src/core/extensions/types.ts) expose `resources_discover` and `loadedExtensionPaths`.
 - Native ownership: the duplicate workflow extension, related repairs, and their tests are removed; no runtime patch is applied.
-- Local proof: `mise install` exposes Biome `2.5.6`; `mise exec -- bun install` regenerated the merged lockfile. `mise ci` exited 0: 149 tests, 475 assertions, typecheck, build, package, hooks, Biome, and Qlty passed. `omo list --approve` resolved the project package. Isolated offline installed OMO loaded all five supported extensions, discovered 35 Compound Engineering skills, and exposed no removed workflow commands; no extension error occurred.
-- Limits: historical authenticated provider and Herdr checks below have not been repeated for this pairing.
-- Revalidate: OMO/Senpi upgrade, resource-discovery change, or package-pin change.
+- Local proof: `bun install` exited `0` and installed 316 packages; `bun run validate` passed with 149 tests across 17 files, and `bun run build` passed. Interactive OMO before the manifest change reproduced both warnings. After the change, the host-package warning and extension issue panel disappeared, while `config-watch user config discovery requires reload` remained. The installed component registered zero targets.
+- Limits: `mise ci` was not run because `mise` is unavailable; the interactive runtime still emits the config-watch warning despite the matching fix in the OMO `5.1.40` source. Historical authenticated provider and Herdr checks below have not been repeated for this pairing.
+- Revalidate: OMO package reinstall or upgrade, Senpi upgrade, resource-discovery change, package-pin change, or resolution of the remaining config-watch warning.
 
 ## Historical extension compatibility
 

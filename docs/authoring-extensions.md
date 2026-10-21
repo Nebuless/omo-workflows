@@ -60,6 +60,13 @@ Local installation uses the extension directory:
 omo install -l ./extensions/<name>
 ```
 
+Packages that import host-provided modules must declare them in
+`peerDependencies` with a `"*"` range, not `dependencies`. This applies to
+`@earendil-works/pi-ai`, `@earendil-works/pi-agent-core`,
+`@earendil-works/pi-coding-agent`, `@earendil-works/pi-tui`, and `typebox`.
+Direct dependencies can bypass the extension loader and create duplicate
+runtime modules.
+
 Root development loading may include all extension entrypoints, but each
 extension must also load from its own directory. Remote GitHub installation and
 version-pinned source locators need separate verification before documentation.

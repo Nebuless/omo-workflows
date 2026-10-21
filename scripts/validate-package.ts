@@ -8,6 +8,7 @@ type PackageManifest = {
     extensions?: unknown;
   };
   dependencies?: Record<string, unknown>;
+  peerDependencies?: Record<string, unknown>;
 };
 
 const root = resolve(import.meta.dirname, "..");
@@ -105,8 +106,21 @@ if (!existsSync(trimPackagePath)) {
 }
 
 const senpiVersion = manifest.dependencies?.["@code-yeongyu/senpi"];
-if (senpiVersion !== "2026.10.16") {
-  errors.push("Senpi must remain pinned to 2026.10.16");
+if (senpiVersion !== "2026.10.19-2") {
+  errors.push("Senpi must remain pinned to 2026.10.19-2");
+}
+
+for (const packageName of [
+  "@earendil-works/pi-ai",
+  "@earendil-works/pi-tui",
+  "typebox",
+]) {
+  if (manifest.dependencies?.[packageName] !== undefined) {
+    errors.push(`${packageName} must not be in dependencies`);
+  }
+  if (manifest.peerDependencies?.[packageName] !== "*") {
+    errors.push(`${packageName} must be a "*" peer dependency`);
+  }
 }
 
 const sourceFiles = [
