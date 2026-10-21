@@ -1,5 +1,25 @@
 # OMO and Senpi Issue Register
 
+## 2026-10-21T06:08:45Z - 9router gateway unreachable over userspace Tailscale
+
+- **Reported symptom:** Tailnet SSH worked, but this host could not reach the remote 9router HTTP gateway.
+- **Affected runtime:** OMO `5.1.40`, Senpi `2026.10.19-2`, Tailscale `1.104.1`; container host running `tailscaled --tun=userspace-networking`.
+- **Cause:** No kernel Tailscale interface or tailnet route existed. Direct HTTP requests timed out, while Tailscale ping succeeded and `tailscale nc` reached the gateway.
+- **Resolution state:** Added a loopback-only TCP bridge, supervised as `9router-tailnet-bridge`, which connects each client through `tailscale nc`. Updated only this host's 9router provider base URL. The bridge source lives at `~/.local/libexec/9router-tailnet-bridge.py`; its service definition lives in the host's user Supervisor configuration. Neither host endpoints nor credentials are tracked here.
+- **Upstream:** Tailscale's [userspace networking documentation](https://tailscale.com/docs/concepts/userspace-networking) explains that ordinary outbound applications need a userspace transport path. This is a local networking workaround, not an identified OMO/Senpi defect; no matching upstream issue was identified. No OMO or Senpi runtime code changed.
+- **Validation:** The supervised bridge reached `RUNNING`; authenticated model discovery returned HTTP `200` with 39 models. A real `cx/gpt-6.1-sol` chat completion through the configured endpoint returned HTTP `200` and `OK`. Python syntax compilation passed without creating cache files.
+- **Revalidation trigger:** Host recreation, Supervisor configuration replacement, gateway relocation, Tailscale networking-mode changes, or provider endpoint changes. Existing OMO sessions may need restarting to load the updated provider configuration.
+
+## 2026-10-21T05:59:11Z - OMO startup reports package and config-watch warnings
+
+- **Reported symptom:** Every startup logged both `user config discovery requires reload` and a host-package warning for `@earendil-works/pi-ai`, `@earendil-works/pi-tui`, and `typebox`.
+- **Affected runtime:** OMO `5.1.40` with Senpi `2026.10.19-2`; repository initially pinned Senpi `2026.10.16`; Bun `1.4.2`.
+- **Cause:** The repository root declared host-provided packages as dependencies instead of wildcard peers, producing duplicate-module warnings. The config-watch warning is separate; the installed OMO component still reports `reload_required` and registers zero targets after the repository Senpi pin is aligned. Its precise local cause was not established.
+- **Resolution state:** Moved the three host packages to `peerDependencies: "*"` and aligned the repository Senpi pin with OMO `5.1.40`. A fresh terminal load no longer shows the host-package warning. The config-watch warning remains in the installed runtime; no user agent-directory migration or local runtime patch was applied.
+- **Upstream:** Senpi's [package dependency guidance](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/packages.md) requires host-provided packages to be wildcard peers. OMO [issue #7064](https://github.com/code-yeongyu/oh-my-openagent/issues/7064) was closed as fixed through Senpi [issue #1136](https://github.com/code-yeongyu/senpi/issues/1136) and OMO [PR #7389](https://github.com/code-yeongyu/oh-my-openagent/pull/7389). The OMO `5.1.40` source includes the protected-path filter, but this installed runtime still emits the warning.
+- **Validation:** `bun install` exited `0` and installed 316 packages; `bun run validate` passed with 149 tests across 17 files, and `bun run build` passed. The interactive OMO terminal was captured before and after the manifest update. The extension-package warning and its TUI issue panel disappeared; `reload_required` remained.
+- **Revalidation trigger:** Recheck after an OMO package reinstall or upgrade, Senpi package-contract change, or config-watch warning fix in the installed runtime.
+
 ## 2026-10-19 - Native workflow ownership restored during main integration
 
 - **Resolution:** Preserved remote removal of the duplicate workflow extension,

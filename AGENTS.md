@@ -91,6 +91,9 @@ When the user requests a durable behavior change, record it here or in the relev
   extension or its runtime repairs.
 - Declare missing required CLI tools in `mise.toml` and install them through
   mise. Bun remains the project JavaScript dependency installer under mise.
+- After each completed repository fix, feature, or other change, create verified
+  atomic local commits for later review. This is standing authorization to commit.
+  Ask before pushing remotely or opening a pull request.
 
 ## Model Routing Preference
 
@@ -127,8 +130,8 @@ benchmarks, and routing rationale in `docs/model-matrix.md` and
   `bun run changelog` after updating `package.json`.
 - `CHANGELOG.md` is generated release history. Do not hand-edit generated
   release blocks.
-- Creating commits, version tags, or publishing remains an explicit user
-  request. This policy never automates those actions.
+- Create atomic local commits under the standing user authorization above.
+  Pushes, pull requests, version tags, and publishing require explicit approval.
 
 ## Project Contract
 

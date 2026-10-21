@@ -7,15 +7,16 @@
 release pairing is:
 
 ```text
-omo-ai                  5.1.34
-@code-yeongyu/senpi     2026.10.16
+omo-ai                  5.1.40
+@code-yeongyu/senpi     2026.10.19-2
 ```
 
-Standalone Senpi `2026.10.16-3` is newer but is not the runtime paired with
-OMO 5.1.34. Dependencies and `bun.lock` match that pairing. The root package
-exposes Better Custom, Compound Engineering, Herdr, Model Routing Advisor, and
-Trim. Native OMO owns workflow scheduling and graph presentation; the duplicate
-workflow extension and its repair scripts and tests are removed.
+The [OMO 5.1.40 release manifest](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/packages/omo-senpi/package.json)
+pins Senpi `2026.10.19-2`. Dependencies and `bun.lock` match that pairing.
+The root package exposes Better Custom, Compound Engineering, Herdr, Model
+Routing Advisor, and Trim. Native OMO owns workflow scheduling and graph
+presentation; the duplicate workflow extension and its repair scripts and tests
+are removed.
 
 Extension resources resolve from the host-provided `loadedExtensionPaths`,
 not a source-checkout or synthetic module URL. `mise ci` is the compatibility

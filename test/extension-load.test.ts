@@ -139,10 +139,12 @@ describe("OMO extension boundary", () => {
     expect([...advisorTools.keys()]).toEqual(["model_route_advice"]);
 
     expect(rootPackage.dependencies).toEqual({
-      "@code-yeongyu/senpi": "2026.10.16",
-      "@earendil-works/pi-ai": "npm:@code-yeongyu/senpi-ai@2026.10.16",
-      "@earendil-works/pi-tui": "npm:@code-yeongyu/senpi-tui@2026.10.16",
-      typebox: "1.3.34",
+      "@code-yeongyu/senpi": "2026.10.19-2",
+    });
+    expect(rootPackage.peerDependencies).toEqual({
+      "@earendil-works/pi-ai": "*",
+      "@earendil-works/pi-tui": "*",
+      typebox: "*",
     });
   });
 });
