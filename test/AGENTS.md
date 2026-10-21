@@ -7,6 +7,8 @@ Own regression coverage shared by standalone OMO/Senpi extensions.
 ## Ownership
 
 - `herdr.test.ts` owns observable Herdr lifecycle reporting coverage.
+- `validate-package.test.ts` owns isolated regression coverage for the real
+  package validator.
 - `herdr-tools.test.ts` owns Herdr tool boundary and skill-discovery coverage.
 - `model-routing-advisor.test.ts` owns standalone model-routing adviser package registration coverage.
 - Compound Engineering package tests live under its own `test/` boundary.
@@ -26,7 +28,7 @@ Own regression coverage shared by standalone OMO/Senpi extensions.
 
 ## Verification
 
-- `bun test test/herdr.test.ts test/herdr-tools.test.ts test/model-routing-advisor.test.ts test/extension-load.test.ts`
+- `bun test test/herdr.test.ts test/herdr-tools.test.ts test/model-routing-advisor.test.ts test/extension-load.test.ts test/validate-package.test.ts`
 
 ## Child DOX Index
 

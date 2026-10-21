@@ -112,13 +112,21 @@ if (senpiVersion !== "2026.10.19-2") {
 
 for (const packageName of [
   "@earendil-works/pi-ai",
+  "@earendil-works/pi-agent-core",
+  "@earendil-works/pi-coding-agent",
   "@earendil-works/pi-tui",
   "typebox",
 ]) {
   if (manifest.dependencies?.[packageName] !== undefined) {
     errors.push(`${packageName} must not be in dependencies`);
   }
-  if (manifest.peerDependencies?.[packageName] !== "*") {
+  if (
+    (packageName === "@earendil-works/pi-ai" ||
+      packageName === "@earendil-works/pi-tui" ||
+      packageName === "typebox" ||
+      manifest.peerDependencies?.[packageName] !== undefined) &&
+    manifest.peerDependencies?.[packageName] !== "*"
+  ) {
     errors.push(`${packageName} must be a "*" peer dependency`);
   }
 }
