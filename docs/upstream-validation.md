@@ -56,6 +56,16 @@ verification date.
 - Limits: `mise ci` was not run because `mise` is unavailable; the interactive runtime still emits the config-watch warning despite the matching fix in the OMO `5.1.40` source. Historical authenticated provider and Herdr checks below have not been repeated for this pairing.
 - Revalidate: OMO package reinstall or upgrade, Senpi upgrade, resource-discovery change, package-pin change, or resolution of the remaining config-watch warning.
 
+## Local subagent assignment migration
+
+- Verified: `2026-10-21`.
+- Local runtime: OMO `5.1.40`; Senpi `2026.10.19-2`.
+- OMO evidence: the pinned [configuration reference](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/reference/configuration.md) and [unified JSON reference](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/reference/omo-json.md) permit shared `agents` and `categories`, with canonical model and reasoning assignments.
+- Senpi evidence: N/A; this changes OMO-owned route configuration, not Senpi request construction or extension behavior.
+- Local proof: compared 10 copied agent assignments and 10 category assignments with ZO's alias-resolved configuration; authenticated model discovery contained every assigned ID. Unrelated fields and the local memory route remained identical. The installed `configDoctorLines` returned no diagnostics; fresh `omo doctor` exited `0` and reported all 11 task categories usable. Existing legacy `.pi` file warnings remain unrelated to routing.
+- Revalidate: source role changes, OMO upgrade, gateway catalog changes, or local profile/override changes. Start a new OMO session after migration.
+- Status: current; exact non-secret assignments are recorded in [model routing](model-routing.md#zo-derived-local-assignments).
+
 ## Historical extension compatibility
 
 The following records apply only to their stated versions and dates.

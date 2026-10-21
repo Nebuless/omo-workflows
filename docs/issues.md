@@ -1,5 +1,15 @@
 # OMO and Senpi Issue Register
 
+## 2026-10-21T06:08:45Z - 9router gateway unreachable over userspace Tailscale
+
+- **Reported symptom:** Tailnet SSH worked, but this host could not reach the remote 9router HTTP gateway.
+- **Affected runtime:** OMO `5.1.40`, Senpi `2026.10.19-2`, Tailscale `1.104.1`; container host running `tailscaled --tun=userspace-networking`.
+- **Cause:** No kernel Tailscale interface or tailnet route existed. Direct HTTP requests timed out, while Tailscale ping succeeded and `tailscale nc` reached the gateway.
+- **Resolution state:** Added a loopback-only TCP bridge, supervised as `9router-tailnet-bridge`, which connects each client through `tailscale nc`. Updated only this host's 9router provider base URL. The bridge source lives at `~/.local/libexec/9router-tailnet-bridge.py`; its service definition lives in the host's user Supervisor configuration. Neither host endpoints nor credentials are tracked here.
+- **Upstream:** Tailscale's [userspace networking documentation](https://tailscale.com/docs/concepts/userspace-networking) explains that ordinary outbound applications need a userspace transport path. This is a local networking workaround, not an identified OMO/Senpi defect; no matching upstream issue was identified. No OMO or Senpi runtime code changed.
+- **Validation:** The supervised bridge reached `RUNNING`; authenticated model discovery returned HTTP `200` with 39 models. A real `cx/gpt-6.1-sol` chat completion through the configured endpoint returned HTTP `200` and `OK`. Python syntax compilation passed without creating cache files.
+- **Revalidation trigger:** Host recreation, Supervisor configuration replacement, gateway relocation, Tailscale networking-mode changes, or provider endpoint changes. Existing OMO sessions may need restarting to load the updated provider configuration.
+
 ## 2026-10-21T05:59:11Z - OMO startup reports package and config-watch warnings
 
 - **Reported symptom:** Every startup logged both `user config discovery requires reload` and a host-package warning for `@earendil-works/pi-ai`, `@earendil-works/pi-tui`, and `typebox`.
