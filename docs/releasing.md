@@ -36,8 +36,9 @@ tags, so do not run release commands until initial commits exist.
 - Commitlint enforces commit syntax at `commit-msg`.
 - Conventional Changelog generates history; it does not commit, tag, publish,
 or change the package version.
-- Agents never create commits, tags, or releases without an explicit user
-request.
+- Agents create verified atomic local commits after each completed repository
+change under standing user authorization. Pushes, pull requests, tags, and
+releases require explicit approval.
 
 ## References
 
