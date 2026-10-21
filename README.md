@@ -4,8 +4,7 @@ Portable OMO/Senpi customizations. Install native OMO first, then install this
 repository or one extension package.
 
 - Native OMO: [`omo-ai`](https://www.npmjs.com/package/omo-ai)
-- Target pairing: OMO `5.1.34`, bundled Senpi `2026.10.16`; standalone Senpi
-  `2026.10.16-3` is a separate release, not this OMO pairing.
+- Target pairing: OMO `5.1.40`, paired Senpi `2026.10.19-2`.
 - Included packages: [`compound-engineering`](extensions/compound-engineering/README.md), [`better-custom`](extensions/better-custom/AGENTS.md),
   [`herdr`](extensions/herdr/AGENTS.md), [`model-routing-advisor`](extensions/model-routing-advisor/README.md), and [`trim`](extensions/trim/AGENTS.md)
 
@@ -16,8 +15,8 @@ Paste this into coding agent:
 ```text
 Install native OMO and Nebuless/omo-workflows.
 
-1. Read the OMO 5.1.34 install guide end to end:
-   https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/guide/installation.md
+1. Read the OMO 5.1.40 install guide end to end:
+   https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/guide/installation.md
 2. Install native OMO:
    npm i -g omo-ai
    Optional onboarding: run `omo setup`.
@@ -39,7 +38,7 @@ install the unrelated npm package named `omo`.
 
 ### 1. Install native OMO
 
-Follow the OMO 5.1.34 [Senpi edition guide](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/guide/installation.md#senpi-edition-omo-via-npm-omo-ai):
+Follow the OMO 5.1.40 [OmO Native guide](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/guide/installation.md#omo-native-omo-via-omo-ai):
 
 ```sh
 npm i -g omo-ai
@@ -47,7 +46,7 @@ npm i -g omo-ai
 
 `omo setup` is optional onboarding, not an installation prerequisite. See the
 pinned upstream
-[setup details](https://github.com/code-yeongyu/oh-my-openagent/blob/d7e224e478a4a77dba0d2104c336fdc72ad301e3/docs/guide/installation.md#first-run-omo-setup).
+[setup details](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/guide/installation.md#first-run-omo-setup).
 
 ### 2. Get this repository
 
