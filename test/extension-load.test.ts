@@ -122,6 +122,7 @@ describe("OMO extension boundary", () => {
       ],
     });
     expect([...tools.keys()]).toEqual([
+      "herdr_desktop",
       "herdr_inspect",
       "herdr_capabilities",
       "herdr_query",

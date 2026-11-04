@@ -47,6 +47,11 @@ verification date.
 
 ## Current integration target
 
+Herdr has a separate [2026-11-04 compatibility record](../extensions/herdr/README.md#compatibility-evidence)
+covering current desktop/core OSC reporting, legacy custom resume metadata,
+installed CLI proof, both upstream runtime boundaries, and unverified desktop
+rendering/restart limits. The older Herdr record below is historical.
+
 Repetition recovery has a separate [2026-11-03 evidence record](../extensions/repetition-recovery/README.md#compatibility-evidence), including the installed OMO/pinned SDK mismatch and deterministic engine admission/refusal proof.
 
 - Verified: `2026-10-21` (installed runtime pairing, package host contract, and startup diagnostics).

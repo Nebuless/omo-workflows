@@ -1,51 +1,26 @@
 ---
 name: herdr-orchestration
 hide: true
-description: Coordinate Herdr agents in bounded waves with explicit dependencies, durable ledger, gates, and evidence.
+description: Coordinate native OMO tasks alongside observed Herdr terminals with explicit scope, dependencies, and completion evidence.
 ---
 
 # Herdr Orchestration
 
-Herdr is multiplexer and agent controller, not native task-graph system. Use this skill only for multiple work items, dependencies, waves, gates, or coordinator recovery. Use `herdr-agent-management` for one agent.
+Native OMO owns task graphs, scheduling, models, delegation, and result delivery. Herdr owns persistent terminals and the desktop window. Do not replace native task orchestration with a second graph runtime or terminal-driven workers.
 
-## Invariants
+## Dispatch
 
-- Require `HERDR_ENV=1`; inspect before every control action.
-- Use session, workspace, tab, pane, and agent IDs returned by Herdr.
-- Coordinator keeps focus. Workers use sibling panes with `--no-focus`.
-- One pane owns one named work item. Do not run workers with overlapping write scope.
-- Persist a workflow ledger outside transient panes before dispatch and after each observed transition.
-- Status is liveness only. Evidence proves completion.
+1. Identify the platform with `herdr`; inspect existing terminals or panes before acting.
+2. Use native OMO task/graph tools for ordinary workers. Give each one outcome, allowed write paths, inputs, acceptance proof, and a stop condition. Parallel workers must not overlap write scope.
+3. Herdr terminal work is an explicit separate execution track. Current `herdr_desktop` supports observation only; legacy dispatch requires an available typed capability plus fresh target proof. Missing control is not permission to inject terminal input.
+4. Keep workers hidden unless the user asks to see a tab or split. Do not alter focus or layout merely to orchestrate.
 
-## Ledger fields
+## Collection and recovery
 
-For each node record: ID, goal, dependencies, wave, owner agent/pane IDs, allowed write scope, acceptance proof, timeout, retry limit, compensation/cancel action, status, evidence, last output time, and pending gate.
+- Retain native task handles and collect their terminal results. Register native monitor subscriptions for waits; do not sleep or poll screens.
+- Associate existing external work with its exact generation, machine/session, terminal or pane ID, owner, scope, next action, and evidence location. Never equate `HC_TERMINAL_ID` with a legacy pane ID.
+- `working` is liveness, `blocked` needs a decision, and `done`/`idle` still require a report and acceptance proof. Screen words alone cannot establish completion.
+- A timeout is a diagnosis point, not permission to resend a task. Read state/output and determine whether earlier input arrived before any retry.
+- Desktop closure leaves core terminals alive. A recovered shell is not a resumed agent. Do not recreate or kill another owner's terminal during recovery.
 
-Reject cycles, missing dependencies, overlapping writes, or nodes without proof. Dispatch only when all dependencies are succeeded and evidence recorded.
-
-## Dispatch envelope
-
-```text
-WORKFLOW: <id>
-NODE: <id>; attempt <n>; deadline <ISO-8601>
-GOAL: <one outcome>
-SCOPE: <allowed>; DO NOT TOUCH: <excluded>
-INPUTS: <verified dependency evidence>
-ACCEPTANCE: <commands/review criteria>
-REPORT: succeeded|blocked|failed|cancelled; changed paths; proof; risks
-ESCALATE: irreversible action, scope change, credentials, ambiguity
-```
-
-## Coordinator loop
-
-1. Read every active worker with `agent get` and `agent read` before waits.
-2. `working`: retain only while output advances before deadline.
-3. `blocked`: capture exact question, create gate, stop dependent nodes, keep unrelated ready work running.
-4. `idle` or `done`: collect report, run acceptance proof, then mark succeeded.
-5. `unknown`: inspect pane and agent detection. Never infer success.
-6. Dispatch next bounded wave only after recorded dependency success.
-7. On timeout: diagnose output/state first. Retry only idempotent or compensated work with altered diagnosis.
-
-## Completion
-
-Finish only when every required node has succeeded or accepted cancellation/compensation, every gate has decision record, and integration proof passes. Preserve ledger and output links. Close only panes created by workflow and only when user requested cleanup.
+Finish after required results and integration checks are verified. Preserve unresolved gates and evidence. Clean up only owned workers within the user's requested scope. Use `herdr-handoff` for an actual ownership transfer.

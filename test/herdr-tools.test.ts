@@ -21,6 +21,15 @@ import {
   registerHerdrTools,
 } from "../extensions/herdr/tools.ts";
 import type { HerdrDiscovery } from "../extensions/herdr/capabilities.ts";
+import {
+  readExistingCore,
+  registerHerdrDesktopTools,
+} from "../extensions/herdr/desktop.ts";
+import { createServer } from "node:net";
+import { once } from "node:events";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const target = () =>
   createTargetSnapshot({
@@ -38,6 +47,208 @@ function required<T>(value: T | undefined, name: string): T {
 }
 
 describe("Herdr extension tools", () => {
+  test("current desktop inspection gates versions, bounds reads, and rejects input routes", async () => {
+    let execute!: (
+      id: string,
+      input: unknown,
+    ) => Promise<{ details: { status: string } }>;
+    const recorded: string[][] = [];
+    let version = "hc 0.1.18";
+    registerHerdrDesktopTools(
+      {
+        registerTool(definition) {
+          execute = (id, input) =>
+            definition.execute(
+              id,
+              input as never,
+              undefined,
+              undefined,
+              {} as never,
+            ) as ReturnType<typeof execute>;
+        },
+      },
+      async (argv) => {
+        recorded.push([...argv]);
+        return {
+          exitCode: 0,
+          truncated: false,
+          output: argv.includes("--version") ? version : "{}",
+        };
+      },
+      async (method, params) => {
+        recorded.push([method, JSON.stringify(params)]);
+        return { exitCode: 0, truncated: false, output: "{}" };
+      },
+    );
+    expect(
+      (await execute("read", { action: "core-read", terminalId: "t7" })).details
+        .status,
+    ).toBe("completed");
+    expect(recorded).toEqual([
+      ["hc", "--version"],
+      ["terminal.read", '{"terminal":"t7","lines":0}'],
+    ]);
+    recorded.length = 0;
+    version = "hc 0.1.14";
+    expect(
+      (await execute("local", { action: "core-list" })).details.status,
+    ).toBe("completed");
+    expect(recorded).toEqual([
+      ["hc", "--version"],
+      ["terminal.list", "{}"],
+    ]);
+    recorded.length = 0;
+    for (const input of [
+      { action: "core-get", terminalId: "--help" },
+      { action: "core-list", terminalId: "t7" },
+      { action: "core-send", terminalId: "t7" },
+    ])
+      expect((await execute("bad", input)).details.status).toBe("unavailable");
+    expect(recorded).toEqual([]);
+    version = "hc 0.1.19";
+    expect(
+      (await execute("future", { action: "core-list" })).details.status,
+    ).toBe("unavailable");
+    expect(recorded).toEqual([["hc", "--version"]]);
+    recorded.length = 0;
+    version = "herdr-app 0.1.13";
+    expect(
+      (await execute("layout", { action: "app-list" })).details.status,
+    ).toBe("completed");
+    expect(recorded).toEqual([
+      ["herdr-app", "--version"],
+      ["herdr-app", "ls"],
+    ]);
+  });
+
+  test("desktop failures cannot masquerade as completed inspection", async () => {
+    let execute!: (
+      id: string,
+      input: unknown,
+    ) => Promise<{
+      details: {
+        status: string;
+        output: string;
+        truncated?: boolean;
+        exitCode?: number;
+      };
+    }>;
+    let probe = { exitCode: 0, truncated: false, output: "hc 0.1.18" };
+    let result = { exitCode: 0, truncated: false, output: "partial" };
+    let reject = false;
+    const calls: string[][] = [];
+    registerHerdrDesktopTools(
+      {
+        registerTool(definition) {
+          execute = (id, input) =>
+            definition.execute(
+              id,
+              input as never,
+              undefined,
+              undefined,
+              {} as never,
+            ) as ReturnType<typeof execute>;
+        },
+      },
+      async (argv) => {
+        calls.push([...argv]);
+        if (reject) throw new Error("offline");
+        return argv.includes("--version") ? probe : result;
+      },
+      async () => result,
+    );
+    for (const badProbe of [
+      { ...probe, exitCode: 1 },
+      { ...probe, truncated: true },
+    ]) {
+      probe = badProbe;
+      calls.length = 0;
+      expect(
+        (await execute("probe", { action: "core-list" })).details.status,
+      ).toBe("unavailable");
+      expect(calls).toEqual([["hc", "--version"]]);
+    }
+    probe = { exitCode: 0, truncated: false, output: "hc 0.1.18" };
+    for (const failed of [
+      { ...result, exitCode: 1 },
+      { ...result, truncated: true },
+    ]) {
+      result = failed;
+      expect((await execute("read", { action: "core-list" })).details).toEqual({
+        ...result,
+        status: "unknown",
+      });
+    }
+    reject = true;
+    expect((await execute("offline", { action: "core-list" })).details).toEqual(
+      { status: "unavailable", output: "offline" },
+    );
+  });
+
+  test("core reads use an existing socket without starting a service", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "herdr-core-"));
+    const endpoint = join(directory, "core.sock");
+    const requests: unknown[] = [];
+    let response = '{"jsonrpc":"2.0","id":1,"result":{"text":"screen"}}\n';
+    const server = createServer((socket) => {
+      socket.once("data", (data) => {
+        requests.push(JSON.parse(data.toString()));
+        socket.end(response);
+      });
+    });
+    const listening = once(server, "listening");
+    server.listen(endpoint);
+    await listening;
+    try {
+      const signal = AbortSignal.timeout(2000);
+      expect(
+        await readExistingCore(
+          "terminal.read",
+          { terminal: "t7", lines: 0 },
+          signal,
+          endpoint,
+        ),
+      ).toEqual({ exitCode: 0, truncated: false, output: '{"text":"screen"}' });
+      expect(requests).toEqual([
+        {
+          jsonrpc: "2.0",
+          id: 1,
+          method: "terminal.read",
+          params: { terminal: "t7", lines: 0 },
+        },
+      ]);
+      response = '{"jsonrpc":"2.0","id":1,"error":{"message":"missing"}}\n';
+      expect(
+        (await readExistingCore("terminal.get", {}, signal, endpoint)).exitCode,
+      ).toBe(1);
+      response = "x".repeat(20001);
+      expect(
+        (await readExistingCore("terminal.list", {}, signal, endpoint))
+          .truncated,
+      ).toBe(true);
+      response = "";
+      await expect(
+        readExistingCore("terminal.list", {}, signal, endpoint),
+      ).rejects.toThrow("closed");
+    } finally {
+      const closed = once(server, "close");
+      server.close();
+      await closed;
+      await rm(directory, { recursive: true, force: true });
+    }
+    await expect(
+      readExistingCore(
+        "terminal.list",
+        {},
+        AbortSignal.timeout(2000),
+        endpoint,
+      ),
+    ).rejects.toThrow();
+    await expect(
+      readExistingCore("terminal.list", {}, AbortSignal.timeout(2000), ""),
+    ).rejects.toThrow("HC_SOCKET");
+  });
+
   test("registers composable tools and no public raw controller", () => {
     const tools = new Map<string, unknown>();
     registerHerdrTools({
@@ -46,6 +257,7 @@ describe("Herdr extension tools", () => {
       },
     });
     expect([...tools.keys()]).toEqual([
+      "herdr_desktop",
       "herdr_inspect",
       "herdr_capabilities",
       "herdr_query",
@@ -148,6 +360,25 @@ describe("Herdr extension tools", () => {
         (capability) => capability.id === "herdr.0.9.1.agent.profile-launch",
       ),
     ).toBe(true);
+  });
+
+  test("admits researched legacy patch versions but rejects unknown versions", () => {
+    for (const version of ["0.9.1", "0.9.2", "0.9.5"]) {
+      expect(
+        validateHerdrDiscovery({
+          version,
+          commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+          schema: "{}",
+        }).versionMatches,
+      ).toBe(true);
+    }
+    expect(
+      validateHerdrDiscovery({
+        version: "0.9.6",
+        commandPaths: HERDR_0_9_1_COMMAND_PATHS,
+        schema: "{}",
+      }).versionMatches,
+    ).toBe(false);
   });
 
   test("tolerates unrelated discovered paths while preserving mapped capabilities", () => {

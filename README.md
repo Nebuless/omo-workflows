@@ -107,7 +107,7 @@ interactive OMO. See [extension authoring and verification](docs/authoring-exten
 
 - [`extensions/compound-engineering`](extensions/compound-engineering/README.md): Every's 35 Compound Engineering skills through native Senpi discovery. Use `/skill:<name>` for deterministic invocation.
 - [`extensions/better-custom`](extensions/better-custom/AGENTS.md): custom provider CRUD and model browser commands.
-- [`extensions/herdr`](extensions/herdr/AGENTS.md): Herdr lifecycle reporting, skills, and argv-only resource tools. No-op outside Herdr.
+- [`extensions/herdr`](extensions/herdr/README.md): current desktop/core and legacy CLI lifecycle integration, bounded inspection, and orchestration skills.
 - [`extensions/model-routing-advisor`](extensions/model-routing-advisor/README.md): explicit read-only route availability reports before native work. No routing or task control.
 - [`extensions/trim`](extensions/trim/AGENTS.md): native compaction governor.
 - [`extensions/repetition-recovery`](extensions/repetition-recovery/README.md): opt-in fallback continuation after native repetition correction fails, with persisted claims and private metadata-only logs.

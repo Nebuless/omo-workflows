@@ -3,6 +3,11 @@ import { assertAgentPrompt, parseOpaqueTargetId } from "./targets.ts";
 import { Type, type Static, type TObject } from "typebox";
 
 export const HERDR_CAPABILITY_VERSION = "0.9.1";
+export const HERDR_SUPPORTED_VERSIONS: readonly string[] = [
+  "0.9.1",
+  "0.9.2",
+  "0.9.5",
+];
 
 export type CapabilityDomain =
   | "root"
@@ -119,10 +124,7 @@ export const agentStartInputSchema = Type.Object(
 );
 export const agentProfileInputSchema = Type.Object(
   {
-    profile: Type.Union([
-      Type.Literal("omo-review"),
-      Type.Literal("codex-review"),
-    ]),
+    profile: Type.Literal("codex-review"),
     paneId: Type.String({ minLength: 1, maxLength: 256 }),
     timeoutMs: Type.Integer({ minimum: 1, maximum: 300_000 }),
   },
@@ -351,7 +353,6 @@ const SUPPORTED_AGENT_KINDS = new Set([
 ]);
 
 export const HERDR_EXTERNAL_AGENT_PROFILES = {
-  "omo-review": { kind: "omp", name: "omo-review" },
   "codex-review": { kind: "codex", name: "codex-review" },
 } as const;
 
@@ -384,7 +385,7 @@ function requireAgentStartInput(input: unknown): AgentStartInput {
 function requireAgentProfileInput(input: unknown): AgentProfileInput {
   const value = requireExactObject(input, ["profile", "paneId", "timeoutMs"]);
   if (
-    (value.profile !== "omo-review" && value.profile !== "codex-review") ||
+    value.profile !== "codex-review" ||
     typeof value.timeoutMs !== "number" ||
     !Number.isInteger(value.timeoutMs) ||
     value.timeoutMs < 1 ||
@@ -727,7 +728,9 @@ export function validateHerdrDiscovery(
   const unexpectedPaths = [...actual]
     .filter((path) => !expected.has(path))
     .sort();
-  const versionMatches = discovery.version === HERDR_CAPABILITY_VERSION;
+  const versionMatches =
+    discovery.version !== null &&
+    HERDR_SUPPORTED_VERSIONS.includes(discovery.version);
   const commandPathsMatch = missingPaths.length === 0;
   return {
     versionMatches,
@@ -743,7 +746,7 @@ export function capabilitiesForDiscovery(
 ): readonly CapabilityDefinition[] {
   const validation = validateHerdrDiscovery(discovery);
   if (!validation.versionMatches) {
-    const reason = `Installed Herdr version ${discovery.version ?? "unknown"} does not match ${HERDR_CAPABILITY_VERSION}.`;
+    const reason = `Installed Herdr version ${discovery.version ?? "unknown"} does not match supported versions ${HERDR_SUPPORTED_VERSIONS.join(", ")}.`;
     return HERDR_0_9_1_CAPABILITIES.map((capability) => ({
       ...capability,
       availability: "unavailable" as const,

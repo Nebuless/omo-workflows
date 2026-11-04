@@ -42,6 +42,45 @@ export function buildReportCommand(
   return argv;
 }
 
+export function buildSessionCommand(
+  env: HerdrEnv,
+  seq: number,
+  session: { readonly id: string; readonly path?: string },
+): string[] | undefined {
+  const path = session.path;
+  if (
+    !path ||
+    path.includes("'") ||
+    Buffer.byteLength(path) >= 4000 ||
+    !session.id ||
+    session.id.length > 256 ||
+    Array.from(path + session.id).some(
+      (char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127,
+    )
+  )
+    return undefined;
+  return [
+    env.bin,
+    "pane",
+    "report-agent-session",
+    "--source",
+    HERDR_SOURCE,
+    "--agent",
+    HERDR_AGENT,
+    "--seq",
+    String(seq),
+    env.paneId,
+    "--agent-session-id",
+    session.id,
+    "--agent-session-path",
+    path,
+    "--",
+    "omo",
+    "--session",
+    path,
+  ];
+}
+
 export function buildReleaseCommand(env: HerdrEnv, seq: number): string[] {
   return [
     env.bin,
@@ -58,7 +97,10 @@ export function buildReleaseCommand(env: HerdrEnv, seq: number): string[] {
 }
 
 export interface HerdrReporter {
-  onSessionStart(): void;
+  onSessionStart(session?: {
+    readonly id: string;
+    readonly path?: string;
+  }): void;
   onAgentStart(): void;
   onUIPromptStart(title?: string): void;
   onUIPromptEnd(): void;
@@ -68,6 +110,9 @@ export interface HerdrReporter {
 
 export interface HerdrReporterOptions {
   readonly env: HerdrEnv | null;
+  readonly coreTerminalId?: string;
+  readonly write?: (value: string) => void;
+  readonly now?: () => number;
   readonly run?: (argv: string[]) => unknown | Promise<unknown>;
   readonly onDiagnostic?: (message: string) => void;
 }
@@ -86,16 +131,30 @@ export function createHerdrReporter(
   const onDiagnostic = options.onDiagnostic ?? (() => undefined);
   let active = false;
   let released = false;
+  let settled = false;
+  const write =
+    options.write ?? ((value: string) => process.stdout.write(value));
+  const now = options.now ?? (() => Date.now() * 1000);
+  const nextSeq = () => (seq = Math.max(seq + 1, now()));
 
   function report(state: HerdrState, message?: string): void {
-    if (!env || released) return;
-    seq += 1;
+    if ((!env && !options.coreTerminalId) || released) return;
     try {
-      Promise.resolve(run(buildReportCommand(env, state, seq, message))).catch(
-        (error) =>
-          onDiagnostic(
-            error instanceof Error ? error.message : "Herdr report failed",
-          ),
+      if (options.coreTerminalId) {
+        const word = state === "idle" && settled ? "done" : state;
+        const msg = message
+          ? `:msg=${Buffer.from(message).toString("base64")}`
+          : "";
+        write(`\x1b]7501;state=${word}:app=omo${msg}\x1b\\`);
+        return;
+      }
+      if (!env) return;
+      Promise.resolve(
+        run(buildReportCommand(env, state, nextSeq(), message)),
+      ).catch((error) =>
+        onDiagnostic(
+          error instanceof Error ? error.message : "Herdr report failed",
+        ),
       );
     } catch (error) {
       onDiagnostic(
@@ -105,13 +164,49 @@ export function createHerdrReporter(
   }
 
   return {
-    onSessionStart(): void {
+    onSessionStart(session): void {
       released = false;
       active = false;
+      settled = false;
       report("idle");
+      if (env && !options.coreTerminalId && session) {
+        const sessionSeq = nextSeq();
+        const argv = buildSessionCommand(env, sessionSeq, session) ?? [
+          env.bin,
+          "pane",
+          "report-agent-session",
+          env.paneId,
+          "--source",
+          HERDR_SOURCE,
+          "--agent",
+          HERDR_AGENT,
+          "--seq",
+          String(sessionSeq),
+          "--",
+          "omo",
+        ];
+        if (argv) {
+          try {
+            Promise.resolve(run(argv)).catch((error) =>
+              onDiagnostic(
+                error instanceof Error
+                  ? error.message
+                  : "Herdr session report failed",
+              ),
+            );
+          } catch (error) {
+            onDiagnostic(
+              error instanceof Error
+                ? error.message
+                : "Herdr session report failed",
+            );
+          }
+        }
+      }
     },
     onAgentStart(): void {
       active = true;
+      settled = false;
       report("working");
     },
     onUIPromptStart(title?: string): void {
@@ -125,17 +220,24 @@ export function createHerdrReporter(
     },
     onAgentSettled(): void {
       active = false;
+      settled = true;
       report("idle");
     },
     onSessionShutdown(reason?: string): void {
-      if (!env || released || reason !== "quit") return;
+      if ((!env && !options.coreTerminalId) || released || reason !== "quit")
+        return;
       released = true;
-      seq += 1;
       try {
-        Promise.resolve(run(buildReleaseCommand(env, seq))).catch((error) =>
-          onDiagnostic(
-            error instanceof Error ? error.message : "Herdr release failed",
-          ),
+        if (options.coreTerminalId) {
+          write("\x1b]7501;state=clear:app=omo\x1b\\");
+          return;
+        }
+        if (!env) return;
+        Promise.resolve(run(buildReleaseCommand(env, nextSeq()))).catch(
+          (error) =>
+            onDiagnostic(
+              error instanceof Error ? error.message : "Herdr release failed",
+            ),
         );
       } catch (error) {
         onDiagnostic(
@@ -199,8 +301,21 @@ export default function herdrIntegration(pi: ExtensionAPI): void {
   pi.on("resources_discover", (_event, ctx) => ({
     skillPaths: herdrSkillPathsForLoadedExtensions(ctx),
   }));
-  const reporter = createHerdrReporter({ env: captureHerdrEnv(process.env) });
-  pi.on("session_start", () => reporter.onSessionStart());
+  const env = captureHerdrEnv(process.env);
+  let reporter = createHerdrReporter({ env });
+  pi.on("session_start", (_event, ctx) => {
+    reporter = createHerdrReporter({
+      env,
+      coreTerminalId:
+        ctx.mode === "tui" && process.stdout.isTTY
+          ? process.env.HC_TERMINAL_ID
+          : undefined,
+    });
+    reporter.onSessionStart({
+      id: ctx.sessionManager.getSessionId(),
+      path: ctx.sessionManager.getSessionFile(),
+    });
+  });
   pi.on("agent_start", () => reporter.onAgentStart());
   pi.on("ui_prompt_start", (event) => reporter.onUIPromptStart(event.title));
   pi.on("ui_prompt_end", () => reporter.onUIPromptEnd());

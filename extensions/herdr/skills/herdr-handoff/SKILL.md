@@ -10,7 +10,7 @@ Use only when work ownership changes. Use `herdr-agent-management` to prompt a w
 
 ## Rules
 
-- Require `HERDR_ENV=1` and verify both source and destination agents before handoff.
+- Identify the platform with `herdr`; verify source and destination identities before handoff. Current core uses terminal IDs; legacy control requires `HERDR_ENV=1` and a pane ID.
 - Read source transcript/state and destination readiness before sending anything.
 - Preserve task scope, current evidence, changed paths, verification, blockers, decisions, and exact next action.
 - Do not transfer secrets, unrelated transcript, or unverified conclusions.
@@ -32,9 +32,9 @@ ESCALATE: <when recipient must ask>
 
 ## Procedure
 
-1. Inspect source: `agent get`, `agent read`, relevant artifacts.
-2. Inspect destination: `agent get`, `agent read`; confirm input-ready state.
-3. Send envelope with `agent prompt` or verified pane prompt.
+1. Inspect source and destination with current `herdr_desktop` core observations or available legacy agent observations, plus relevant artifacts.
+2. Confirm destination readiness and the authorized delivery route.
+3. Deliver through native OMO task messaging, or an available typed legacy prompt with verified target proof. Current desktop inspection cannot send a handoff; retain ownership when no delivery route exists.
 4. Read destination output/state. If it asks a question, preserve ownership until answer is resolved.
 5. Record handoff location and recipient identity in any workflow ledger.
 
