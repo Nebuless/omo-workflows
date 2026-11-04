@@ -18,8 +18,14 @@ Store portable, merge-safe OMO configuration templates.
 - Current `deep-low`, `deep-high`, and `architect` category names use the pinned OMO release schema; do not restore legacy `deep`.
 - `omo-agent-settings.json` keeps native Senpi startup and working tips disabled.
 - Routing templates are complete replacement profiles, not additive JSON fragments.
+- Their `[opencode].agents` blocks are OpenCode-only. Native named-agent
+  overrides belong in shared `agents` or `[native].agents`; shared categories
+  do not turn an OpenCode agent block into a Native override.
 - Both routing templates keep every execution category in shared top-level `categories`; parent OMO runs, Senpi children, reflection, and Kibitzer use same routing map. `memory.reflection.category` and `memory.recall.category` select `memory-reflection` explicitly.
-- Both routing templates disable reflection sandboxing until upstream merges a fix for missing `runtime/reflection-sessions`; see `docs/issues.md`.
+- Both routing templates retain disabled reflection sandboxing for the
+  `runtime/reflection-sessions` defect recorded on 2026-09-11. Reproduce on
+  the installed host before treating that workaround as necessary; see
+  `docs/issues.md`.
 
 ## Work Guidance
 

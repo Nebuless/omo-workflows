@@ -14,6 +14,9 @@ Own reusable operational guidance, references, and optional skill-scoped MCP set
 - Give each skill one capability boundary and explicit trigger description.
 - Keep references local and portable; do not rely on machine-only paths.
 - Treat skill content as guidance, not a privilege escalation mechanism.
+- `/skill:<name>` is the explicit invocation. Host-provided bare aliases,
+  same-name user/package precedence, and argument hints belong to the host.
+  Hiding a helper skill does not itself disable its associated tool.
 
 ## Work Guidance
 

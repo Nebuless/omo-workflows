@@ -14,6 +14,8 @@ Own slash commands, shortcuts, and command-line flags.
 - One command has one observable action and bounded output.
 - Commands that write, alter sessions, or call external systems need explicit approval.
 - Guard TUI-only flows against noninteractive modes.
+- Distinguish host skill aliases from registered commands. Verify argument
+  metadata against the target release rather than unreleased upstream HEAD.
 
 ## Work Guidance
 

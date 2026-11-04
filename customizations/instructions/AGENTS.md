@@ -3,6 +3,7 @@
 ## Purpose
 
 Own durable agent rules, prompt overlays, and scoped instruction patterns.
+Also cover native Markdown prompt-template resources.
 
 ## Ownership
 
@@ -14,6 +15,8 @@ Own durable agent rules, prompt overlays, and scoped instruction patterns.
 - Use `prompt_append` or global rules for additive behavior.
 - Use full `prompt` replacement only when loss of host presets is intentional.
 - State scope, precedence, and enforceable companion controls for every policy.
+- Use `pi.prompts` or discovered prompt paths for templates. Do not restore
+  removed automatic `SYSTEM.md`/`APPEND_SYSTEM.md` discovery.
 
 ## Work Guidance
 

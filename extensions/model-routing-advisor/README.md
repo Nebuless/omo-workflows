@@ -27,12 +27,12 @@ Invoke `model_route_advice` explicitly before native work begins:
 ```json
 {
   "routeKind": "category",
-  "routeKey": "deep",
+  "routeKey": "deep-high",
   "candidates": [
     { "providerId": "9router", "modelId": "cx/gpt-6-astra" },
-    { "providerId": "9router", "modelId": "ollama-cloud/glm-5.3-flash" }
+    { "providerId": "9router", "modelId": "cx/gpt-6.1-sol" }
   ],
-  "provenance": { "source": "caller", "label": "deep preflight" }
+  "provenance": { "source": "caller", "label": "explicit deep-high candidates" }
 }
 ```
 
@@ -49,6 +49,8 @@ Report status is observation, not selection:
 - `input_invalid`: request failed safe bounded validation.
 
 Catalog visibility and configured auth do not prove future provider dispatch.
+These illustrative IDs appear in the repository's 2026-10-16 catalog record.
+The example does not declare a native default chain or select a fallback.
 
 ## Bounds
 

@@ -37,7 +37,7 @@ models.
 
 
 - Keep format-agnostic provider logic separate from host seams.
-- Update the pinned upstream revision in the root README when importing
+- Update the pinned upstream revision in `docs/compatibility.md` when importing
   upstream changes.
 - Run focused tests and the repository `mise ci` gate after changes.
 

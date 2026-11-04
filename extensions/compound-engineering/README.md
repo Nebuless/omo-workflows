@@ -39,11 +39,11 @@ surface is `/skill:<name>`; model routing can select visible skills naturally.
 
 ## Compatibility
 
-Target pairing: OMO `5.1.34` with bundled Senpi `2026.10.16`. Packaged resources
+The repository SDK pin is Senpi `2026.10.19-2`. Packaged resources
 resolve from Senpi's `loadedExtensionPaths` discovery context, including when
 the loader relocates the entrypoint. Run the repository `mise ci` gate for
 the integrated checkout; see [compatibility](../../docs/compatibility.md).
-Standalone Senpi `2026.10.16-3` is not the OMO pairing.
+An independently installed Senpi version is not proof of OMO's bundled pairing.
 Upstream skill version and immutable revision are in [UPSTREAM.md](UPSTREAM.md).
 
 ## Verify
@@ -51,3 +51,4 @@ Upstream skill version and immutable revision are in [UPSTREAM.md](UPSTREAM.md).
 ```sh
 bun test extensions/compound-engineering/test
 bun run typecheck
+```

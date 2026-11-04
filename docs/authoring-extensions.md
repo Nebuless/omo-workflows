@@ -72,6 +72,20 @@ extension must also load from its own directory. Remote GitHub installation and
 version-pinned source locators need separate verification before documentation.
 Do not invent their syntax.
 
+### Native package resources
+
+Manifests can expose `pi.skills`, `pi.prompts`, and `pi.themes` alongside
+`pi.extensions`. Prompt templates are Markdown; themes are JSON. Conventional
+resource directories and `resources_discover` callbacks are also supported.
+Resolve extension-relative resources from the host's `loadedExtensionPaths`
+discovery context, not a synthetic module URL or checkout path.
+
+The repository pins Senpi `2026.10.19-2`. Its
+[package contract](https://github.com/code-yeongyu/senpi/blob/a4816ed8c3c643051700aecd0b3059530e75ee85/packages/coding-agent/docs/packages.md)
+and [extension types](https://github.com/code-yeongyu/senpi/blob/a4816ed8c3c643051700aecd0b3059530e75ee85/packages/coding-agent/src/core/extensions/types.ts)
+own these APIs. See [integration evidence](upstream-validation.md#current-integration-target)
+for dated runtime checks and their limits.
+
 ## Runtime contract
 
 Extensions must work alone and beside other installed extensions.
@@ -82,6 +96,20 @@ Extensions must work alone and beside other installed extensions.
   separate modules.
 - Preserve upstream license, attribution, and immutable revision when porting.
 - Resolve user configuration through host APIs; never hard-code user home paths.
+- Guard custom terminal components with `ctx.mode === "tui"`. `ctx.hasUI`
+  includes RPC dialog support and is not a terminal-only guard.
+- Start long-lived resources in `session_start` or on demand, not in the
+  extension factory, and close them in `session_shutdown`.
+- Use actionable boundaries such as `agent_before_settle` to request a
+  continuation. `agent_settled` is notification-only; runs requested there start
+  after all settled handlers finish. Keep subscriptions scoped and use returned
+  unsubscribe functions where the pinned host supplies them.
+
+These lifecycle and UI contracts were source-checked on 2026-11-04 against the
+[pinned extension guide](https://github.com/code-yeongyu/senpi/blob/a4816ed8c3c643051700aecd0b3059530e75ee85/packages/coding-agent/docs/extensions.md).
+OMO loads the package but does not own these Senpi APIs. No live UI or lifecycle
+probe was run for this prose reconciliation. Revalidate after a host or SDK
+upgrade.
 
 Example entrypoint:
 

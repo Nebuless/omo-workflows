@@ -6,6 +6,14 @@ The upstream implementation is Atomic-specific; this repository keeps its
 provider and model-browser behavior while replacing the host boundary with
 Senpi's public extension API.
 
+## Install
+
+```sh
+omo install -l ./extensions/better-custom
+```
+
+The package manifest declares `src/index.ts` as its standalone entrypoint.
+
 ## Commands
 
 - `/custom-provider` — add, edit, or delete providers in the active
@@ -61,7 +69,8 @@ static profile.
 
 ## Compatibility
 
-Target pairing: OMO `5.1.34` with bundled Senpi `2026.10.16`.
+The repository SDK pin is Senpi `2026.10.19-2`. The recorded integration
+pairing and validation limits are in [compatibility](../../docs/compatibility.md).
 The September native thinking-map capture remains historical evidence, not
 a current authenticated request check. See
 [`docs/upstream-validation.md`](../../docs/upstream-validation.md).
@@ -77,5 +86,6 @@ Run the repository gates from the repository root:
 mise ci
 ```
 
-The upstream source revision is recorded in the root README and should be
+The upstream source revision is recorded in
+[the compatibility guide](../../docs/compatibility.md#upstream-import-boundary) and should be
 updated deliberately when importing future upstream changes.

@@ -27,10 +27,17 @@ catalog entries was verified; see [model-matrix.md](model-matrix.md).
 
 `~/.omo/omo.jsonc` is the global user routing file. Copy a portable profile only
 when that is the desired local configuration. Shared top-level `categories`
-are visible to parent OMO runs and Senpi-owned children. `[opencode]` carries
-optional named-agent overrides and must not contain `categories`. Preserve
+are visible to parent OMO runs and Senpi-owned children. Shared `agents` or
+`[native].agents` configure Native named agents. The templates' `[opencode]`
+agent blocks apply only to OpenCode, not Native. Preserve
 fields outside `agents.*.models` and `categories.*.models` when editing an
 existing configuration. Use canonical catalog IDs, not convenience aliases.
+
+Native resolves shared keys, `[native]`, the selected `profiles.<name>`, then
+that profile's `[native]` block. Config profiles select override layers;
+`model_profile` selects the main-session chain, not delegated task routes.
+The [subagent evidence record](omo-subagents.md#reconciliation-evidence)
+identifies the pinned OMO source for these distinctions.
 
 Inspect catalog visibility before changing routes:
 

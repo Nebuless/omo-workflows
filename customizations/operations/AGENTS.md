@@ -14,6 +14,10 @@ Own notifications, telemetry, Git metadata, LSP, update behavior, and runtime di
 - Prefer configured native controls before extension code.
 - Make telemetry, notifications, and attribution visible and opt-outable.
 - Keep diagnostics bounded and redact credentials, paths, and session content where needed.
+- Treat `formatOnMutation`, post-edit diagnostics, and repository quality as
+  separate controls. Verify actual formatter output against project style.
+- Use native doctor/update/host inspection before inventing a repair. Check each
+  historical script's actual guards; a newer host is not proof a repair applies.
 
 ## Work Guidance
 

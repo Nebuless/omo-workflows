@@ -2,16 +2,19 @@
 
 ## Purpose
 
-Own interactive prompts, status surfaces, custom components, and rendered tool output.
+Own interactive prompts, status surfaces, terminal components, tool rendering,
+and native JSON theme resources.
 
 ## Ownership
 
 - Senpi extension packages own runtime UI.
+- `pi.themes` and native theme discovery own packaged JSON themes.
 - This directory owns interaction design notes.
 
 ## Local Contracts
 
-- Guard terminal-only APIs with `ctx.mode === "tui"` or `ctx.hasUI`.
+- Guard terminal components with `ctx.mode === "tui"`. `ctx.hasUI` also
+  includes RPC dialog support and is not a terminal guard.
 - Preserve keyboard navigation, cancellation, resize behavior, and readable error states.
 - Provide a noninteractive fallback or mark command unavailable.
 

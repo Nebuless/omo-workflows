@@ -1,8 +1,8 @@
-# Browser and Terminal Automation Customizations
+# Browser, Terminal, and Desktop Automation Customizations
 
 ## Purpose
 
-Own OMO browser automation, tmux integration, and terminal-facing automation policy.
+Own browser automation, terminal integration, and experimental native Computer Use.
 
 ## Ownership
 
@@ -14,6 +14,10 @@ Own OMO browser automation, tmux integration, and terminal-facing automation pol
 - Do not let project configuration widen browser environment allowlists or launch arguments.
 - Define visible user control, target scope, and safe cancellation.
 - Keep terminal pane integration observational unless user requests mutation.
+- Computer Use is separate from omowright. Record OS support, native read/input
+  permissions, `/computer status`, `computer.enabled`, and the human-only
+  stop/resume control before adopting it. Browser permissions do not grant
+  native desktop input.
 
 ## Work Guidance
 

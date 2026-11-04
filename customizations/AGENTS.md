@@ -16,6 +16,8 @@ Route new OMO customization work to one stable capability boundary before runtim
 - Create one extension per runtime capability.
 - Keep secrets, user-only config, and generated state out of this tree.
 - Follow [customization scaffolding](../docs/customization-scaffolding.md) before creating work.
+- The historical [upstream update audit](../docs/upstream-update-audit.md) records
+  October 1 released versus HEAD-only contracts, coverage, and verification limits.
 
 ## Work Guidance
 
@@ -31,15 +33,15 @@ Route new OMO customization work to one stable capability boundary before runtim
 
 - `agents/` — agent, category, permission, and model-chain policy.
 - `profiles/` — configuration overlays and main-session model-profile policy.
-- `instructions/` — durable rules, prompts, and context policy.
+- `instructions/` — durable rules, prompt templates, and context policy.
 - `skills/` — reusable guidance and skill-resource policy.
 - `hooks/` — lifecycle and guard-hook policy.
 - `commands/` — command, shortcut, and flag policy.
 - `tools/` — LLM tool and provider policy.
 - `mcp/` — MCP-server integration policy.
-- `tui/` — terminal UI and rendering policy.
-- `workflows/` — sessions, tasks, compaction, and team policy.
+- `tui/` — terminal UI, JSON themes, and rendering policy.
+- `workflows/` — sessions, tasks/DAG/workpool, compaction, teams, schedules, and monitors.
 - `memory/` — durable-memory, retention, and recall policy.
-- `automation/` — browser and terminal integration policy.
+- `automation/` — browser, terminal, and experimental desktop Computer Use policy.
 - `operations/` — telemetry, notifications, LSP, diagnostics, and update policy.
-- `integrations/` — API, webhook, daemon, and external-system policy.
+- `integrations/` — hosted search, app-server, API, webhook, daemon, and external-system policy.

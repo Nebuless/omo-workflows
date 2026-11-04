@@ -45,6 +45,10 @@ These files are portable configuration choices, not statements about the
 active global configuration on any host. Choose and copy a profile explicitly;
 verify the catalog with `omo --list-models 9router` first.
 
+The templates' `[opencode].agents` blocks are OpenCode-only. Native named-agent
+overrides use shared `agents` or `[native].agents`; the shared category routes
+remain usable independently. See [configuration guidance](model-routing.md#configuration).
+
 ## Schema and behavior evidence
 
 The immutable OMO release source at

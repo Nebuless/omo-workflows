@@ -14,6 +14,10 @@ Own OMO and Senpi durable-memory policy, retention, recall boundaries, and fact 
 - Store durable decisions, discoveries, user preferences, and repair facts.
 - Do not persist secrets, raw credentials, or transient tool output without a specific retention need.
 - Separate project facts from person facts and state retention or review rules.
+- Native multilingual matching is separate from opt-in
+  `memory.recall.query_expansion`, which defaults to `false`.
+- Keep old reflection-sandbox repairs labeled with their verified runtime;
+  do not infer that an old workaround is necessary on a new host.
 
 ## Work Guidance
 

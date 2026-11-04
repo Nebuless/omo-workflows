@@ -12,6 +12,8 @@ Own config-layer profiles, model catalogs, and Senpi main-session model profiles
 ## Local Contracts
 
 - Keep `profiles.<name>` separate from `model_profiles`; first changes config layer, second selects session model.
+- Native resolves shared keys, `[native]`, the active profile, then its
+  `[native]` block. Task-category chains are separate from main-session profiles.
 - Prefer catalog aliases for repeated model and reasoning pairs.
 - Do not place credentials or endpoints in portable profiles.
 

@@ -14,6 +14,9 @@ Own lifecycle interception, deterministic policy gates, context transforms, and 
 - Block unsafe actions in code or configuration, never prose alone.
 - Keep hooks idempotent and ordered by explicit dependency.
 - Start resources after `session_start`; close them in `session_shutdown`.
+- Keep OMO hook enable/disable policy separate from Senpi lifecycle callbacks.
+  Use actionable/settled boundaries for follow-up turns and current scoped
+  unsubscribe APIs. Do not treat `agent_end` alone as proof of final idleness.
 
 ## Work Guidance
 

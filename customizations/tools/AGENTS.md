@@ -19,6 +19,9 @@ Own LLM-callable tools and runtime provider/model registration.
 
 - Use provider registration only when configuration cannot represent provider behavior.
 - Keep provider credentials in environment resolution, never source or portable docs.
+- Native `models discover <provider>` can populate an OpenAI-compatible model
+  catalog. Catalog entries and service-tier decorators remain metadata, not
+  proof of credentials, dispatch, or a new task routing policy.
 
 ## Verification
 

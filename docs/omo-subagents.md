@@ -2,7 +2,7 @@
 
 Use this guide to configure, verify, and repair delegated OMO/Senpi work. It covers built-in named agents, task categories, model routes, custom providers, and extension-added capabilities.
 
-## Mental model
+## Delegation model
 
 A parent session delegates in two ways:
 
@@ -11,7 +11,11 @@ A parent session delegates in two ways:
 
 A configured OMO `models` chain is ordered. First entry is primary; later entries can be selected during child admission or model resolution, including capacity pressure. Senpi retry fallback chains are separate, per-process runtime retry state. A task must resolve to both an available model and valid credentials before it starts. Crossing providers at either stage changes the data boundary; document and approve that decision before routing real task content.
 
-Native OMO owns task sessions, processes, retries, cancellation, output delivery, and DAG scheduling. Extensions may observe, gate, or present that state, but must not replace scheduler ownership. Current native task schema cannot express Atomic-style per-stage tool/context policy or worktree delegation.
+Native OMO owns task sessions, processes, retries, cancellation, output delivery,
+and DAG scheduling. Extensions may observe, gate, or present that state, but must
+not replace scheduler ownership. Task isolation and merge-back options are
+separate from agent tool permissions and dependency graphs. Inspect the live
+schema for the host's supported isolation provider.
 
 OMO configures Senpi-backed subagents. Parent OpenCode behavior and Senpi-owned children do not always see the same harness-scoped config. Put category routes at shared top level when any Senpi child must use them.
 
@@ -24,9 +28,14 @@ Use one unified JSONC file:
 .omo/omo.jsonc                   # project configuration
 ```
 
-OMO walks `.omo/omo.jsonc` layers from ancestor to working directory; nearest project layer wins and overrides user configuration. Within each merged file, OMO applies shared base keys first and then its `[opencode]` block. Profiles can add another override layer.
+OMO merges the user layer and ancestor-to-project layers, with the nearest
+project layer winning. Native resolves shared keys, `[native]`, the selected
+`profiles.<name>`, then that profile's `[native]` block. `[senpi]` is the
+accepted legacy spelling. `[opencode]` applies only to the OpenCode edition.
 
-Use shared top-level `categories` for task routes used by OMO and Senpi. Use `[opencode].agents` for OMO named-agent overrides.
+Use shared top-level `categories` and `agents` for portable task routes, or
+`[native].agents` for Native-only overrides. Config profiles select override
+layers. `model_profile` selects a main-session model chain, not child routes.
 
 ```jsonc
 {
@@ -42,7 +51,7 @@ Use shared top-level `categories` for task routes used by OMO and Senpi. Use `[o
       ]
     }
   },
-  "[opencode]": {
+  "[native]": {
     "agents": {
       "explore": {
         "models": [
@@ -71,12 +80,21 @@ Current OMO built-ins include:
 
 | ID | Use | Configure under |
 |---|---|---|
-| `explore` | fast codebase discovery and extraction | `[opencode].agents.explore` |
-| `librarian` | research and source-backed lookup | `[opencode].agents.librarian` |
-| `plan-consultant` | plan-gated design work | `[opencode].agents.plan-consultant` |
-| `plan-reviewer` | plan-gated review | `[opencode].agents.plan-reviewer` |
+| `explore` | fast codebase discovery and extraction | `agents.explore` or `[native].agents.explore` |
+| `librarian` | research and source-backed lookup | `agents.librarian` or `[native].agents.librarian` |
+| `plan-consultant` | plan-gated design work | `agents.plan-consultant` or `[native].agents.plan-consultant` |
+| `plan-reviewer` | plan-gated review | `agents.plan-reviewer` or `[native].agents.plan-reviewer` |
 
-Built-in agents retain their curated role and in-process execution. OMO's `task.default_execution_mode` defaults to `in-process`; custom agents can use `in-process` or `process`, but curated built-ins remain in-process. Override only fields needed for model, reasoning, or policy. Other agent keys create custom agents. Keep each custom agent narrow, with explicit prompt, model chain, permissions, tool limits, turn limit, execution mode, and delegation depth. Treat availability as runtime state: inspect the task tool schema and loaded extension inventory in the session that will launch work.
+Curated agents retain their role and in-process execution.
+`task.default_execution_mode` defaults to `auto`: on non-Windows platforms,
+children use the parent's ensured host when `process_runner` is `host` and
+the host supports `session_context` and `generation_handoff`; otherwise they
+run in-process. The decision is made once per parent session. Explicit
+`in-process` or `process` overrides apply to ordinary custom agents.
+
+Other agent keys create custom agents. Keep each role narrow, with an explicit
+prompt, model chain, permissions, tool limits, turn/depth limits, and execution
+mode. Inspect the active task schema and loaded inventory before launching.
 
 ### Categories
 
@@ -91,7 +109,7 @@ Built-in categories route delegated work by task kind:
 | `visual-engineering` | UI, styling, visual QA |
 | `artistry` | unconventional or creative work |
 | `deep-low` | browser, backend, algorithms, and investigation settled from available evidence |
-| `deep-high` | difficult work with substantial scope or uncertainty |
+| `deep-high` | escalation for an unresolved trade-off, contract boundary, or mechanism |
 | `architect` | system design and boundary decisions |
 | `ultrabrain` | hard reasoning and architecture |
 
@@ -113,7 +131,10 @@ This repository adds shared `memory-reflection` for OMO reflection and Kibitzer 
 }
 ```
 
-`memory.reflection.sandbox: "off"` is temporary local workaround for known Linux `bwrap` directory failure. See [issue register](issues.md#2026-09-11t215541z---memory-reflection-fails-before-child-launch) before changing it.
+The templates retain `memory.reflection.sandbox: "off"` for the Linux `bwrap`
+failure recorded on 2026-09-11. Its necessity has not been revalidated here.
+Consult the [dated issue record](issues.md#2026-09-11t215541z---memory-reflection-fails-before-child-launch)
+and reproduce on the installed host before treating the workaround as required.
 
 ## Setup procedure
 
@@ -125,10 +146,10 @@ This repository adds shared `memory-reflection` for OMO reflection and Kibitzer 
    ```
 
 3. Edit `~/.omo/omo.jsonc` for global behavior, or nearest `.omo/omo.jsonc` for one project.
-4. Configure named agents under `[opencode].agents`; configure categories at shared top-level `categories`.
+4. Configure shared `agents`/`categories`, or Native-only `[native]` overrides.
 5. Use only catalog-verified canonical route IDs: `9router/cx/gpt-6.1-sol`, `9router/cx/gpt-6-luna`, and `9router/cx/gpt-6-astra`, not aliases or display names. Sol supports reasoning through `high`, not `xhigh`.
 6. Include only fallbacks that are present in catalog and have working credentials.
-7. Start a new OMO/Senpi session. A running task launcher may retain routes resolved at startup. `/reload` hot-reloads only auto-discovered extension paths; settings-package and `-e` resources need restart unless runtime proves otherwise. Use fresh session for route smoke tests.
+7. Start a fresh session for route smoke tests. `/reload` depends on discovery paths, trust, and session state. Do not assume a running child adopts changed routes or execution modes.
 8. Launch one harmless named-agent task and one category task. Confirm reported agent/category and resolved model match configuration.
 
 For this repository's portable profiles, use exactly one of:
@@ -137,6 +158,9 @@ For this repository's portable profiles, use exactly one of:
 - [`templates/omo.jsonc.balanced`](../templates/omo.jsonc.balanced)
 
 Verify every model with `omo --list-models 9router` before copying a profile. These profile files are complete routing replacements, not fragments to merge blindly.
+
+Their categories are shared; their `[opencode].agents` blocks apply only to
+OpenCode. Configure shared or `[native]` agent overrides separately for Native.
 
 ## Validation and smoke checks
 
@@ -174,19 +198,27 @@ Test a failure path too: choose an unavailable provider only in a disposable tes
 |---|---|---|
 | `No active credentials for provider` | configured provider has no authenticated credential | Authenticate that provider or remove it from route. Restart session and rerun smoke task. |
 | `model_not_found` or unavailable model | wrong model ID, stale catalog, unsupported provider | Run `omo --list-models <provider>`; copy returned canonical ID. Do not invent fallback ID. |
-| Child uses model from wrong provider | category exists only in `[opencode]`, but child is Senpi-owned | Move category to shared top-level `categories`; keep named-agent overrides in `[opencode].agents`. |
+| Child ignores expected route | override exists only in `[opencode]`, but this is Native | Use shared `categories`/`agents` or `[native]`; reserve `[opencode]` for that edition. |
 | Current task ignores edited route | task launcher loaded config before edit | Start fresh OMO/Senpi session; then rerun smoke task. |
 | Named agent still uses default chain | wrong agent ID or config layer overridden by project/profile | Check exact built-in ID, nearest `.omo/omo.jsonc`, selected profile, and final merged config. |
 | `/reload` does not expose extension | extension not in trusted auto-discovery path, package not installed, or session lacks project trust | Install extension at global/project scope, confirm package discovery, then `/reload` or restart. |
 | `/custom-provider` cannot run | command needs interactive TUI | Launch interactive OMO. Noninteractive, print, JSON, and RPC modes cannot use provider wizard. |
 | Custom provider loaded but model cannot switch | endpoint, key, API style, or model metadata invalid | Use `/better-models`; verify provider URL, credential source, selected API style, and discovered model ID. |
-| Reflection fails with `bwrap` missing `reflection-sessions` | known sandbox bind-path defect on Linux | Keep documented `memory.reflection.sandbox: "off"` workaround until upstream fix is installed and verified. |
+| Reflection fails with `bwrap` missing `reflection-sessions` | previously observed Linux sandbox bind-path defect | Consult the dated issue record and reproduce on the installed host before applying its workaround. |
 
 Never solve route failure by adding blind fallback chains. First prove model ID is catalog-visible and provider credential is active. A fallback hides root cause and can run work under unintended cost, capability, or data boundary.
 
 ## Workflow and task controls
 
-For ordinary delegated work, the active `task` tool exposes task launch, output/status, steering, and cancellation. Inspect its live schema rather than copying parameters from an older session or a different harness. Read status before a control action. Cancellation is destructive task control; require explicit user confirmation.
+The active task family exposes launch, output/status, steering, and cancellation.
+Completion is delivered automatically. `task_output` reads state without
+resuming work; `task_send` steers or resumes eligible parked children.
+Cancellation is terminal, so identify the intended child before stopping it.
+Inspect the live schema instead of copying an older harness's parameters.
+
+Workpool is a native keyed queue. DAG/ULW workflows express dependencies over
+native tasks. Team Mode has its own roster and messaging contracts. Scheduled
+prompts and durable monitors provide continuation without replacing scheduling.
 
 When caller needs availability evidence before a native launch, use the optional
 [`model-routing-advisor`](../extensions/model-routing-advisor/README.md) tool
@@ -197,7 +229,11 @@ task. See [model routing preflight](model-routing.md#explicit-route-advice-prefl
 
 ## Custom providers and extension-added capabilities
 
-Subagent routing accepts any provider/model registered in active OMO/Senpi runtime. Native providers come from OMO setup and provider credentials. Extensions may register providers, models, tools, commands, skills, task agents, or custom categories. Therefore a provider list is runtime inventory, not fixed repository policy.
+Subagent routing accepts provider/models admitted by the active runtime and
+configured route. Native providers come from setup and credentials; public
+Senpi extensions can register providers, models, tools, commands, and resources.
+OMO configuration owns task-agent/category definitions. A provider list is
+runtime inventory, not fixed repository policy.
 
 In-process task children do not load extension-declared MCP servers. Do not route a task to an extension-only MCP capability until live child evidence proves that capability is injected for its execution mode.
 
@@ -237,7 +273,7 @@ An extension that changes subagent behavior must document:
 
 Use public Senpi APIs only. Keep provider registration, persistence, UI, and host wiring separate. Add a focused behavior test and verify live discovery; compilation alone does not prove OMO loaded extension.
 
-## Runtime validation record
+## Historical runtime validation record
 
 - Verified: `2026-10-16`
 - Local runtime: OMO `5.1.34` at `d7e224e478a4a77dba0d2104c336fdc72ad301e3`; bundled Senpi `2026.10.16` at `8b62d4a6d16fd1d6d3787d30fbc8e1059b357623`.
@@ -246,9 +282,21 @@ Use public Senpi APIs only. Keep provider registration, persistence, UI, and hos
 - Standalone Senpi `2026.10.16-3` is newer and is not the Senpi version bundled with this OMO release.
 - Revalidate: OMO or Senpi upgrade, provider catalog change, task execution-mode change, or extension-provider change.
 - Senpi evidence: [extensions](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/extensions.md), [settings](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/settings.md), and [custom providers](https://github.com/code-yeongyu/senpi/blob/main/packages/coding-agent/docs/custom-provider.md) cover extension registration, trust, fallback, and providers.
-- Local proof: `bun test test/omo-preferences.test.ts` passed with 3 tests and 18 assertions. Live category smoke checks recorded CX-backed categories completing; stale Olama fallback credentials failed named-agent smoke before config repair. See [issue register](issues.md).
+- Historical local proof: the earlier `bun test test/omo-preferences.test.ts` run passed with 3 tests and 18 assertions. The earlier live category smoke checks recorded CX-backed categories completing; stale Olama fallback credentials failed named-agent smoke before config repair. These checks were not rerun for this reconciliation. See [issue register](issues.md).
 - Revalidate: OMO or Senpi upgrade, route merge-precedence change, task execution-mode change, or extension-provider change.
-- Status: `current`.
+- Status: historical evidence for the stated pairing. The repository now pins Senpi `2026.10.19-2`; see [current integration evidence](upstream-validation.md#current-integration-target).
+
+### Reconciliation evidence
+
+- Inspected: `2026-11-04`; installed `omo --version` reports OMO `5.1.58`
+  with Senpi `2026.11.2-1`, distinct from the repository SDK pin.
+- Native layering and execution-mode claims were checked against the repository's
+  recorded OMO `5.1.40` source: [configuration](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/reference/configuration.md)
+  and [task reference](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/reference/omo-json.md).
+  Senpi does not own these OMO routing decisions.
+- Control semantics follow the active task tool schema. No live child launch,
+  provider request, sandbox reproduction, or route migration was performed.
+- Revalidate after a host, routing-schema, or task execution-mode change.
 
 ## Sources and revalidation
 

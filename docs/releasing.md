@@ -28,8 +28,9 @@ no existing SemVer tag, append `-- --first-release`.
 explicit release request.
 
 `mise run changelog` prepends history since last SemVer tag. It needs at least
-one committed Conventional Commit. The repository currently has no history or
-tags, so do not run release commands until initial commits exist.
+one committed Conventional Commit. The checkout has committed history and had
+no version tags when inspected on 2026-11-04. Use `--first-release` for the first
+release history when no SemVer tag exists. History alone does not authorize a tag.
 
 ## Boundaries
 

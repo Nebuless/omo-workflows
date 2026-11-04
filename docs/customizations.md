@@ -12,6 +12,7 @@ Runtime-dependent claims follow the [upstream validation contract](upstream-vali
 | Compound Engineering | Run Every's 35-skill engineering loop natively | `extensions/compound-engineering/` | [Package guide](../extensions/compound-engineering/README.md) |
 | Custom providers and models | Add providers and choose models | `extensions/better-custom/` | [Better Custom contract](../extensions/better-custom/AGENTS.md) |
 | Herdr | Control Herdr resources and agents | `extensions/herdr/` | [Herdr contract](../extensions/herdr/AGENTS.md) |
+| Model Routing Advisor | Observe route availability without selecting or launching | `extensions/model-routing-advisor/` | [Package guide](../extensions/model-routing-advisor/README.md) |
 | Trim | Govern native compaction | `extensions/trim/` | [Trim contract](../extensions/trim/AGENTS.md) |
 | Repetition recovery | One bounded fallback after native correction fails | `extensions/repetition-recovery/` | [Activation and limits](../extensions/repetition-recovery/README.md) |
 | Toolchain and quality | Set local tools and checks | `mise.toml`, Qlty, Biome, prek | [LSP setup](lsp.md) |
@@ -24,7 +25,7 @@ Runtime-dependent claims follow the [upstream validation contract](upstream-vali
 ## Global agent instructions
 
 This is a boundary-crossing customization. Its current evidence record follows
-[the upstream validation contract](upstream-validation.md#existing-validation-records).
+[the upstream validation contract](upstream-validation.md).
 
 Use a global OMO rule file for durable instructions. This keeps OMO's generated,
 model-specific system prompt, tools, skills, and orchestration active.
@@ -34,6 +35,11 @@ model-specific system prompt, tools, skills, and orchestration active.
 **Verified 2026-10-16** against OMO `5.1.34` (release
 `d7e224e478a4a77dba0d2104c336fdc72ad301e3`) and its Senpi `2026.10.16`
 pairing (release `8b62d4a6d16fd1d6d3787d30fbc8e1059b357623`):
+
+This is a dated source record. The live `overlay-ok` check below was recorded
+on 2026-09-11 and was not repeated during this reconciliation. See
+[integration evidence](upstream-validation.md#current-integration-target)
+for the newer repository target.
 
 - `~/.omo/rules/*.md` is OMO's durable global instruction surface.
 - `--append-system-prompt` adds instructions without replacing the selected
@@ -103,6 +109,8 @@ permissions, lifecycle, persistence, and verification. Place runnable behavior
 in an independently installable `extensions/<name>/` package.
 
 Themes belong under the existing TUI policy domain, not a separate scaffold.
+Prompt templates likewise belong under instructions and can ship through
+`pi.prompts`. See [native package resources](authoring-extensions.md#native-package-resources).
 Senpi loads JSON themes from global and trusted-project locations, package
 `themes/` directories and `pi.themes` entries, configured paths, and CLI paths.
 Extensions may contribute theme resources through the `themePaths` returned

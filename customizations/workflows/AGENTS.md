@@ -2,7 +2,8 @@
 
 ## Purpose
 
-Own session state, compaction, task concurrency, teams, and continuation behavior.
+Own session state, compaction, native tasks/DAG/workpool, teams, scheduled
+prompts, durable monitors, and continuation behavior.
 
 ## Ownership
 
@@ -14,6 +15,9 @@ Own session state, compaction, task concurrency, teams, and continuation behavio
 - Define state lifetime, restart behavior, concurrency bound, and user cancellation route.
 - Persist only minimal state through supported Senpi session APIs.
 - Treat cross-provider task fallback as a data-handling decision.
+- Native owns scheduling, child lifecycles, recovery, and completion delivery.
+  `auto` execution and session-scoped hosts are separate from Team Mode.
+- A cancelled threshold request does not veto native overflow/manual compaction.
 
 ## Work Guidance
 

@@ -14,6 +14,9 @@ Own MCP server selection, configuration, credential boundaries, and output limit
 - Prefer built-in MCPs before adding a server.
 - Grant smallest credential and tool scope.
 - Keep user-only environment allowlists and browser arguments in user configuration.
+- Distinguish configured, built-in, skill-scoped, and extension registrations.
+  Put authenticated remote servers in user `mcp.json`; remote skill servers
+  do not receive `bearerTokenEnv` credentials. Prove child-mode visibility.
 
 ## Work Guidance
 
