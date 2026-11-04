@@ -23,6 +23,11 @@ not a source-checkout or synthetic module URL. `mise ci` is the compatibility
 gate for the integrated checkout. Dated runtime checks and their limits live in
 [upstream validation](upstream-validation.md).
 
+The repository SDK pin is a compile/test baseline, not a pin on the engine
+installed with OMO. The historical [October 1 audit](upstream-update-audit.md)
+records an older mismatch and its proof limits; it does not describe the
+current package layout or compatibility gate.
+
 The OMO runtime directory resolver honors explicit environment overrides for
 `OMO_CODING_AGENT_DIR` and `SENPI_CODING_AGENT_DIR`. Do not assume the launcher
 always sets both variables. Extensions should use Senpi's `getAgentDir()` rather

@@ -72,6 +72,17 @@ Repetition recovery has a separate [2026-11-03 evidence record](../extensions/re
 
 The following records apply only to their stated versions and dates.
 
+### October 1 end-to-end customization audit
+
+- Verified: `2026-10-01`; source inventory, released/HEAD distinction, and installed-loader checks.
+- Local runtime: OMO `5.1.8`; installed Senpi `2026.10.1-2`; repository SDK `2026.9.13`; Bun `1.3.14`.
+- OMO evidence: [release](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.8) and [configuration](https://github.com/code-yeongyu/oh-my-openagent/blob/ac28307c18c247dea911160fd63654e1cdd0da9f/docs/reference/configuration.md) at `ac28307c18c247dea911160fd63654e1cdd0da9f`.
+- Senpi evidence: released [extension types](https://github.com/code-yeongyu/senpi/blob/ecbe5c9b82db1a2267148a8da900be4c7e08165f/packages/coding-agent/src/core/extensions/types.ts) and [package contract](https://github.com/code-yeongyu/senpi/blob/ecbe5c9b82db1a2267148a8da900be4c7e08165f/packages/coding-agent/docs/packages.md). Newer inspected source `0455f7839f4e142f158e2e7cdd4113b520283ec3` was not installed-engine proof.
+- Original proof: five root and individual extension-source loader probes, frozen install, package validation, typecheck, 150 tests, and five builds. Better Custom had no standalone manifest then. The root dependency warning was reproduced and removed by the local peer-dependency repair.
+- Original limits: the old SDK lacked `loadedExtensionPaths`; Qlty was blocked by mutation formatting, and Markdown LSP was not configured. Live compaction, hosted search, desktop/Windows behavior, and prior provider/sandbox workarounds were not rerun.
+- Status: historical. Newer remote changes superseded the package, SDK, routing, and formatter-workaround gaps. See the full [historical audit](upstream-update-audit.md) and current integration target above.
+- Revalidate: host upgrade, provider-catalog change, or native resource/event contract change.
+
 ### Better Custom
 
 - Verified: `2026-09-18` (native compatibility boundary, documentation, and isolated request proof)

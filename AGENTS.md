@@ -147,6 +147,12 @@ benchmarks, and routing rationale in `docs/model-matrix.md` and
 - Worktrees are managed only through Worktrunk (`wt`). Do not use raw
   `git worktree` commands.
 - OMO compatibility targets the exact Senpi version pinned in `package.json`.
+- Keep the repository SDK pin separate from the installed OMO engine version.
+  An upstream audit must cover every customization boundary and extension,
+  distinguish released from HEAD-only contracts, and update owning docs/indexes.
+- Host-provided extension packages belong in `peerDependencies` with `"*"`
+  ranges, not `dependencies`. Keep development copies needed for standalone
+  checks in `devDependencies`.
 
 ## User-Reported OMO Issues
 
@@ -186,6 +192,8 @@ trigger.
 - `customizations/` — policy-only scaffolds for OMO and Senpi capability domains; runnable behavior belongs in `extensions/`. Read [`customizations/AGENTS.md`](customizations/AGENTS.md) and [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) before creating a new customization.
 - `docs/` — durable compatibility, packaging, release, repair, routing, LSP, extension-authoring, customization, upstream-validation, requirements plans, and user-reported issue guidance. `docs/issues.md` is timestamped register for OMO/Senpi user reports and upstream references. `docs/model-matrix.md` owns model pricing, benchmark evidence, and profile mappings; `docs/model-routing.md` owns active routing policy. `docs/plans/` owns requirements-only CE unified plan artifacts. Read [`docs/customizations.md`](docs/customizations.md) before choosing a customization boundary; read [`docs/customization-scaffolding.md`](docs/customization-scaffolding.md) for the upstream-backed capability map and creation rules; read [`docs/upstream-validation.md`](docs/upstream-validation.md) before relying on OMO or Senpi runtime behavior; read [`docs/authoring-extensions.md`](docs/authoring-extensions.md) before adding or restructuring an extension.
 - `adr/` — immutable repository-level architecture decisions. Read [`adr/AGENTS.md`](adr/AGENTS.md) before creating or superseding an ADR.
+- `docs/upstream-update-audit.md` — historical October 1 release-to-customization
+  coverage, installed versus SDK compatibility, and verification limits.
 - `extensions/` — extension package ownership boundary.
 - `extensions/compound-engineering/` — native OMO/Senpi package for Every's pinned Compound Engineering skill collection.
 - `extensions/better-custom/` — native Senpi port of upstream provider/model

@@ -19,6 +19,8 @@ customization repository.
 - `customizations.md` owns the customization catalog, global OMO instruction guidance, Compound Engineering routing, and detail-doc routing.
 - `customization-scaffolding.md` owns upstream-backed capability mapping and policy-scaffold creation guidance.
 - `upstream-validation.md` owns authority sources, timestamped runtime-evidence records, and revalidation triggers.
+- `upstream-update-audit.md` preserves the historical October 1 release audit,
+  released-versus-HEAD distinctions, and limits of its original local proof.
 
 ## Local Contracts
 
@@ -50,4 +52,6 @@ No child `AGENTS.md` boundaries exist.
 - `customizations.md` — customization catalog and global OMO instruction setup.
 - `customization-scaffolding.md` — capability map, policy scaffolds, and upstream-backed creation rules.
 - `upstream-validation.md` — OMO/Senpi authority registry and version-sensitive evidence format.
+- `upstream-update-audit.md` — historical October 1 customization coverage and
+  verification limits, with links to superseding guidance.
 - `plans/` — requirements-only CE unified plan artifacts; read `plans/AGENTS.md` before editing.

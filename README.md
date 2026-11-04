@@ -118,6 +118,7 @@ Workflow scheduling and graph presentation use native OMO. The duplicate
 ## Repository operations
 
 - [Compatibility and upstream provenance](docs/compatibility.md)
+- [Historical October 1 upstream audit](docs/upstream-update-audit.md)
 - [LSP setup](docs/lsp.md)
 - [Model routing policy](docs/model-routing.md)
 - [OMO/Senpi subagent setup and troubleshooting](docs/omo-subagents.md)

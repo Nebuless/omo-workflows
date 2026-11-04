@@ -1,5 +1,25 @@
 # OMO and Senpi Issue Register
 
+## 2026-10-01T16:16:04Z - Root extension package declared host modules as dependencies
+
+- **Reported symptom:** Extension loading warned that root dependencies on
+  `@earendil-works/pi-ai`, `@earendil-works/pi-tui`, and `typebox` could create
+  duplicate host runtime modules.
+- **Affected runtime:** OMO `5.1.8`, Senpi engine `2026.10.1-2`, repository SDK
+  `2026.9.13`, Bun `1.3.14`.
+- **Resolution:** The original local repair moved those declarations to wildcard
+  peers with pinned development copies. Later remote changes superseded that
+  implementation with broader package validation and the newer SDK baseline.
+- **Upstream:** The released [package contract](https://github.com/code-yeongyu/senpi/blob/ecbe5c9b82db1a2267148a8da900be4c7e08165f/packages/coding-agent/docs/packages.md)
+  defines host peers. This was a local packaging defect. No matching upstream
+  issue or pull request was identified.
+- **Historical validation:** The installed resource loader reproduced the warning
+  before the repair, then loaded all five extensions without warnings or errors.
+  Frozen installation, package validation, typecheck, 150 tests with 415 assertions,
+  and five builds passed. These are October 1 results, not a new runtime audit.
+- **Revalidation trigger:** Host upgrade, package-loader contract change, or root
+  dependency changes. See the historical [update audit](upstream-update-audit.md).
+
 ## 2026-11-03T17:35:08Z - Repetition recovery stops after native correction
 
 - **Reported symptom:** Repeated output was interrupted by `collapse-repetition`; the user requested one bounded fallback after the native correction fails.
