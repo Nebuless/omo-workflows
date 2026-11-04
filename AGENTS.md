@@ -146,7 +146,9 @@ benchmarks, and routing rationale in `docs/model-matrix.md` and
   version recommendations; `docs/releasing.md` owns release procedure.
 - Worktrees are managed only through Worktrunk (`wt`). Do not use raw
   `git worktree` commands.
-- OMO compatibility targets the exact Senpi version pinned in `package.json`.
+- OMO compatibility targets the exact `omo-ai` development dependency and matching
+  Senpi dependency pinned in `package.json`; update both pins and `bun.lock`
+  together and verify the project-local CLI without changing global OMO.
 
 ## User-Reported OMO Issues
 

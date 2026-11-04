@@ -47,12 +47,22 @@ verification date.
 
 ## Current integration target
 
+- Verified: `2026-11-04` UTC.
+- Repository runtime: OMO `5.1.60`, Senpi `2026.11.2-3`, mise Bun `1.3.14`.
+- OMO evidence: [release](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.60), published `2026-11-03T17:48:31Z`; [exact runtime pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/packages/omo-native/package.json).
+- Senpi evidence: [public extension lifecycle and discovery types](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/types.ts), including `AgentEndEvent.deadline` and scoped resource discovery. Existing extension APIs remain compatible.
+- Local proof: `mise exec -- bun run omo --version` reports `omo 5.1.60 (engine: senpi 2026.11.2-3)`; typecheck, build, and all 171 tests pass. Isolated `omo install -l`, `omo list --approve`, and `omo --offline --approve --help` exit `0`, list the package, and expose its repetition-recovery flag. Exact local `pi-ai` and `pi-tui` development aliases prevent stale wildcard peer resolutions beside the upgraded SDK; public peer ranges stay `*`.
+- Limits: global OMO and services are unchanged. Historical authenticated provider and Herdr desktop rendering checks below have not been repeated. The upstream `config-watch user config discovery requires reload` diagnostic remains present.
+- Revalidate: either runtime upgrade, host-alias version change, resource discovery or lifecycle change.
+
 Herdr has a separate [2026-11-04 compatibility record](../extensions/herdr/README.md#compatibility-evidence)
 covering current desktop/core OSC reporting, legacy custom resume metadata,
 installed CLI proof, both upstream runtime boundaries, and unverified desktop
 rendering/restart limits. The older Herdr record below is historical.
 
-Repetition recovery has a separate [2026-11-03 evidence record](../extensions/repetition-recovery/README.md#compatibility-evidence), including the installed OMO/pinned SDK mismatch and deterministic engine admission/refusal proof.
+Repetition recovery has a separate [2026-11-04 evidence record](../extensions/repetition-recovery/README.md#compatibility-evidence) for the matching release pair and deterministic engine admission/refusal proof.
+
+## Historical integration target
 
 - Verified: `2026-10-21` (installed runtime pairing, package host contract, and startup diagnostics).
 - Local runtime: OMO `5.1.40`, paired Senpi `2026.10.19-2`; repository pin `2026.10.19-2`; Bun `1.4.2`. The repository toolchain still pins Bun `1.3.14` in `mise.toml`; `mise` was unavailable in this environment.

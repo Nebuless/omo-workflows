@@ -7,6 +7,8 @@ Own executable validation and portable runtime-repair scripts.
 ## Ownership
 
 - `validate-package.ts` validates the public package contract.
+- The package validator enforces exact matching release pins for the `omo-ai`
+  development dependency, Senpi dependency, and local development host aliases.
 - The package validator forbids all five documented host packages in
   dependencies and requires `*` peers for existing root host peers; optional
   host peers must also use `*` when declared.

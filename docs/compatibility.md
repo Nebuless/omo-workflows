@@ -7,14 +7,20 @@
 release pairing is:
 
 ```text
-omo-ai                  5.1.40
-@code-yeongyu/senpi     2026.10.19-2
+omo-ai                  5.1.60
+@code-yeongyu/senpi     2026.11.2-3
 ```
 
-The [OMO 5.1.40 release manifest](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/packages/omo-senpi/package.json)
-pins Senpi `2026.10.19-2`. Dependencies and `bun.lock` match that pairing.
+The [OMO 5.1.60 release manifest](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/packages/omo-native/package.json)
+pins Senpi `2026.11.2-3`. The root manifest pins `omo-ai` as a development
+dependency and Senpi as a dependency; `bun.lock` fixes that pairing. The package
+validator rejects missing, floating, or mismatched pins. The local CLI is
+available through `mise exec -- bun run omo`; global OMO remains a separate install.
+Development aliases for `pi-ai` and `pi-tui` match Senpi's versions while their
+public peer ranges remain `*`. This prevents Bun from retaining an older wildcard
+peer beside the upgraded engine, which creates incompatible stream class types.
 The root package exposes Better Custom, Compound Engineering, Herdr, Model
-Routing Advisor, and Trim. Native OMO owns workflow scheduling and graph
+Routing Advisor, Trim, and Repetition Recovery. Native OMO owns workflow scheduling and graph
 presentation; the duplicate workflow extension and its repair scripts and tests
 are removed.
 
@@ -75,7 +81,7 @@ state into the repository.
 The compatibility gate must prove all of the following before claiming full
 checkout compatibility:
 
-1. The manifest points to the extension entrypoint and pins Senpi.
+1. The manifest points to every extension entrypoint and pins OMO and Senpi.
 2. TypeScript resolves the public Senpi extension API.
 3. The extension factory registers `/custom-provider` and `/better-models`.
 4. Config writes remain atomic and preserve unknown fields.

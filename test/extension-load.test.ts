@@ -140,7 +140,7 @@ describe("OMO extension boundary", () => {
     expect([...advisorTools.keys()]).toEqual(["model_route_advice"]);
 
     expect(rootPackage.dependencies).toEqual({
-      "@code-yeongyu/senpi": "2026.10.19-2",
+      "@code-yeongyu/senpi": "2026.11.2-3",
     });
     expect(rootPackage.peerDependencies).toEqual({
       "@earendil-works/pi-ai": "*",

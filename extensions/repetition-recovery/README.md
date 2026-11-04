@@ -59,17 +59,14 @@ only when those sessions will not be reopened for automated recovery.
 
 ## Compatibility evidence
 
-- Verified: `2026-11-03`.
-- Repository runtime: Senpi `2026.10.19-2`, Bun `1.3.14`.
-- Installed OMO: `5.1.58`; its manifest targets Senpi `2026.11.2-1`, not the
-  repository pin. Admission proof here is for the pinned SDK, not the newer binary.
-- OMO evidence: [exact release pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/31180c810c2a99098fabfc224e8b6c270cc93b6a/packages/omo-senpi/package.json).
-- Senpi evidence: [native guard lifecycle](https://github.com/code-yeongyu/senpi/blob/a4816ed8c3c643051700aecd0b3059530e75ee85/packages/coding-agent/src/core/extensions/builtin/ttsr/index.ts),
-  [one native correction](https://github.com/code-yeongyu/senpi/blob/a4816ed8c3c643051700aecd0b3059530e75ee85/packages/coding-agent/src/core/extensions/builtin/ttsr/follow-up-limit.ts),
-  [engine pause marker](https://github.com/code-yeongyu/senpi/blob/a4816ed8c3c643051700aecd0b3059530e75ee85/packages/coding-agent/src/core/engine-paused.ts),
-  [turn admission](https://github.com/code-yeongyu/senpi/blob/a4816ed8c3c643051700aecd0b3059530e75ee85/packages/coding-agent/src/core/agent-session.ts).
-  Current upstream `main` pause and follow-up-limit sources were also fetched on
-  the verification date and retain the same marker and correction contracts.
+- Verified: `2026-11-04`.
+- Repository runtime: OMO `5.1.60`, Senpi `2026.11.2-3`, mise Bun `1.3.14`.
+  The local CLI reports this exact pairing; global OMO is unchanged.
+- OMO evidence: [exact release pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/packages/omo-native/package.json).
+- Senpi evidence: [native guard lifecycle](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/builtin/ttsr/index.ts),
+  [one native correction](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/builtin/ttsr/follow-up-limit.ts),
+  [engine pause marker](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/engine-paused.ts),
+  [turn admission](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-session.ts).
 - Local proof: `bun test --timeout 30000 ./extensions/repetition-recovery/test`
   drives the actual SDK loader, built-in TTSR detector, session lifecycle, and an
   in-process deterministic provider. It observes primary, primary, fallback when

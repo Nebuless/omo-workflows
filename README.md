@@ -4,7 +4,7 @@ Portable OMO/Senpi customizations. Install native OMO first, then install this
 repository or one extension package.
 
 - Native OMO: [`omo-ai`](https://www.npmjs.com/package/omo-ai)
-- Target pairing: OMO `5.1.40`, paired Senpi `2026.10.19-2`.
+- Target pairing: OMO `5.1.60`, paired Senpi `2026.11.2-3`.
 - Included packages: [`compound-engineering`](extensions/compound-engineering/README.md), [`better-custom`](extensions/better-custom/AGENTS.md),
   [`herdr`](extensions/herdr/AGENTS.md), [`model-routing-advisor`](extensions/model-routing-advisor/README.md), and [`trim`](extensions/trim/AGENTS.md)
 
@@ -15,10 +15,10 @@ Paste this into coding agent:
 ```text
 Install native OMO and Nebuless/omo-workflows.
 
-1. Read the OMO 5.1.40 install guide end to end:
-   https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/guide/installation.md
+1. Read the OMO 5.1.60 install guide end to end:
+   https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/docs/guide/installation.md
 2. Install native OMO:
-   npm i -g omo-ai
+   npm i -g omo-ai@5.1.60
    Optional onboarding: run `omo setup`.
 3. Ask me before provider login, credential import, permission changes, or any
    external write the guide requires.
@@ -38,15 +38,15 @@ install the unrelated npm package named `omo`.
 
 ### 1. Install native OMO
 
-Follow the OMO 5.1.40 [OmO Native guide](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/guide/installation.md#omo-native-omo-via-omo-ai):
+Follow the OMO 5.1.60 [OmO Native guide](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/docs/guide/installation.md#omo-native-omo-via-omo-ai):
 
 ```sh
-npm i -g omo-ai
+npm i -g omo-ai@5.1.60
 ```
 
 `omo setup` is optional onboarding, not an installation prerequisite. See the
 pinned upstream
-[setup details](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/docs/guide/installation.md#first-run-omo-setup).
+[setup details](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/docs/guide/installation.md#first-run-omo-setup).
 
 ### 2. Get this repository
 
@@ -58,6 +58,10 @@ mise install
 mise exec -- bun install --frozen-lockfile
 mise ci
 ```
+
+`package.json` pins the local `omo-ai` CLI and its matching Senpi SDK;
+`bun.lock` fixes their dependency graph. Use `mise exec -- bun run omo --version`
+to check the local CLI. Installing project dependencies does not upgrade global OMO.
 
 ### 3. Install extensions
 
