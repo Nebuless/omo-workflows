@@ -37,3 +37,4 @@ Own extension package boundaries and upstream adaptation policy.
 - `model-routing-advisor/` — standalone read-only route availability evidence before explicit native workflow preflight.
 - `trim/` — native compaction governor; `native` leaves Senpi threshold behavior unchanged, while `settled` and `manual` gate threshold compaction and `/trim shake` forces a safe native request.
 - Shared extension regressions live in `../test/`.
+- `repetition-recovery/` — one opt-in fallback continuation after exhausted native repetition correction; owns persisted claims, private logs, and real-engine admission tests.

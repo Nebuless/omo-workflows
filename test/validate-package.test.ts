@@ -26,6 +26,7 @@ const files = [
   "extensions/herdr/index.ts",
   "extensions/model-routing-advisor/index.ts",
   "extensions/trim/src/index.ts",
+  "extensions/repetition-recovery/src/index.ts",
   "extensions/better-custom/src/config.ts",
   "extensions/better-custom/src/model-browser.ts",
   "extensions/herdr/skills/herdr/SKILL.md",
@@ -60,6 +61,11 @@ for (const [path, name, entrypoint] of [
     "./index.ts",
   ],
   ["extensions/trim/package.json", "@omo-workflows/trim", "./src/index.ts"],
+  [
+    "extensions/repetition-recovery/package.json",
+    "@omo-workflows/repetition-recovery",
+    "./src/index.ts",
+  ],
 ]) {
   const target = join(root, path);
   mkdirSync(join(target, ".."), { recursive: true });

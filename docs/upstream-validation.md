@@ -47,6 +47,8 @@ verification date.
 
 ## Current integration target
 
+Repetition recovery has a separate [2026-11-03 evidence record](../extensions/repetition-recovery/README.md#compatibility-evidence), including the installed OMO/pinned SDK mismatch and deterministic engine admission/refusal proof.
+
 - Verified: `2026-10-21` (installed runtime pairing, package host contract, and startup diagnostics).
 - Local runtime: OMO `5.1.40`, paired Senpi `2026.10.19-2`; repository pin `2026.10.19-2`; Bun `1.4.2`. The repository toolchain still pins Bun `1.3.14` in `mise.toml`; `mise` was unavailable in this environment.
 - OMO evidence: [release manifest](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/packages/omo-senpi/package.json) pins Senpi `2026.10.19-2`; [config-watch target resolver](https://github.com/code-yeongyu/oh-my-openagent/blob/eb585410f078ba656ace9f69f5434db4db4d8745/packages/omo-senpi/src/components/config-watch/paths.ts) checks anchored globs against protected paths.

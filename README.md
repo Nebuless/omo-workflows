@@ -110,6 +110,7 @@ interactive OMO. See [extension authoring and verification](docs/authoring-exten
 - [`extensions/herdr`](extensions/herdr/AGENTS.md): Herdr lifecycle reporting, skills, and argv-only resource tools. No-op outside Herdr.
 - [`extensions/model-routing-advisor`](extensions/model-routing-advisor/README.md): explicit read-only route availability reports before native work. No routing or task control.
 - [`extensions/trim`](extensions/trim/AGENTS.md): native compaction governor.
+- [`extensions/repetition-recovery`](extensions/repetition-recovery/README.md): opt-in fallback continuation after native repetition correction fails, with persisted claims and private metadata-only logs.
 
 Workflow scheduling and graph presentation use native OMO. The duplicate
 `workflow-graph` extension and its runtime repairs are removed.

@@ -1,5 +1,14 @@
 # OMO and Senpi Issue Register
 
+## 2026-11-03T17:35:08Z - Repetition recovery stops after native correction
+
+- **Reported symptom:** Repeated output was interrupted by `collapse-repetition`; the user requested one bounded fallback after the native correction fails.
+- **Affected runtime:** Installed OMO `5.1.58`; repository SDK pin Senpi `2026.10.19-2`. The installed OMO manifest targets the newer Senpi `2026.11.2-1`.
+- **Resolution:** Added opt-in `extensions/repetition-recovery`. It preserves native correction, persists one attempt per user-message entry, uses public session model/message APIs, and records metadata-only local evidence. No global installation or runtime patch was applied.
+- **Upstream:** Native correction exhaustion is explicit in [the pinned guard](https://github.com/code-yeongyu/senpi/blob/a4816ed8c3c643051700aecd0b3059530e75ee85/packages/coding-agent/src/core/extensions/builtin/ttsr/index.ts). This fallback is an invented local extension, not a claimed upstream fix.
+- **Validation:** Real pinned SDK regression exercises admission after a repetition pause and refusal at the unchanged engine cap. Newer installed-binary admission is not verified.
+- **Revalidation:** Both runtime upgrades and changes to pause/admission semantics; see [activation and evidence](../extensions/repetition-recovery/README.md).
+
 ## 2026-10-21T06:08:45Z - 9router gateway unreachable over userspace Tailscale
 
 - **Reported symptom:** Tailnet SSH worked, but this host could not reach the remote 9router HTTP gateway.

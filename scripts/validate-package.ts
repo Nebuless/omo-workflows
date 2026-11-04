@@ -29,6 +29,7 @@ const extensionEntrypoints = [
   "./extensions/herdr/index.ts",
   "./extensions/model-routing-advisor/index.ts",
   "./extensions/trim/src/index.ts",
+  "./extensions/repetition-recovery/src/index.ts",
 ] as const;
 if (
   !Array.isArray(extensions) ||
@@ -55,6 +56,11 @@ for (const [relativePath, packageName, entrypoint] of [
     "./src/index.ts",
   ],
   ["extensions/herdr/package.json", "@omo-workflows/herdr", "./index.ts"],
+  [
+    "extensions/repetition-recovery/package.json",
+    "@omo-workflows/repetition-recovery",
+    "./src/index.ts",
+  ],
   [
     "extensions/model-routing-advisor/package.json",
     "@omo-workflows/model-routing-advisor",
