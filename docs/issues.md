@@ -1,5 +1,14 @@
 # OMO and Senpi Issue Register
 
+## 2026-11-05T19:38:00Z - Historical repetition stops lack confirmed fallback recovery
+
+- **Observed symptom:** Nine native repetition stops across eight available historical sessions required intervention or had no later recovery recorded. No extension recovery admissions or private journals were found. These records do not prove historical flag activation.
+- **Affected runtime:** Sessions span September 23 through November 5 across runtime versions. Current source review targets OMO `5.1.60` and Senpi `2026.11.2-3`.
+- **Resolution:** Proposed the [repetition recovery reliability plan](plans/2026-11-05-1938-fix-repetition-recovery-reliability-plan.md), covering fresh exhaustion, interruption races, restoration evidence, and activation diagnostics. No runtime implementation or host activation was performed.
+- **Upstream:** The [pinned native guard](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/builtin/ttsr/index.ts) owns detection and correction. No matching upstream issue was identified for the local extension lifecycle findings. The fallback remains an invented local customization.
+- **Validation:** Read-only audit of 96 local session files and 46,269 records, plus source comparison. Production tests were not run during planning. Coverage limits and acceptance checks are recorded in the plan.
+- **Revalidation:** Implement and verify the plan against the pinned SDK before changing activation or claiming a production recovery rate.
+
 ## 2026-10-01T16:16:04Z - Root extension package declared host modules as dependencies
 
 - **Reported symptom:** Extension loading warned that root dependencies on

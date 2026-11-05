@@ -40,7 +40,7 @@ installed OMO/Senpi runtime, and release-tool command behavior.
 
 ## Child DOX Index
 
-No child `AGENTS.md` boundaries exist.
+`plans/AGENTS.md` owns unified requirements and implementation plan artifacts.
 
 - `releasing.md` — release and versioning procedure.
 - `runtime-repairs.md` — portable runtime repair, OMO preference, and obsolete-config cleanup procedures.
@@ -54,4 +54,4 @@ No child `AGENTS.md` boundaries exist.
 - `upstream-validation.md` — OMO/Senpi authority registry and version-sensitive evidence format.
 - `upstream-update-audit.md` — historical October 1 customization coverage and
   verification limits, with links to superseding guidance.
-- `plans/` — requirements-only CE unified plan artifacts; read `plans/AGENTS.md` before editing.
+- `plans/` — CE unified requirements and implementation plan artifacts; read `plans/AGENTS.md` before editing.
