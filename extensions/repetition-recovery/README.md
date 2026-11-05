@@ -45,6 +45,12 @@ Input, abort, shutdown, and branch replacement invalidate the attempt. Cleanup
 reconciles a late switch, preserves newer committed model choices, and records
 restoration separately from the continuation outcome.
 
+Native compaction can accept a fallback switch without applying it. Recovery
+requests no turn in that case and reselects the original session model to cancel
+the deferred switch. A journal append failure after switching still runs model
+cleanup and surfaces the existing held notification. The durable claim remains
+spent, although a failed append cannot record the final restoration result.
+
 A failed restoration remains held for reconciliation on session load without
 another continuation. Legacy terminal claims remain spent but do not prove
 restoration. Unreadable journals hold recovery instead of replaying it.
@@ -94,6 +100,10 @@ rotated or deleted because their claims prevent duplicate recovery.
 - A real maximum-runtime deadline terminates a stalled provider with zero
   fallback calls. Subscriber metadata contains the deadline while the extension
   event omits it, confirming the documented upstream limit.
+- A compaction-enabled SDK scenario proves that an uncommitted fallback is
+  cancelled with zero continuation requests. Journal permission failures during
+  ownership recording, request recording, and terminal outcome recording still
+  restore the original model. These regressions failed before the cleanup fix.
 - CLI proof uses an isolated agent directory and the pinned OMO package under
   mise Node `24.18.0` with `OMO_RUNTIME=node`. Its launcher requires Bun
   `>=1.4.0`, while repository checks retain mise Bun `1.3.14`. RPC verifies package

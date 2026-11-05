@@ -23,6 +23,145 @@ import {
   type AssistantMessage,
 } from "@earendil-works/pi-ai";
 import repetitionRecovery from "../src/index.ts";
+import { createRecovery } from "../src/recovery.ts";
+import { journal } from "../src/journal.ts";
+
+test("an uncommitted native fallback switch is cancelled without requesting a turn", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "recovery-pending-"));
+  const settings = SettingsManager.inMemory({
+    enabledBuiltinExtensions: [],
+    compaction: { enabled: true, reserveTokens: 1024, keepRecentTokens: 512 },
+    retry: { enabled: false },
+  });
+  const registry = new ModelRegistry(
+    await ModelRuntime.create({
+      agentDir: directory,
+      modelsPath: null,
+      refreshOnCreate: false,
+    }),
+  );
+  registry.registerProvider("pending-test", {
+    api: "openai-completions",
+    apiKey: "local-fixture-key",
+    baseUrl: "http://invalid.test",
+    models: ["primary", "fallback"].map((id) => ({
+      id,
+      name: id,
+      contextWindow: id === "primary" ? 100000 : 20000,
+      reasoning: false,
+      input: ["text"],
+      maxTokens: 512,
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    })),
+    streamSimple() {
+      throw new Error("No provider request permitted");
+    },
+  });
+  let context: ExtensionContext | undefined;
+  let select:
+    | ((model: NonNullable<ExtensionContext["model"]>) => Promise<boolean>)
+    | undefined;
+  const loader = new DefaultResourceLoader({
+    cwd: directory,
+    agentDir: directory,
+    settingsManager: settings,
+    noExtensions: true,
+    noSkills: true,
+    noPromptTemplates: true,
+    noThemes: true,
+    noContextFiles: true,
+    systemPrompt: "Fixture.",
+    extensionFactories: [
+      (pi) => {
+        select = (model) => pi.setSessionModel(model);
+        pi.on("session_start", (_event, ctx) => {
+          context = ctx;
+        });
+      },
+    ],
+  });
+  let session:
+    | Awaited<ReturnType<typeof createAgentSession>>["session"]
+    | undefined;
+  try {
+    await loader.reload();
+    const manager = SessionManager.inMemory(directory);
+    manager.appendMessage({
+      role: "user",
+      content: "Original conversation. ".repeat(5000),
+      timestamp: 1,
+    });
+    manager.appendCustomMessageEntry("ttsr-injection", "Correction.", false, {
+      rules: ["collapse-repetition"],
+    });
+    const primary = registry.find("pending-test", "primary");
+    if (!primary) throw new Error("Missing primary model");
+    ({ session } = await createAgentSession({
+      cwd: directory,
+      agentDir: directory,
+      settingsManager: settings,
+      modelRegistry: registry,
+      model: primary,
+      resourceLoader: loader,
+      sessionManager: manager,
+      tools: [],
+      autoTitleSessions: false,
+    }));
+    await session.bindExtensions({});
+    const ctx = context;
+    const selectModel = select;
+    if (!ctx || !selectModel) throw new Error("Missing bound extension");
+    const current = () => ({
+      agentDir: directory,
+      sessionId: manager.getSessionId(),
+      entries: manager.getBranch(),
+      model: ctx.model,
+      models: registry.getAll(),
+      pending: false,
+    });
+    const requests: string[] = [];
+    let deferred = false;
+    const recovery = createRecovery(
+      {
+        current,
+        select: async (model) => {
+          const selected = await selectModel(model);
+          if (model.id === "fallback")
+            deferred = session?.pendingModelSwitch?.model.id === "fallback";
+          return selected;
+        },
+        send: () => {
+          requests.push("sent");
+        },
+        notify: () => {},
+      },
+      "pending-test/fallback",
+    );
+    recovery.started(current());
+    manager.appendCustomEntry("ttsr-loop-stopped", {
+      rules: ["collapse-repetition"],
+    });
+    recovery.stopped({ rules: ["collapse-repetition"] }, current());
+    await recovery.settled(current());
+    expect(deferred).toBe(true);
+    expect(session.model?.id).toBe("primary");
+    expect(session.pendingModelSwitch).toBeUndefined();
+    expect(requests).toEqual([]);
+    const user = manager
+      .getBranch()
+      .find(
+        (entry) => entry.type === "message" && entry.message.role === "user",
+      );
+    if (!user) throw new Error("Missing user entry");
+    expect(
+      journal(directory, `${manager.getSessionId()}:${user.id}`).read()
+        ?.restoration,
+    ).toBe("restored");
+  } finally {
+    session?.dispose();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test.each([
   "admitted",

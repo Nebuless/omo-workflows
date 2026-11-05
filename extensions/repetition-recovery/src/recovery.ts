@@ -222,16 +222,23 @@ export function createRecovery<M extends ModelRef>(
             ? { provider: choice.provider, id: choice.modelId }
             : saved.original;
         const resolved = choice ? "superseded" : "restored";
-        if (sameModel(ctx.model, target)) {
+        // A successful SDK selection may only queue compaction. Re-selecting
+        // the current model clears that deferred switch through the public API.
+        const deferred =
+          !saved.selectionId && attempt.selectionSucceeded === true && !choice;
+        if (sameModel(ctx.model, target) && !deferred) {
           restoration = resolved;
           break;
         }
-        if (!ownsModel && !choice) break;
+        if (!ownsModel && !choice && !deferred) break;
         const model = ctx.models.find((item) => sameModel(item, target));
         if (!model || !(await host.select(model))) break;
         ctx = live(attempt);
         ownsModel = sameModel(ctx.model, target);
-        if (explicitChoice(ctx, attempt)?.id === choice?.id) {
+        if (
+          (deferred && ownsModel) ||
+          explicitChoice(ctx, attempt)?.id === choice?.id
+        ) {
           if (ownsModel) restoration = resolved;
           break;
         }
@@ -257,9 +264,12 @@ export function createRecovery<M extends ModelRef>(
   const finish = async (attempt: Attempt, outcome: string): Promise<void> => {
     attempt.cancelled = true;
     // The first terminal result owns the continuation outcome.
-    if (attempt.record.outcome === undefined)
-      record(attempt, "outcome", { outcome });
-    if (attempt.record.restoration !== "held") await restore(attempt);
+    try {
+      if (attempt.record.outcome === undefined)
+        record(attempt, "outcome", { outcome });
+    } finally {
+      if (attempt.record.restoration !== "held") await restore(attempt);
+    }
   };
   const resumed = async (ctx: RecoveryContext<M>): Promise<void> => {
     snapshot(ctx, false);
@@ -523,7 +533,12 @@ export function createRecovery<M extends ModelRef>(
         await finish(attempt, "superseded");
         return;
       }
-      record(attempt, "continuation_requested");
+      try {
+        record(attempt, "continuation_requested");
+      } catch (error) {
+        await finish(attempt, "not-admitted");
+        throw error;
+      }
       host.send();
     },
   };

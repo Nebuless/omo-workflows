@@ -39,6 +39,9 @@ Attempt one fallback continuation after native repetition recovery is exhausted.
   for prior user entries on the active branch without replaying continuation.
   A crash before committed ownership is persisted leaves restoration held.
   Legacy terminal claims remain spent with restoration unknown.
+- A successful selection without a committed model entry may be deferred by
+  native compaction. Cancel it through session-only reselection before reporting
+  restoration. Journal append failures must not prevent owned-model cleanup.
 - Report enabled or disabled activation and bounded fallback, pending, refusal,
   and restoration-held states through existing UI notifications. Journal a
   settled model run as `settled`, not as completed user work.

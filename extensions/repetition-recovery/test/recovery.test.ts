@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import {
+  chmodSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -994,6 +995,57 @@ test.each(["", "{", '{"event":"outcome"}', '{"restoration":"invalid"}'])(
     expect(readFileSync(path, "utf8")).toBe(content);
     expect(f.model().id).toBe("primary");
     expect(f.requests).toEqual([]);
+  },
+);
+
+test.each(["ownership", "request", "outcome"] as const)(
+  "journal failure at %s cannot prevent restoring the owned fallback",
+  async (stage) => {
+    const f = fixture();
+    const store = journal(f.agentDir, "session-1:user-1");
+    const path = join(
+      f.agentDir,
+      "logs",
+      "repetition-recovery",
+      `${store.correlation}.jsonl`,
+    );
+    const recovery = createRecovery(
+      {
+        ...f.host,
+        select: async (model) => {
+          const selected = await f.host.select(model);
+          if (model.id === "fallback" && stage === "ownership")
+            chmodSync(path, 0o400);
+          return selected;
+        },
+        current: () => {
+          const ctx = f.context();
+          if (ctx.model.id === "fallback" && stage === "request") {
+            Object.defineProperty(ctx, "pending", {
+              get: () => {
+                chmodSync(path, 0o400);
+                return false;
+              },
+            });
+          }
+          return ctx;
+        },
+      },
+      "test/fallback",
+    );
+    f.exhaust(recovery);
+    try {
+      if (stage === "outcome") {
+        await recovery.settled(f.context());
+        recovery.started(f.context());
+        chmodSync(path, 0o400);
+      }
+      await expect(recovery.settled(f.context())).rejects.toBeInstanceOf(Error);
+      expect(f.model().id).toBe("primary");
+      expect(f.requests).toEqual(stage === "outcome" ? ["fallback"] : []);
+    } finally {
+      chmodSync(path, 0o600);
+    }
   },
 );
 

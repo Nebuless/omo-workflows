@@ -76,6 +76,14 @@ The isolated OMO CLI check uses mise Node `24.18.0` with `OMO_RUNTIME=node`:
 the pinned launcher requires Bun `>=1.4.0`, while repository checks retain mise
 Bun `1.3.14`. This does not change the repository toolchain or global runtime.
 
+The November 5 follow-up also verifies native deferred model switching in
+[the pinned session implementation](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-session.ts).
+`setSessionModel` can return successfully while compaction holds the target.
+A committed session-only reselection clears that hold. The compaction-enabled
+regression verifies cancellation with zero continuation requests. Three journal
+append-failure cases verify cleanup after ownership, request, or outcome write
+failure. OMO packaging and discovery are unchanged from the evidence above.
+
 ## Historical integration target
 
 - Verified: `2026-10-21` (installed runtime pairing, package host contract, and startup diagnostics).
