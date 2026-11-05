@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import type { AgentToolResult, ExtensionAPI } from "@code-yeongyu/senpi";
 import { Type } from "typebox";
+import { registerHerdrDesktopTools } from "./desktop.ts";
 import {
   buildCapabilityArgv,
   capabilitiesForDiscovery,
@@ -397,6 +398,7 @@ export function registerHerdrTools(
   options: HerdrToolOptions = {},
 ): void {
   const run = options.runner ?? spawnHerdr;
+  registerHerdrDesktopTools(pi, run);
   const approvals = options.approvals ?? new ApprovalRegistry();
   const env = options.env ?? process.env;
   const discover = options.discovery ?? (() => discovery(run, env));

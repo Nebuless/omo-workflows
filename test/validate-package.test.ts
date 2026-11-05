@@ -92,6 +92,34 @@ function validate(manifest: unknown) {
 }
 
 describe("package host dependency validation", () => {
+  test("rejects missing, floating, or mismatched runtime pins", () => {
+    for (const [section, name, version] of [
+      ["dependencies", "@code-yeongyu/senpi", "2026.11.2-3"],
+      ["devDependencies", "omo-ai", "5.1.60"],
+      [
+        "devDependencies",
+        "@earendil-works/pi-ai",
+        "npm:@code-yeongyu/senpi-ai@2026.11.2-3",
+      ],
+      [
+        "devDependencies",
+        "@earendil-works/pi-tui",
+        "npm:@code-yeongyu/senpi-tui@2026.11.2-3",
+      ],
+    ] as const) {
+      for (const value of [undefined, `^${version}`, "0.0.0"]) {
+        const result = validate({
+          ...original,
+          [section]: { ...original[section], [name]: value },
+        });
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(
+          `${name} must remain pinned to ${version}`,
+        );
+      }
+    }
+  });
+
   test("enforces forbidden dependencies and required or optional peers", () => {
     const base = {
       ...original,

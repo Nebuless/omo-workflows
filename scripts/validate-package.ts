@@ -8,6 +8,7 @@ type PackageManifest = {
     extensions?: unknown;
   };
   dependencies?: Record<string, unknown>;
+  devDependencies?: Record<string, unknown>;
   peerDependencies?: Record<string, unknown>;
 };
 
@@ -111,9 +112,23 @@ if (!existsSync(trimPackagePath)) {
   }
 }
 
-const senpiVersion = manifest.dependencies?.["@code-yeongyu/senpi"];
-if (senpiVersion !== "2026.10.19-2") {
-  errors.push("Senpi must remain pinned to 2026.10.19-2");
+for (const [section, name, version] of [
+  ["dependencies", "@code-yeongyu/senpi", "2026.11.2-3"],
+  ["devDependencies", "omo-ai", "5.1.60"],
+  [
+    "devDependencies",
+    "@earendil-works/pi-ai",
+    "npm:@code-yeongyu/senpi-ai@2026.11.2-3",
+  ],
+  [
+    "devDependencies",
+    "@earendil-works/pi-tui",
+    "npm:@code-yeongyu/senpi-tui@2026.11.2-3",
+  ],
+] as const) {
+  if (manifest[section]?.[name] !== version) {
+    errors.push(`${name} must remain pinned to ${version}`);
+  }
 }
 
 for (const packageName of [
