@@ -47,7 +47,7 @@ verification date.
 
 ## Current integration target
 
-- Verified: `2026-11-04` UTC.
+- Verified: `2026-11-05` UTC.
 - Repository runtime: OMO `5.1.60`, Senpi `2026.11.2-3`, mise Bun `1.3.14`.
 - OMO evidence: [release](https://github.com/code-yeongyu/oh-my-openagent/releases/tag/v5.1.60), published `2026-11-03T17:48:31Z`; [exact runtime pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/packages/omo-native/package.json).
 - Senpi evidence: [public extension lifecycle and discovery types](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/types.ts), including `AgentEndEvent.deadline` and scoped resource discovery. Existing extension APIs remain compatible.
@@ -60,7 +60,21 @@ covering current desktop/core OSC reporting, legacy custom resume metadata,
 installed CLI proof, both upstream runtime boundaries, and unverified desktop
 rendering/restart limits. The older Herdr record below is historical.
 
-Repetition recovery has a separate [2026-11-04 evidence record](../extensions/repetition-recovery/README.md#compatibility-evidence) for the matching release pair and deterministic engine admission/refusal proof.
+Repetition recovery has a separate [evidence record](../extensions/repetition-recovery/README.md#compatibility-evidence)
+for the matching release pair, deterministic admission/refusal proof, and lifecycle
+limits. The November 5 source audit found that extension `agent_end` dispatch
+omits the declared deadline field. Recovery can exclude a persisted
+`deadline-stop`, but cannot establish deadline exclusion if that write fails.
+The pinned SDK now verifies successful native correction without a fallback,
+both exhaustion rules, restoration, unchanged cap refusal, and a real
+maximum-runtime stop with zero fallback provider calls.
+The deadline scenario observes metadata on the subscriber and its omission from
+the extension event. Immutable [abort-event construction](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-abort-provenance.ts)
+and [deadline persistence](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/turn-deadline.ts)
+confirm the source boundary. Revalidate after either lifecycle path changes.
+The isolated OMO CLI check uses mise Node `24.18.0` with `OMO_RUNTIME=node`:
+the pinned launcher requires Bun `>=1.4.0`, while repository checks retain mise
+Bun `1.3.14`. This does not change the repository toolchain or global runtime.
 
 ## Historical integration target
 

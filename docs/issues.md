@@ -1,13 +1,23 @@
 # OMO and Senpi Issue Register
 
+## 2026-11-05T20:22:00Z - Extension deadline payload omits declared metadata
+
+- **Observed symptom:** A real maximum-runtime stop delivers `deadline` to session subscribers but omits it from extension `agent_end`, despite the public type declaring that field.
+- **Affected runtime:** Repository OMO `5.1.60`, Senpi `2026.11.2-3`.
+- **Resolution:** Recovery rejects declared deadlines and fresh persisted `deadline-stop` entries. If native deadline persistence fails, no public signal distinguishes that deadline at this extension boundary. This upstream limitation remains unresolved. No installed host or runtime was changed.
+- **Upstream:** Immutable [abort payload construction](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-abort-provenance.ts) omits the field. [Deadline persistence](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/turn-deadline.ts) tolerates a failed write before abort. No matching upstream issue was identified. Reading the persisted stop is the local workaround.
+- **Validation:** `test/engine.test.ts` under the repetition-recovery package observes one primary call, zero fallback calls, a persisted stop, subscriber deadline metadata, and an extension event with `deadline === undefined`.
+- **Revalidation:** Senpi abort dispatch or deadline persistence changes.
+
 ## 2026-11-05T19:38:00Z - Historical repetition stops lack confirmed fallback recovery
 
 - **Observed symptom:** Nine native repetition stops across eight available historical sessions required intervention or had no later recovery recorded. No extension recovery admissions or private journals were found. These records do not prove historical flag activation.
 - **Affected runtime:** Sessions span September 23 through November 5 across runtime versions. Current source review targets OMO `5.1.60` and Senpi `2026.11.2-3`.
-- **Resolution:** Proposed the [repetition recovery reliability plan](plans/2026-11-05-1938-fix-repetition-recovery-reliability-plan.md), covering fresh exhaustion, interruption races, restoration evidence, and activation diagnostics. No runtime implementation or host activation was performed.
+- **Resolution:** Implemented the approved [repetition recovery reliability plan](plans/2026-11-05-1938-fix-repetition-recovery-reliability-plan.md). The extension now requires fresh correlated exhaustion, reconciles interrupted model changes, tracks restoration independently, and reports bounded activation and recovery outcomes. No host activation or runtime patch was applied.
+- **Implementation status:** Repository implementation is verified; the historical audit remains evidence of missed recovery opportunities, not proof that recovery was active or would have succeeded.
 - **Upstream:** The [pinned native guard](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/builtin/ttsr/index.ts) owns detection and correction. No matching upstream issue was identified for the local extension lifecycle findings. The fallback remains an invented local customization.
-- **Validation:** Read-only audit of 96 local session files and 46,269 records, plus source comparison. Production tests were not run during planning. Coverage limits and acceptance checks are recorded in the plan.
-- **Revalidation:** Implement and verify the plan against the pinned SDK before changing activation or claiming a production recovery rate.
+- **Validation:** Focused extension suite: 86 tests, 332 assertions. `mise ci`: 246 tests, 896 assertions across 21 files; package validation, typecheck, build, Qlty/Biome, and hook configuration all passed.
+- **Revalidation:** Revalidate after OMO or Senpi upgrades and native detector, event, admission, model-attribution, or deadline-lifecycle changes. Do not infer a production recovery rate from synthetic tests.
 
 ## 2026-10-01T16:16:04Z - Root extension package declared host modules as dependencies
 

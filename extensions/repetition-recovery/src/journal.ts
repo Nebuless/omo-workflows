@@ -20,6 +20,7 @@ export interface RecoveryRecord {
   readonly event:
     | "failure"
     | "recovery_action"
+    | "continuation_requested"
     | "continuation_admitted"
     | "outcome";
   readonly correlation: string;
@@ -29,6 +30,79 @@ export interface RecoveryRecord {
   readonly rule: "collapse-repetition" | "repetitive-turns";
   readonly detectorMetadata: "rule-only";
   readonly outcome?: string;
+  readonly restoration?:
+    | "switch-pending"
+    | "pending"
+    | "restored"
+    | "superseded"
+    | "held";
+  readonly boundaryId?: string;
+  readonly selectionId?: string;
+  readonly selectionActor?: string;
+}
+
+function normalize(record: RecoveryRecord): RecoveryRecord {
+  const outcome = [
+    "completed", // Legacy terminal claims remain spent.
+    "settled",
+    "aborted",
+    "error",
+    "engine-refused",
+    "interrupted",
+    "interrupted-or-not-admitted",
+    "not-admitted",
+    "repetition-recurred",
+    "superseded",
+    "pending-input",
+    "fallback-invalid",
+    "fallback-unavailable",
+    "model-selection-failed",
+    "model-selection-rejected",
+    "unknown",
+  ].find((value) => value === record.outcome);
+  const actor = record.selectionActor;
+  return {
+    event: record.event,
+    correlation: record.correlation,
+    at: record.at,
+    original: {
+      provider: record.original.provider,
+      id: record.original.id,
+    },
+    rule: record.rule,
+    detectorMetadata: record.detectorMetadata,
+    ...(record.fallback
+      ? {
+          fallback: {
+            provider: record.fallback.provider,
+            id: record.fallback.id,
+          },
+        }
+      : {}),
+    ...(outcome === undefined ? {} : { outcome }),
+    ...(record.restoration === undefined
+      ? {}
+      : { restoration: record.restoration }),
+    ...(record.boundaryId === undefined
+      ? {}
+      : { boundaryId: record.boundaryId }),
+    ...(record.selectionId === undefined
+      ? {}
+      : { selectionId: record.selectionId }),
+    ...(actor === undefined
+      ? {}
+      : {
+          selectionActor: /^[a-f0-9]{64}$/.test(actor)
+            ? actor
+            : selectionActorDigest(actor),
+        }),
+  };
+}
+
+export function selectionActorDigest(actor: string): string {
+  return createHash("sha256")
+    .update(`repetition-recovery:${actor}`)
+    .digest("hex");
 }
 
 export function journal(agentDir: string, identity: string) {
@@ -74,6 +148,7 @@ export function journal(agentDir: string, identity: string) {
       if (
         event !== "failure" &&
         event !== "recovery_action" &&
+        event !== "continuation_requested" &&
         event !== "continuation_admitted" &&
         event !== "outcome"
       )
@@ -89,13 +164,42 @@ export function journal(agentDir: string, identity: string) {
           typeof fallback.id !== "string")
       )
         throw new Error("Invalid fallback model reference");
-      return {
+      const restoration =
+        "restoration" in value ? value.restoration : undefined;
+      if (
+        restoration !== undefined &&
+        restoration !== "switch-pending" &&
+        restoration !== "pending" &&
+        restoration !== "restored" &&
+        restoration !== "superseded" &&
+        restoration !== "held"
+      )
+        throw new Error("Invalid recovery restoration status");
+      const outcome = "outcome" in value ? value.outcome : undefined;
+      const boundaryId = "boundaryId" in value ? value.boundaryId : undefined;
+      const selectionId =
+        "selectionId" in value ? value.selectionId : undefined;
+      const selectionActor =
+        "selectionActor" in value ? value.selectionActor : undefined;
+      if (
+        (outcome !== undefined && typeof outcome !== "string") ||
+        (boundaryId !== undefined && typeof boundaryId !== "string") ||
+        (selectionId !== undefined && typeof selectionId !== "string") ||
+        (selectionActor !== undefined && typeof selectionActor !== "string")
+      )
+        throw new Error("Invalid recovery ownership metadata");
+      return normalize({
         event,
         original: { provider: original.provider, id: original.id },
         rule: value.rule,
         correlation,
-        at: "",
+        at: "at" in value && typeof value.at === "string" ? value.at : "",
         detectorMetadata: "rule-only",
+        ...(typeof outcome === "string" ? { outcome } : {}),
+        ...(restoration === undefined ? {} : { restoration }),
+        ...(typeof boundaryId === "string" ? { boundaryId } : {}),
+        ...(typeof selectionId === "string" ? { selectionId } : {}),
+        ...(typeof selectionActor === "string" ? { selectionActor } : {}),
         ...(typeof fallback === "object" &&
         fallback !== null &&
         "provider" in fallback &&
@@ -104,7 +208,7 @@ export function journal(agentDir: string, identity: string) {
         typeof fallback.id === "string"
           ? { fallback: { provider: fallback.provider, id: fallback.id } }
           : {}),
-      };
+      });
     },
     claim(record: RecoveryRecord): boolean {
       mkdirSync(directory, { recursive: true, mode: 0o700 });
@@ -121,7 +225,7 @@ export function journal(agentDir: string, identity: string) {
         throw error;
       }
       try {
-        writeFileSync(descriptor, `${JSON.stringify(record)}\n`);
+        writeFileSync(descriptor, `${JSON.stringify(normalize(record))}\n`);
         fsyncSync(descriptor);
       } finally {
         closeSync(descriptor);
@@ -129,7 +233,7 @@ export function journal(agentDir: string, identity: string) {
       return true;
     },
     append(record: RecoveryRecord): void {
-      appendFileSync(path, `${JSON.stringify(record)}\n`, {
+      appendFileSync(path, `${JSON.stringify(normalize(record))}\n`, {
         mode: 0o600,
         flush: true,
       });

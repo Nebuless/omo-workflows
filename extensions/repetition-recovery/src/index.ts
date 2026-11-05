@@ -23,9 +23,31 @@ export default function repetitionRecovery(pi: ExtensionAPI): void {
   pi.on("session_start", async (_event, ctx) => {
     latestContext = ctx;
     const selector = pi.getFlag("repetition-recovery-model");
-    if (typeof selector !== "string" || selector.length === 0) return;
+    if (typeof selector !== "string" || selector.length === 0) {
+      ctx.ui.notify(
+        "Repetition recovery disabled: no fallback model selector is configured.",
+        "info",
+      );
+      return;
+    }
+    const fallback = ctx.modelRegistry
+      .getAll()
+      .find((model) => `${model.provider}/${model.id}` === selector);
+    const usable =
+      fallback !== undefined &&
+      (fallback.provider !== ctx.model?.provider ||
+        fallback.id !== ctx.model?.id);
+    ctx.ui.notify(
+      usable
+        ? "Repetition recovery enabled: one distinct fallback continuation is configured."
+        : fallback
+          ? "Repetition recovery held: fallback is the current model."
+          : "Repetition recovery held: selected fallback is unavailable.",
+      usable ? "info" : "warning",
+    );
     recovery = createRecovery(
       {
+        current: () => context(ctx),
         select: (model) => pi.setSessionModel(model),
         send: () =>
           pi.sendMessage(
@@ -59,6 +81,7 @@ export default function repetitionRecovery(pi: ExtensionAPI): void {
   });
   pi.on("agent_end", (event) => {
     userAborted = event.abortSource === "user" || event.deadline !== undefined;
+    if (userAborted) recovery?.invalidate();
     recovery?.ended(
       event.aborted
         ? "aborted"
@@ -67,8 +90,11 @@ export default function repetitionRecovery(pi: ExtensionAPI): void {
                 message.role === "assistant" && message.stopReason === "error",
             )
           ? "error"
-          : "completed",
+          : "settled",
     );
+  });
+  pi.events.on("ttsr:loop-stopped", (data) => {
+    if (latestContext) recovery?.stopped(data, context(latestContext));
   });
   pi.events.on("engine:turn-limit", async (data) => {
     if (
@@ -78,22 +104,29 @@ export default function repetitionRecovery(pi: ExtensionAPI): void {
       data.customType === "repetition-recovery" &&
       latestContext
     )
-      await recovery?.refused(context(latestContext));
+      await recovery?.refused();
   });
   pi.on("session_abort", async (_event, ctx) => {
     userAborted = true;
-    await recovery?.interrupted(context(ctx));
+    latestContext = ctx;
+    await recovery?.interrupted();
   });
   pi.on("input", async (_event, ctx) => {
-    await recovery?.interrupted(context(ctx));
+    latestContext = ctx;
+    await recovery?.interrupted();
   });
   pi.on("session_shutdown", async (_event, ctx) => {
-    await recovery?.interrupted(context(ctx));
+    latestContext = ctx;
+    await recovery?.interrupted();
+  });
+  pi.on("session_tree", async (_event, ctx) => {
+    latestContext = ctx;
+    await recovery?.interrupted();
   });
   pi.on("agent_settled", async (_event, ctx) => {
     latestContext = ctx;
     try {
-      if (userAborted) await recovery?.interrupted(context(ctx));
+      if (userAborted) await recovery?.interrupted();
       else await recovery?.settled(context(ctx));
     } catch (error) {
       if (!(error instanceof Error)) throw error;
