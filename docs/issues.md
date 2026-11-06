@@ -1,5 +1,16 @@
 # OMO and Senpi Issue Register
 
+## 2026-11-06T20:51:15Z - Installed recovery extension inactive without fallback selector
+
+- **Observed:** Local herdr-app terminal `t10`, session `01a1b297-9fcb-76ec-b7a3-2e6d8f84543f`, stopped after native `collapse-repetition` detection and its one corrective retry. No tool call or extension fallback followed.
+- **Affected runtime:** Installed OMO `5.1.62`, Senpi `2026.11.5-1`; repository targets OMO `5.1.60`, Senpi `2026.11.2-3`.
+- **Cause:** Global OMO settings load this repository package, whose manifest includes repetition recovery. Installed CLI help exposes its flag. The live process has no `--repetition-recovery-model`; the extension startup handler returns disabled without that selector. No recovery journal directory exists. Installation alone does not enable recovery.
+- **Resolution:** User-approved automatic activation now chooses a distinct authenticated current-provider fallback, preferring Luna. The model flag is an optional override, with `off` as opt-out. Deferred cleanup also preserves a newer explicit choice instead of overwriting it. No live-session input, native-guard change, or runtime patch applied.
+- **Validation:** Initial focused baseline reported 90 passed, 2 failed in pre-existing deferred-cleanup race regressions at `test/recovery.test.ts:880`. Both regressions now pass. Added no-flag CLI activation, native fallback admission and opt-out coverage. Full `mise ci` passed 255 tests, typecheck, build, package validation, Qlty/Biome and hook validation. Fresh targeted LSP has no errors or warnings; four pre-existing Bun async-assertion hints remain. Installed-runtime end-to-end provider fallback remains unverified.
+- **Upstream:** No matching upstream issue identified. This activation requirement belongs to the local [extension](../extensions/repetition-recovery/src/index.ts) and its [documented contract](../extensions/repetition-recovery/README.md#activation), not an upstream repair.
+- **Revalidation:** Test installed OMO/Senpi admission and restoration before relying on unattended recovery.
+
+
 ## 2026-11-05T20:22:00Z - Extension deadline payload omits declared metadata
 
 - **Observed symptom:** A real maximum-runtime stop delivers `deadline` to session subscribers but omits it from extension `agent_end`, despite the public type declaring that field.

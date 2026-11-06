@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-test.each(["disabled", "enabled"])(
+test.each(["automatic", "disabled", "enabled"])(
   "pinned OMO discovers recovery and reports %s through RPC",
   async (state) => {
     const directory = mkdtempSync(join(tmpdir(), "recovery-cli-"));
@@ -50,7 +50,9 @@ test.each(["disabled", "enabled"])(
         "primary",
         ...(state === "enabled"
           ? ["--repetition-recovery-model", "recovery-cli/fallback"]
-          : []),
+          : state === "disabled"
+            ? ["--repetition-recovery-model", "off"]
+            : []),
       ],
       {
         cwd: directory,
@@ -101,7 +103,8 @@ test.each(["disabled", "enabled"])(
       expect(
         notices.some(
           (message) =>
-            /repetition recovery/i.test(message) && message.includes(state),
+            /repetition recovery/i.test(message) &&
+            message.includes(state === "automatic" ? "enabled" : state),
         ),
       ).toBe(true);
       expect(notices.join("\n")).not.toContain("local-fixture-key");

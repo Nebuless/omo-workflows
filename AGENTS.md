@@ -205,7 +205,7 @@ trigger.
 - `extensions/herdr/` — standalone OMO lifecycle integration, skills, and safe CLI tools for Herdr.
 - `extensions/model-routing-advisor/` — standalone read-only route availability reports for explicit workflow preflight; native OMO/Senpi retains routing and task control.
 - `extensions/trim/` — native compaction governor with package-local tests.
-- `extensions/repetition-recovery/` — opt-in, persisted single fallback continuation after native repetition correction is exhausted; preserves native admission limits and private metadata-only logs.
+- `extensions/repetition-recovery/` — automatic, persisted single fallback continuation after native repetition correction is exhausted; preserves native admission limits and private metadata-only logs.
 - `scripts/` — validation and portable runtime-repair scripts.
 - `test/` — shared OMO/Senpi extension regression coverage.
 

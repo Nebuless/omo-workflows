@@ -380,12 +380,13 @@ test.each([
       | undefined;
     try {
       await loader.reload();
-      loader
-        .getExtensions()
-        .runtime.flagValues.set(
-          "repetition-recovery-model",
-          "recovery-test/fallback",
-        );
+      if (mode !== "admitted")
+        loader
+          .getExtensions()
+          .runtime.flagValues.set(
+            "repetition-recovery-model",
+            "recovery-test/fallback",
+          );
       const model = registry.find("recovery-test", "primary");
       if (!model) throw new Error("Fixture primary missing");
       const manager = SessionManager.inMemory(directory);

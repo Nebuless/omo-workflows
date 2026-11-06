@@ -5,7 +5,7 @@ export default function repetitionRecovery(pi: ExtensionAPI): void {
   pi.registerFlag("repetition-recovery-model", {
     type: "string",
     description:
-      "One fallback provider/model after native repetition recovery is exhausted",
+      "Override the automatic fallback provider/model; use off to disable recovery",
   });
   let recovery:
     | ReturnType<typeof createRecovery<NonNullable<ExtensionContext["model"]>>>
@@ -22,11 +22,31 @@ export default function repetitionRecovery(pi: ExtensionAPI): void {
   });
   pi.on("session_start", async (_event, ctx) => {
     latestContext = ctx;
-    const selector = pi.getFlag("repetition-recovery-model");
-    if (typeof selector !== "string" || selector.length === 0) {
+    const configured = pi.getFlag("repetition-recovery-model");
+    if (configured === "off") {
+      ctx.ui.notify("Repetition recovery disabled: explicit override.", "info");
+      return;
+    }
+    const available = ctx.modelRegistry
+      .getAvailable()
+      .filter(
+        (model) =>
+          model.provider !== ctx.model?.provider || model.id !== ctx.model?.id,
+      );
+    const sameProvider = available.filter(
+      (model) => model.provider === ctx.model?.provider,
+    );
+    const automatic =
+      sameProvider.find((model) => model.id.endsWith("gpt-6-luna")) ??
+      sameProvider[0];
+    const selector =
+      typeof configured === "string" && configured.length > 0
+        ? configured
+        : automatic && `${automatic.provider}/${automatic.id}`;
+    if (!selector) {
       ctx.ui.notify(
-        "Repetition recovery disabled: no fallback model selector is configured.",
-        "info",
+        "Repetition recovery held: no distinct authenticated fallback available.",
+        "warning",
       );
       return;
     }

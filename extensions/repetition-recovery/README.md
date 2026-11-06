@@ -7,22 +7,27 @@ attempt per session and latest user message. Reloading cannot replay a claim.
 
 ## Activation
 
-Run directly without installation:
+Installation enables recovery automatically. At session start, choose a distinct
+authenticated model on the current provider, preferring an ID ending in
+`gpt-6-luna`, then the first remaining available model on that provider.
+Recovery stays held if none exists. Automatic selection never crosses providers.
 
 ```sh
-omo -e ./extensions/repetition-recovery --repetition-recovery-model 9router/cx/gpt-6-luna
+omo -e ./extensions/repetition-recovery
 ```
 
 For project-local installation, use
-`omo install -l ./extensions/repetition-recovery`, then pass the same flag in a
-new session. The selected model must be distinct from the current model and
-available with configured authentication. There is no default fallback.
-Selection uses `setSessionModel`, leaving provider settings and global defaults
-unchanged.
+`omo install -l ./extensions/repetition-recovery`, then start or reload OMO.
+An optional `--repetition-recovery-model provider/model` overrides selection,
+including an explicit cross-provider choice. Use `--repetition-recovery-model off`
+to disable recovery. Invalid or identical overrides stay held without silently
+substituting another model. Selection uses `setSessionModel`, leaving provider
+settings and global defaults unchanged.
 
-Existing UI notifications report disabled or configured activation, unusable
-selectors, pending input, engine refusal, and held restoration. A configured
-fallback does not guarantee provider success or task completion.
+Existing UI notifications report activation, unavailable fallbacks, pending input,
+engine refusal, and held restoration. Recovery attempts one continuation after
+native correction is exhausted, not prevention of the initial repetition or a
+guarantee of provider success or task completion.
 
 ## Admission bounds
 
@@ -77,6 +82,20 @@ The public exhaustion event exposes rule names only. Detector offsets,
 confidence, and raw samples are unavailable there, so
 `detectorMetadata: rule-only` records that limit. Journals are not automatically
 rotated or deleted because their claims prevent duplicate recovery.
+
+## Automatic activation evidence (2026-11-06)
+
+- Pinned validation target remains OMO `5.1.60`, Senpi `2026.11.2-3`. Installed
+  host reports OMO `5.1.62`, Senpi `2026.11.5-1`; live provider recovery is not claimed.
+- Re-fetched the immutable [OMO runtime pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/packages/omo-native/package.json),
+  [Senpi model registry](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/model-registry.ts),
+  and [extension API](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/types.ts).
+  `getAvailable()` filters configured authentication, not provider reachability.
+- CLI fixtures cover no-flag activation, override and opt-out without provider
+  calls. Native TTSR exhaustion also exercises automatic fallback admission.
+  Deferred cleanup regressions preserve newer explicit model choices.
+- Native guard, correction, admission caps, journal claims and restoration remain
+  unchanged in purpose. Revalidate after either runtime or availability API changes.
 
 ## Compatibility evidence
 

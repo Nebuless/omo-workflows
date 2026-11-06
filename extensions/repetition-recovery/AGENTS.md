@@ -20,7 +20,7 @@ Attempt one fallback continuation after native repetition recovery is exhausted.
 - Invalidate eligibility on input, cancellation, shutdown, or branch replacement.
   Re-read live session, user, branch, deadline-stop, and pending-message state
   before claiming and after awaited model selection.
-- Require an explicit fallback model flag; use session-only model selection.
+- Enable recovery on installation with a distinct authenticated current-provider fallback, preferring an ID ending in `gpt-6-luna`, then registry order. Never cross providers automatically. Keep the model flag as an optional override and `off` as opt-out; use session-only model selection.
 - Claim one attempt per session and user-message entry on disk before switching models.
 - Never send user input, use manual-continue identifiers, edit context, or patch runtime code.
 - Log only allowlisted metadata; never log prompts, output, credentials, or tool arguments.

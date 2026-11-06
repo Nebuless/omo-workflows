@@ -120,9 +120,21 @@ function fixture() {
   };
 }
 
-test.each([undefined, "", "test/fallback", "PRIVATE/unknown", "test/primary"])(
+test.each([
+  { selector: undefined, ids: ["primary", "fallback"], state: "enabled:" },
+  { selector: "", ids: ["primary", "fallback"], state: "enabled:" },
+  { selector: "off", ids: ["primary", "fallback"], state: "disabled:" },
+  {
+    selector: "test/fallback",
+    ids: ["primary", "fallback"],
+    state: "enabled:",
+  },
+  { selector: "PRIVATE/unknown", ids: ["primary", "fallback"], state: "held:" },
+  { selector: "test/primary", ids: ["primary", "fallback"], state: "held:" },
+  { selector: undefined, ids: ["primary"], state: "held:" },
+])(
   "activation reports selector state without copying selector %j",
-  async (selector) => {
+  async ({ selector, ids, state }) => {
     const f = fixture();
     const notices: string[] = [];
     const settings = SettingsManager.inMemory({ enabledBuiltinExtensions: [] });
@@ -137,7 +149,7 @@ test.each([undefined, "", "test/fallback", "PRIVATE/unknown", "test/primary"])(
       api: "openai-completions",
       apiKey: "PRIVATE key",
       baseUrl: "http://invalid.test",
-      models: ["primary", "fallback"].map((id) => ({
+      models: ids.map((id) => ({
         id,
         name: id,
         reasoning: false,
@@ -182,12 +194,6 @@ test.each([undefined, "", "test/fallback", "PRIVATE/unknown", "test/primary"])(
     });
     try {
       await session.bindExtensions({});
-      const state =
-        selector === undefined || selector === ""
-          ? "disabled:"
-          : selector === "test/fallback"
-            ? "enabled:"
-            : "held:";
       expect(notices).toHaveLength(1);
       expect(notices[0]).toContain(state);
       expect(notices.join("\n")).not.toContain("PRIVATE");
@@ -846,6 +852,45 @@ test("preserves a same-fallback explicit choice racing deferred restoration", as
     restoration: "superseded",
   });
 });
+
+test.each(["fallback", "explicit"] as const)(
+  "preserves deferred recovery cleanup against a newer %s choice",
+  async (choice) => {
+    const f = fixture();
+    const restoring = Promise.withResolvers<void>();
+    const restored = Promise.withResolvers<void>();
+    let fallbackDeferred = false;
+    const recovery = createRecovery(
+      {
+        ...f.host,
+        select: async (model) => {
+          if (model.id === "fallback" && !fallbackDeferred) {
+            fallbackDeferred = true;
+            return true;
+          }
+          if (model.id === "primary") {
+            restoring.resolve();
+            await restored.promise;
+          }
+          return f.host.select(model);
+        },
+      },
+      "test/fallback",
+    );
+    f.exhaust(recovery);
+    const settling = recovery.settled(f.context());
+    await restoring.promise;
+    await f.choose(choice, "command", "person");
+    restored.resolve();
+    await settling;
+    expect(f.model().id).toBe(choice);
+    expect(f.requests).toEqual([]);
+    expect(journal(f.agentDir, "session-1:user-1").read()).toMatchObject({
+      outcome: "superseded",
+      restoration: "superseded",
+    });
+  },
+);
 
 test.each(["missing", "rejected", "throw", "disposed"] as const)(
   "reload reconciles prior-user held restoration after %s without replay",

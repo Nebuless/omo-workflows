@@ -208,15 +208,16 @@ export function createRecovery<M extends ModelRef>(
         saved.fallback !== undefined &&
         sameModel(ctx.model, saved.fallback);
       for (;;) {
+        const choice = explicitChoice(ctx, attempt);
         // After a crash, a matching extension selection alone cannot prove it
         // was ours. Keep that obligation held until ownership is known.
         if (
           !saved.selectionId &&
           attempt.selectionSucceeded !== false &&
-          !sameModel(ctx.model, saved.original)
+          !sameModel(ctx.model, saved.original) &&
+          !(attempt.selectionSucceeded === true && choice)
         )
           break;
-        const choice = explicitChoice(ctx, attempt);
         const target =
           choice?.provider && choice.modelId
             ? { provider: choice.provider, id: choice.modelId }
@@ -232,13 +233,26 @@ export function createRecovery<M extends ModelRef>(
         }
         if (!ownsModel && !choice && !deferred) break;
         const model = ctx.models.find((item) => sameModel(item, target));
+        const before = ctx.entries.map((entry) => entry.id);
         if (!model || !(await host.select(model))) break;
         ctx = live(attempt);
+        if (!attempt.record.selectionActor) {
+          const cleanup = ctx.entries.filter(
+            (entry) =>
+              !before.includes(entry.id) &&
+              entry.type === "model_change" &&
+              entry.source === "extension" &&
+              entry.provider === target.provider &&
+              entry.modelId === target.id,
+          );
+          if (cleanup.length === 1 && cleanup[0]?.actor)
+            attempt.record = {
+              ...attempt.record,
+              selectionActor: selectionActorDigest(cleanup[0].actor),
+            };
+        }
         ownsModel = sameModel(ctx.model, target);
-        if (
-          (deferred && ownsModel) ||
-          explicitChoice(ctx, attempt)?.id === choice?.id
-        ) {
+        if (explicitChoice(ctx, attempt)?.id === choice?.id) {
           if (ownsModel) restoration = resolved;
           break;
         }
