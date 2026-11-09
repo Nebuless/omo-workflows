@@ -37,6 +37,32 @@ When the host is standalone Senpi, the normal Senpi agent directory is used.
 JSON and OMP-compatible YAML locations are preserved where they already
 exist. Writes use a temporary file followed by an atomic rename.
 
+## Automatic model limits
+
+On `session_start`, including reloads, configured custom OpenAI-completions and
+OpenAI-responses providers refresh their context and output limits in memory.
+The extension reads the authenticated model list and supplements it with
+CLIProxyAPI's existing `GET /models?client_version=cpa` catalog. This also
+improves discovery in the interactive provider wizard.
+
+The catalog's `slug`, `context_window`, and `max_tokens` supply model identity,
+effective context, and output capacity. `max_context_window` is a ceiling and
+does not replace the effective context. Ordinary model-list metadata takes
+precedence over supplemental catalog fields.
+
+Startup uses native authentication, including resolved headers, with a
+1.5-second timeout per request. Providers are probed concurrently; startup
+skips detail and unrelated gateway routes. An unavailable catalog leaves
+registered limits intact. Only already configured models present in the
+authenticated list receive updates; model-specific endpoint/API overrides
+retain their saved metadata. Unknown fields and thinking maps are preserved.
+Senpi's explicit `modelOverrides` remain authoritative.
+
+No model configuration is saved by automatic discovery. Native registration
+refreshes the selected model as well as the model browser. A new session or
+extension reload loads this behavior after updating the repository package.
+No worker changes or service restart are required.
+
 ## Native thinking-level compatibility
 
 Better Custom stores generic, per-model native `thinkingLevelMap` metadata. The
@@ -69,7 +95,7 @@ static profile.
 
 ## Compatibility
 
-The repository SDK pin is Senpi `2026.10.19-2`. The recorded integration
+The repository SDK pin is Senpi `2026.11.2-3` with OMO `5.1.60`. The recorded integration
 pairing and validation limits are in [compatibility](../../docs/compatibility.md).
 The September native thinking-map capture remains historical evidence, not
 a current authenticated request check. See

@@ -6,7 +6,7 @@ Own Senpi host adaptation, provider persistence, interactive commands, and model
 
 ## Ownership
 
-- `index.ts` owns extension registration.
+- `index.ts` owns extension registration and session-start model-limit discovery.
 - `config.ts` owns atomic `models.json` persistence.
 - `flows/` owns provider CRUD workflows.
 - `probe/` owns endpoint and model capability discovery.
@@ -22,6 +22,13 @@ Own Senpi host adaptation, provider persistence, interactive commands, and model
 - Apply 9router profiles only to exact `9router/cx/gpt-5.6-luna`, `9router/cx/gpt-5.6-sol`, and `9router/cx/gpt-5.6-terra` IDs. Luna maps `minimal` to `low` and `xhigh` to `max`; Sol and Terra map `xhigh` to `ultra`; each keeps `off` as `none` and `max` as `max`.
 - Resolve metadata precedence as observed native map/compatibility, stored native map/compatibility, matching profile, then generic defaults. Do not partially merge a profile into an existing map.
 - Pass native map and compatibility metadata through unchanged; Better Custom does not inspect, intercept, or rewrite requests.
+- Register saved providers synchronously; refresh OpenAI provider limits in memory
+  during awaited `session_start`. Resolve probe authentication through the native
+  registry and preserve credential references in registered configuration.
+- Supplement authenticated model IDs with the existing CLIProxy Codex catalog;
+  use effective `context_window`, never its `max_context_window` ceiling.
+- Automatic discovery must preserve configured model selection, endpoint/API
+  overrides, unknown fields and thinking metadata, and must not save configuration.
 
 ## Work Guidance
 

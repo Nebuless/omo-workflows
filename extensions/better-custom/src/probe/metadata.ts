@@ -115,6 +115,7 @@ export function metadataFromModelListItem(
   );
   const inputModalities =
     strings(record(item.architecture)?.input_modalities) ??
+    strings(item.input_modalities) ??
     strings(item.modalities);
   const capabilityInfo = capabilitiesMetadata(item.capabilities);
   const vision = inputModalities
@@ -195,6 +196,13 @@ export function parseLiteLLMModelInfo(
   const outer = root?.data;
   const entries = Array.isArray(outer) ? outer : record(outer)?.data;
   return namedMetadata(entries, "model_name", "model_info");
+}
+
+/** CLIProxyAPI's existing Codex client catalog uses slugs instead of OpenAI ids. */
+export function parseCodexModelCatalog(
+  value: unknown,
+): Map<string, ObservedModelMetadata> {
+  return namedMetadata(record(value)?.models, "slug");
 }
 
 /** Parse LiteLLM GET /model_group/info. */

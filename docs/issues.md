@@ -1,5 +1,34 @@
 # OMO and Senpi Issue Register
 
+## 2026-11-09T22:52:38Z - CLIProxy subscription models retain default context limits
+
+- **Observed:** `/custom-provider` discovered CLIProxy model IDs but omitted their
+  context/output limits. Saved definitions were registered without network
+  discovery, so models without explicit limits used 128,000/16,384 defaults.
+- **Affected runtime:** OMO `5.1.60`, Senpi `2026.11.2-3`; CLIProxyAPI worker
+  `8.0.62` with CLIProxy Home `1.1.9`.
+- **Cause:** The ordinary `/v1/models` route supplies minimal OpenAI entries.
+  Rich metadata already exists at `/v1/models?client_version=cpa`, using
+  `models[].slug`, `context_window` and `max_tokens`.
+- **Resolution:** The shared Better Custom extension supplements authenticated
+  model IDs with that catalog and refreshes configured OpenAI provider limits
+  during `session_start`, without saving model configuration. The worker and
+  installed agent configuration are unchanged.
+- **Validation:** Failing-first probe and lifecycle regressions now pass. A real
+  native session fixture observes selected-model limits changing from
+  128,000/16,384 to 500,000/128,000 without inference or configuration writes.
+  The live worker reports Sol at 500,000/128,000 and Luna at 272,000/128,000.
+  Package validation, typecheck, build, quality and hooks pass. The suite
+  initially reports 257 passed and 3 permission-fixture failures under root;
+  those three pass when the test process drops effective, inherited and ambient
+  DAC-bypass capabilities. No recovery source or tests were changed.
+  See the [upstream evidence](upstream-validation.md#automatic-provider-model-limits).
+- **Upstream:** No matching upstream issue was identified. This is a local
+  extension discovery change using Senpi's existing
+  [provider-registration reconciliation](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-session.ts#L12169-L12171).
+- **Revalidation:** OMO/Senpi lifecycle or provider-composition changes, worker
+  catalog schema changes, or model-limit changes.
+
 ## 2026-11-06T20:51:15Z - Installed recovery extension inactive without fallback selector
 
 - **Observed:** Local herdr-app terminal `t10`, session `01a1b297-9fcb-76ec-b7a3-2e6d8f84543f`, stopped after native `collapse-repetition` detection and its one corrective retry. No tool call or extension fallback followed.

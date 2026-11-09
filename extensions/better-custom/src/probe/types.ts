@@ -13,8 +13,12 @@ export interface GatewayProbeOptions {
   preset?: GatewayPresetId | string;
   /** Resolved key material. It is used only for request headers and never returned. */
   apiKey?: string;
+  /** Resolved request headers from the host authentication boundary. */
+  headers?: Record<string, string | null>;
   fetch?: ProbeFetch;
   timeoutMs?: number;
+  /** Startup reads model catalogs only; interactive probes also inspect detail routes. */
+  catalogOnly?: boolean;
 }
 
 /** Only gateway-observed fields are returned; local rules/defaults remain in model-entry. */

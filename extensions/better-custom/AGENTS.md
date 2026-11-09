@@ -3,7 +3,7 @@
 ## Purpose
 
 Provide OMO/Senpi commands for editing custom providers and browsing available
-models.
+models, with automatic discovery of provider model limits.
 
 ## Ownership
 
@@ -20,6 +20,8 @@ models.
 - Resolve the active configuration through Senpi's `getAgentDir()`. Do not
   hard-code `~/.omo/agent`; OMO supplies `SENPI_CODING_AGENT_DIR`.
 - Keep `/custom-provider` and `/better-models` interactive-only.
+- Refresh configured OpenAI model limits in memory during `session_start`;
+  automatic discovery must not save configuration or select additional models.
 - Writes to `models.json` must remain atomic and preserve unknown fields.
 - Do not reintroduce `@bastani/atomic` imports from the upstream extension.
 - `thinkingLevelMap` is generic, per-model native metadata with exactly the

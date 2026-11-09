@@ -11,6 +11,8 @@ Own regression coverage shared by standalone OMO/Senpi extensions.
   package validator, including runtime and development host-alias pins.
 - `herdr-tools.test.ts` owns Herdr tool boundary and skill-discovery coverage.
 - `model-routing-advisor.test.ts` owns standalone model-routing adviser package registration coverage.
+- `extension-load.test.ts` owns package registration and automatic provider-limit
+  discovery, including selected-model refresh in a real native session.
 - Compound Engineering package tests live under its own `test/` boundary.
 
 ## Local Contracts

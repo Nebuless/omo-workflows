@@ -5,7 +5,7 @@ import type {
 import { addProviderFlow } from "./flows/add.ts";
 import { deleteProviderFlow } from "./flows/delete.ts";
 import { editProviderFlow } from "./flows/edit.ts";
-import type { CommandContext, SelectItem } from "./types.ts";
+import type { CommandContext, ModelsConfig, SelectItem } from "./types.ts";
 import { selectOne } from "./ui/select.ts";
 import { showUnifiedModelsBrowser } from "./ui/model-view.ts";
 import { loadModelsConfig } from "./config.ts";
@@ -13,11 +13,13 @@ import {
   betterCustomViewSources,
   buildUnifiedModelView,
   registerBetterCustomProviders,
+  registrationConfig,
   setHostModelSwitcher,
   setProviderRegistrar,
   switchToModel,
 } from "./model-browser.ts";
 import type { UnifiedViewSource } from "./model-browser.ts";
+import { probeGateway } from "./probe/index.ts";
 
 type CustomProviderAction = "add" | "edit" | "delete";
 type ProviderFlow = (ctx: CommandContext) => Promise<boolean>;
@@ -195,6 +197,84 @@ export default function customProviderWizard(pi: ExtensionAPI): void {
   } catch {
     // A missing or unreadable models config must not break extension load.
   }
+  pi.on("session_start", async (_event, ctx) => {
+    let config: ModelsConfig;
+    try {
+      config = loadModelsConfig();
+    } catch {
+      return;
+    }
+    await Promise.all(
+      betterCustomViewSources(config).map(async ({ id }) => {
+        const provider = config.providers?.[id];
+        if (
+          !provider?.baseUrl ||
+          (provider.api !== "openai-responses" &&
+            provider.api !== "openai-completions")
+        )
+          return;
+        const models = provider.models ?? [];
+        const sample = models.find(
+          (model) =>
+            typeof model === "string" ||
+            ((!model.baseUrl || model.baseUrl === provider.baseUrl) &&
+              (!model.api || model.api === provider.api)),
+        );
+        const model =
+          sample &&
+          ctx.modelRegistry.find(
+            id,
+            typeof sample === "string" ? sample : sample.id,
+          );
+        if (!model) return;
+        try {
+          const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+          if (!auth.ok) return;
+          const result = await probeGateway({
+            endpoint: auth.baseUrl ?? provider.baseUrl,
+            api: provider.api,
+            apiKey: auth.apiKey,
+            headers: auth.headers,
+            catalogOnly: true,
+            timeoutMs: 1_500,
+          });
+          let changed = false;
+          const refreshed = models.map((saved) => {
+            const entry = typeof saved === "string" ? { id: saved } : saved;
+            if (
+              (entry.baseUrl && entry.baseUrl !== provider.baseUrl) ||
+              (entry.api && entry.api !== provider.api) ||
+              !result.ids.includes(entry.id)
+            )
+              return saved;
+            const info = result.metadataById.get(entry.id);
+            if (
+              info?.contextWindow === undefined &&
+              info?.maxTokens === undefined
+            )
+              return saved;
+            changed = true;
+            return {
+              ...entry,
+              ...(info.contextWindow !== undefined
+                ? { contextWindow: info.contextWindow }
+                : {}),
+              ...(info.maxTokens !== undefined
+                ? { maxTokens: info.maxTokens }
+                : {}),
+            };
+          });
+          if (changed)
+            pi.registerProvider(
+              id,
+              registrationConfig({ ...provider, models: refreshed }) as never,
+            );
+        } catch {
+          // Unavailable discovery or authentication leaves the registered catalog intact.
+        }
+      }),
+    );
+  });
   pi.registerCommand("better-models", {
     description:
       "Browse every authenticated provider's models in one view and switch.",

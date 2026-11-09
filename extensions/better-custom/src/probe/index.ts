@@ -11,6 +11,7 @@ import {
   metadataFromModelDetail,
   metadataFromModelListItem,
   modelIdFromEntry,
+  parseCodexModelCatalog,
   parseLiteLLMModelGroupInfo,
   parseLiteLLMModelInfo,
   parsePublicModelCatalog,
@@ -107,6 +108,8 @@ async function firstParsedMap(
   const headers = probeHeaders(
     options.api,
     includeApiKey ? options.apiKey : undefined,
+    false,
+    includeApiKey ? options.headers : undefined,
   );
   for (const url of urls) {
     const json = await requestJson(
@@ -133,7 +136,7 @@ async function fetchModelList(
   metadataById: Map<string, ObservedModelMetadata>;
 }> {
   const fetcher = resolveFetch(options.fetch);
-  const headers = probeHeaders(api, options.apiKey);
+  const headers = probeHeaders(api, options.apiKey, false, options.headers);
   const candidates = modelBaseCandidates(endpoint, api, ensureV1);
   for (const baseUrl of candidates) {
     const json = await requestJson(
@@ -172,7 +175,12 @@ async function fetchPerModelDetails(
   options: GatewayProbeOptions,
 ): Promise<Map<string, ObservedModelMetadata>> {
   const fetcher = resolveFetch(options.fetch);
-  const headers = probeHeaders(options.api, options.apiKey);
+  const headers = probeHeaders(
+    options.api,
+    options.apiKey,
+    false,
+    options.headers,
+  );
   const result = new Map<string, ObservedModelMetadata>();
   for (const id of ids) {
     const url = new URL(
@@ -222,7 +230,30 @@ export async function probeGateway(
   );
   const metadataById = new Map(list.metadataById);
 
-  if (preset.profile.modelInfo) {
+  if (
+    list.ids.length > 0 &&
+    (options.api === "openai-completions" || options.api === "openai-responses")
+  ) {
+    const catalog = await firstParsedMap(
+      [
+        new URL(
+          "models?client_version=cpa",
+          list.baseUrl.replace(/\/?$/, "/"),
+        ).toString(),
+      ],
+      parseCodexModelCatalog,
+      options,
+    );
+    // The ordinary authenticated list owns access; a client template may
+    // contain models this key cannot use. Inline evidence takes precedence.
+    mergeMap(
+      metadataById,
+      new Map([...catalog].filter(([id]) => list.ids.includes(id))),
+      false,
+    );
+  }
+
+  if (!options.catalogOnly && preset.profile.modelInfo) {
     mergeMap(
       metadataById,
       await firstParsedMap(
@@ -233,7 +264,7 @@ export async function probeGateway(
       true,
     );
   }
-  if (preset.profile.modelGroupInfo && options.apiKey) {
+  if (!options.catalogOnly && preset.profile.modelGroupInfo && options.apiKey) {
     mergeMap(
       metadataById,
       await firstParsedMap(
@@ -244,7 +275,7 @@ export async function probeGateway(
       false,
     );
   }
-  if (preset.profile.publicCatalog) {
+  if (!options.catalogOnly && preset.profile.publicCatalog) {
     mergeMap(
       metadataById,
       await firstParsedMap(
@@ -258,7 +289,7 @@ export async function probeGateway(
       true,
     );
   }
-  if (preset.profile.perModelDetails) {
+  if (!options.catalogOnly && preset.profile.perModelDetails) {
     mergeMap(
       metadataById,
       await fetchPerModelDetails(list.baseUrl, list.ids, options),

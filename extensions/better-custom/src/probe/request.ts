@@ -10,12 +10,19 @@ export function probeHeaders(
   api: ProviderApi,
   apiKey: string | undefined,
   contentType = false,
+  overrides?: Record<string, string | null>,
 ): Record<string, string> {
   const headers: Record<string, string> = { accept: "application/json" };
   if (contentType) headers["content-type"] = "application/json";
   if (apiKey) {
     headers.authorization = "Bearer " + apiKey;
     if (api === "google-generative-ai") headers["x-goog-api-key"] = apiKey;
+  }
+  for (const [name, value] of Object.entries(overrides ?? {})) {
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === name.toLowerCase()) delete headers[key];
+    }
+    if (value !== null) headers[name] = value;
   }
   return headers;
 }

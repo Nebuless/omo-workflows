@@ -8,6 +8,9 @@ Own regression coverage for provider configuration, host registration, and model
 
 - `config.test.ts` owns persistence behavior.
 - `model-entry.test.ts` owns model metadata behavior.
+- `probe.test.ts` owns supplemental Codex catalog discovery and evidence precedence.
+- Shared `../../../test/extension-load.test.ts` covers automatic discovery through
+  the extension lifecycle and selected-model refresh in a real native session.
 
 ## Local Contracts
 

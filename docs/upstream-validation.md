@@ -55,6 +55,33 @@ verification date.
 - Limits: global OMO and services are unchanged. Historical authenticated provider and Herdr desktop rendering checks below have not been repeated. The upstream `config-watch user config discovery requires reload` diagnostic remains present.
 - Revalidate: either runtime upgrade, host-alias version change, resource discovery or lifecycle change.
 
+## Automatic provider model limits
+
+- Verified: `2026-11-09` UTC.
+- Local runtime: OMO `5.1.60`; Senpi `2026.11.2-3`; mise Bun `1.3.14`.
+- OMO evidence: the [pinned composition awaits component registration](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/packages/omo-senpi/src/extension/compose.ts#L210-L214).
+  Current upstream [OMO 5.1.65 and Senpi 2026.11.9 pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/2faeda01eaee3bba9c65ac20ab78151371181dfb/packages/omo-native/package.json#L1-L20)
+  was inspected separately; it is not the repository target.
+- Senpi evidence: pinned [provider registration](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-session.ts#L12169-L12171)
+  invokes [selected-model reconciliation](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-session.ts#L11798-L11810).
+  Current upstream corroborates the [awaited lifecycle](https://github.com/code-yeongyu/senpi/blob/54e193574661891f1dd612097ae8849690db5f06/packages/coding-agent/docs/extensions.md#L229-L233)
+  and [selected-model refresh](https://github.com/code-yeongyu/senpi/blob/54e193574661891f1dd612097ae8849690db5f06/packages/coding-agent/src/core/agent-session.ts#L12179-L12192).
+- Local proof: `test/extension-load.test.ts` runs a real Senpi session against an
+  ephemeral local catalog, confirms selected-model and registry limits refresh,
+  and observes no inference or configuration writes. Probe tests cover catalog
+  slugs, effective context versus maximum ceiling, authenticated ID filtering,
+  inline precedence and unsupported routes. The updated probe reads the live
+  CLIProxy worker without changing its configuration: Sol reports
+  500,000/128,000 and Luna 272,000/128,000 context/output tokens.
+- Host check: this root host's recovery permission fixtures require dropping
+  `dac_override` and `dac_read_search` from bounding, inheritable and ambient
+  capability sets for the check process. This enforces the fixtures' existing
+  filesystem failure conditions without changing their source.
+- Revalidate: either runtime upgrade, registration/composition or authentication
+  changes, and worker catalog schema changes.
+- Status: current for the pinned runtime and tested catalog contract. Paid model
+  inference is outside this metadata-only verification.
+
 Herdr has a separate [2026-11-04 compatibility record](../extensions/herdr/README.md#compatibility-evidence)
 covering current desktop/core OSC reporting, legacy custom resume metadata,
 installed CLI proof, both upstream runtime boundaries, and unverified desktop
