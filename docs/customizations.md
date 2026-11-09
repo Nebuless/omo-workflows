@@ -14,7 +14,7 @@ Runtime-dependent claims follow the [upstream validation contract](upstream-vali
 | Herdr | Control Herdr resources and agents | `extensions/herdr/` | [Herdr contract](../extensions/herdr/AGENTS.md) |
 | Model Routing Advisor | Observe route availability without selecting or launching | `extensions/model-routing-advisor/` | [Package guide](../extensions/model-routing-advisor/README.md) |
 | Trim | Govern native compaction | `extensions/trim/` | [Trim contract](../extensions/trim/AGENTS.md) |
-| Repetition recovery | One bounded fallback after native correction fails | `extensions/repetition-recovery/` | [Activation and limits](../extensions/repetition-recovery/README.md) |
+| Repetition recovery | Bounded TTSR incident evidence and one same-model continuation after native correction fails | `extensions/repetition-recovery/` | [Activation and limits](../extensions/repetition-recovery/README.md) |
 | Toolchain and quality | Set local tools and checks | `mise.toml`, Qlty, Biome, prek | [LSP setup](lsp.md) |
 | Runtime repairs | Repair known OMO runtime gaps | `scripts/` | [Runtime repairs](runtime-repairs.md) |
 | Global agent instructions | Apply durable instructions to every OMO session | `~/.omo/rules/*.md` | [Global instructions](#global-agent-instructions) |

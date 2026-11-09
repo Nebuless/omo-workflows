@@ -2,13 +2,14 @@
 
 ## Purpose
 
-Attempt one fallback continuation after native repetition recovery is exhausted.
+Capture bounded TTSR incident evidence and attempt one same-model continuation after native repetition recovery is exhausted.
 
 ## Ownership
 
 - `src/index.ts` owns public lifecycle registration.
 - `src/recovery.ts` owns exhaustion detection and recovery transitions.
-- `src/journal.ts` owns private local claims and redacted event records.
+- `src/journal.ts` owns private local claims and metadata-only event records.
+- `src/incidents.ts` owns single-message stream capture, credential redaction, private incident files and twenty-file retention.
 - `test/` owns deterministic lifecycle and real-engine regression coverage.
 
 ## Local Contracts
@@ -20,10 +21,11 @@ Attempt one fallback continuation after native repetition recovery is exhausted.
 - Invalidate eligibility on input, cancellation, shutdown, or branch replacement.
   Re-read live session, user, branch, deadline-stop, and pending-message state
   before claiming and after awaited model selection.
-- Enable recovery on installation with a distinct authenticated current-provider fallback, preferring an ID ending in `gpt-6-luna`, then registry order. Never cross providers automatically. Keep the model flag as an optional override and `off` as opt-out; use session-only model selection.
+- Enable recovery on installation using the live current model without switching. Keep the model flag as an explicit override and `off` as recovery opt-out. Incident logging remains enabled. Never change provider automatically; explicit different-model overrides use session-only selection.
 - Claim one attempt per session and user-message entry on disk before switching models.
 - Never send user input, use manual-continue identifiers, edit context, or patch runtime code.
-- Log only allowlisted metadata; never log prompts, output, credentials, or tool arguments.
+- Keep claim journals metadata-only. Incident files contain only bounded assistant text, thinking and streamed tool arguments associated with fresh TTSR activation records. Never copy user messages, prompts, provider payloads, headers, tool results or the surrounding transcript. Redact common credentials before writing, mark truncation and execution-at-capture state, keep files private and retain twenty incidents. Redaction is best-effort.
+- Supply only the incident path in continuation instructions, with an explicit untrusted-data warning and uncertain-side-effect check. Do not automatically recover security rules, route errors or other unsupported guards. No fresh-session API is available to lifecycle handlers.
 - Normalize journal reads and writes, strip unknown nested fields, and hash
   selection actor identity consistently with live ownership comparisons.
   Preserve legacy claims and keep request records separate from admission.

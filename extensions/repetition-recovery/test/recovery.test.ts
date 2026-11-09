@@ -2,8 +2,8 @@ import { afterEach, expect, test } from "bun:test";
 import {
   chmodSync,
   mkdtempSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -18,8 +18,8 @@ import {
   SettingsManager,
 } from "@code-yeongyu/senpi";
 import repetitionRecovery from "../src/index.ts";
-import { createRecovery, type RecoveryContext } from "../src/recovery.ts";
 import { journal, selectionActorDigest } from "../src/journal.ts";
+import { createRecovery, type RecoveryContext } from "../src/recovery.ts";
 
 const directories: string[] = [];
 afterEach(() => {
@@ -130,8 +130,8 @@ test.each([
     state: "enabled:",
   },
   { selector: "PRIVATE/unknown", ids: ["primary", "fallback"], state: "held:" },
-  { selector: "test/primary", ids: ["primary", "fallback"], state: "held:" },
-  { selector: undefined, ids: ["primary"], state: "held:" },
+  { selector: "test/primary", ids: ["primary", "fallback"], state: "enabled:" },
+  { selector: undefined, ids: ["primary"], state: "enabled:" },
 ])(
   "activation reports selector state without copying selector %j",
   async ({ selector, ids, state }) => {
@@ -386,7 +386,7 @@ test("records actual admission and outcome without copying detector payloads", a
   expect(f.model().id).toBe("primary");
 });
 
-test.each(["missing/model", "test/primary", ""])(
+test.each(["missing/model", ""])(
   "does not continue with unavailable or identical fallback %s",
   async (selector) => {
     const f = fixture();
@@ -1191,4 +1191,28 @@ test("rejected fallback preserves another extension's committed same-model choic
     outcome: "model-selection-rejected",
     restoration: "superseded",
   });
+});
+
+test("default recovery uses the live model without switching", async () => {
+  const f = fixture();
+  let selections = 0;
+  const recovery = createRecovery({
+    ...f.host,
+    select: async () => {
+      selections++;
+      return true;
+    },
+  });
+  f.exhaust(recovery);
+  await recovery.settled(f.context());
+  expect(f.requests).toEqual(["primary"]);
+  expect(selections).toBe(0);
+  recovery.started(f.context());
+  recovery.ended("settled");
+  await recovery.settled(f.context());
+  expect(f.requests).toEqual(["primary"]);
+  expect(selections).toBe(0);
+  expect(journal(f.agentDir, "session-1:user-1").read()?.restoration).toBe(
+    "restored",
+  );
 });

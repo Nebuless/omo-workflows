@@ -1,16 +1,12 @@
 # Repetition recovery
 
-The native repetition guard and its first correction run unchanged. A fresh
-`ttsr:loop-stopped` event must match a newly appended stop in the active branch,
-after the matching native correction. The extension then claims one fallback
-attempt per session and latest user message. Reloading cannot replay a claim.
+Records the assistant output associated with a TTSR rule activation. After native
+repetition correction is exhausted, requests one automatic continuation using the
+current model. No new user message is required.
 
 ## Activation
 
-Installation enables recovery automatically. At session start, choose a distinct
-authenticated model on the current provider, preferring an ID ending in
-`gpt-6-luna`, then the first remaining available model on that provider.
-Recovery stays held if none exists. Automatic selection never crosses providers.
+Installation enables recovery automatically:
 
 ```sh
 omo -e ./extensions/repetition-recovery
@@ -18,116 +14,101 @@ omo -e ./extensions/repetition-recovery
 
 For project-local installation, use
 `omo install -l ./extensions/repetition-recovery`, then start or reload OMO.
-An optional `--repetition-recovery-model provider/model` overrides selection,
-including an explicit cross-provider choice. Use `--repetition-recovery-model off`
-to disable recovery. Invalid or identical overrides stay held without silently
-substituting another model. Selection uses `setSessionModel`, leaving provider
-settings and global defaults unchanged.
+The default resolves the current model when recovery begins, not at startup.
+`--repetition-recovery-model provider/model` selects an explicit override,
+including another provider. Identical overrides are allowed without switching.
+`--repetition-recovery-model off` disables automatic recovery, not incident logging.
+There is no automatic downgrade or provider change. Explicit model switches use
+`setSessionModel` and are restored without overwriting newer committed choices.
 
-Existing UI notifications report activation, unavailable fallbacks, pending input,
-engine refusal, and held restoration. Recovery attempts one continuation after
-native correction is exhausted, not prevention of the initial repetition or a
-guarantee of provider success or task completion.
+## Incident logs
 
-## Admission bounds
+Only assistant-generated content is buffered. The recorder observes normalized
+`message_update` text, thinking and tool-argument deltas before transcript
+sanitization. It writes only when a fresh branch entry identifies a TTSR
+`rule-activation`. Ordinary responses, user messages, prompts, provider payloads,
+headers, tool results and the surrounding transcript are not copied.
 
-Native exhaustion is published in `agent_settled`, after
-`agent_before_settle`. The extension requests one hidden custom-message turn
-through ordinary `sendMessage({triggerTurn:true})` admission. It never sends user
-input, impersonates manual continuation, modifies the detector, or edits history.
-Only an observed `agent_start` records admission. Settlement describes the model
-run, not completion of the user's task.
+Files live at
+`<ctx.agentDir>/logs/repetition-recovery/incidents/<sha256>.json`.
+Each contains timestamp, opaque session identity, activation IDs, rule names,
+remediation, provider/model and the associated assistant message. Tool IDs and
+names include whether execution had started **at capture time**, not an assurance
+about later execution. No tool execution is implied by streamed arguments.
 
-The pinned engine admits a continuation after its repetition pause when native
-turn caps allow it. At the per-user cap, the same request is refused without a
-fallback provider call. No cap is raised or cleared. Provider retries and tool
-execution remain engine-owned.
+Messages are capped at 16,384 UTF-16 code units, with an explicit truncation flag.
+The first portion is retained, so a late trigger may lie beyond the captured
+prefix. Up to forty tool identities are retained. Split chunks are joined before
+redacting common credential assignments, bearer tokens, known key formats and
+private-key blocks. Redaction is best-effort, not proof of secret-free content.
+Treat logs as sensitive local data and do not upload them automatically.
+Directories are private and files use mode `0600`. Only the newest twenty
+incident files survive pruning. Durable recovery claims are never pruned.
 
-Historical stops, unsupported rules, provider errors alone, user cancellation,
-new input, and competing pending messages cannot authorize a continuation.
-Eligibility is checked before claiming and again after awaited model selection.
-Input, abort, shutdown, and branch replacement invalidate the attempt. Cleanup
-reconciles a late switch, preserves newer committed model choices, and records
-restoration separately from the continuation outcome.
+The recovery instruction provides the latest incident path and labels its content
+as untrusted diagnostic evidence, not instructions. It asks the model to avoid
+the failed output and check uncertain side effects before repeating work. It does
+not insert the raw incident into the continuation prompt. Failed incident writes
+produce a warning without bypassing recovery bounds or replaying a claim.
 
-Native compaction can accept a fallback switch without applying it. Recovery
-requests no turn in that case and reselects the original session model to cancel
-the deferred switch. A journal append failure after switching still runs model
-cleanup and surfaces the existing held notification. The durable claim remains
-spent, although a failed append cannot record the final restoration result.
+## Recovery bounds
 
-A failed restoration remains held for reconciliation on session load without
-another continuation. Legacy terminal claims remain spent but do not prove
-restoration. Unreadable journals hold recovery instead of replaying it.
-Reload checks prior user entries on the active branch. If a crash occurs before
-committed selection ownership is saved, restoration stays held for manual model
-reconciliation. An unconfirmed matching model never proves ownership.
+Native detection and its initial corrective retry remain unchanged. A fresh
+`ttsr:loop-stopped` event must match a newly appended stop on the active branch
+after the matching native correction. Only `collapse-repetition` and
+`repetitive-turns` authorize extension recovery. Other TTSR activations are logged
+but keep their native remediation. Security rules do not authorize an extra retry.
 
-The pinned Senpi runtime omits `deadline` from extension `agent_end` dispatch
-despite declaring it in the public type. A fresh persisted `deadline-stop`
-blocks recovery. If that write fails, no public deadline signal reaches this
-extension. Deadline exclusion under that upstream failure remains unverified.
-No installed runtime patch is applied.
+The extension durably claims one attempt per session and latest user-message
+entry, then sends a hidden custom message with `triggerTurn: true` through normal
+engine admission. Only an observed `agent_start` records admission. The same-model
+path does not switch models. An explicit different-model override retains the
+existing ownership-based restoration and deferred-compaction cleanup.
 
-## Local evidence
+Cancellation, new input, shutdown, branch replacement, competing pending messages
+and persisted deadline stops invalidate eligibility. Native turn caps remain in
+force. Reload cannot replay a spent claim. A failed model restoration remains
+held for reconciliation on reload. Unreadable journals hold recovery.
 
-Journals live at
+This continues the **existing session**, not a fresh session or a new process.
+The public `newSession` action is command-context-only, unavailable to automatic
+lifecycle handlers. Process crashes, authentication/network/route errors, the
+separate tool-loop guard and arbitrary non-TTSR stops are not automatically
+recovered by this extension. There is no universal rule-activation event.
+
+The pinned runtime omits declared `agent_end.deadline` metadata. Recovery checks
+fresh persisted `deadline-stop` entries. If that upstream write also fails,
+deadline exclusion remains unverified. Detector offsets and match reasons are
+not public, so incidents identify associated output, not the exact matched span.
+
+## Recovery journals
+
+Claims and lifecycle metadata remain at
 `<ctx.agentDir>/logs/repetition-recovery/<sha256(session-id:user-entry-id)>.jsonl`.
-The directory uses mode `0700` and files use `0600`. Allowlisted metadata records
-claims, requests, admissions, outcomes, and restoration obligations. Journals and
-notifications exclude prompts, output, credentials, tool arguments, arbitrary
-errors, and machine-specific paths. Selection ownership uses opaque metadata.
-
-The public exhaustion event exposes rule names only. Detector offsets,
-confidence, and raw samples are unavailable there, so
-`detectorMetadata: rule-only` records that limit. Journals are not automatically
-rotated or deleted because their claims prevent duplicate recovery.
-
-## Automatic activation evidence (2026-11-06)
-
-- Pinned validation target remains OMO `5.1.60`, Senpi `2026.11.2-3`. Installed
-  host reports OMO `5.1.62`, Senpi `2026.11.5-1`; live provider recovery is not claimed.
-- Re-fetched the immutable [OMO runtime pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/packages/omo-native/package.json),
-  [Senpi model registry](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/model-registry.ts),
-  and [extension API](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/types.ts).
-  `getAvailable()` filters configured authentication, not provider reachability.
-- CLI fixtures cover no-flag activation, override and opt-out without provider
-  calls. Native TTSR exhaustion also exercises automatic fallback admission.
-  Deferred cleanup regressions preserve newer explicit model choices.
-- Native guard, correction, admission caps, journal claims and restoration remain
-  unchanged in purpose. Revalidate after either runtime or availability API changes.
+These files exclude message content, credentials, arbitrary errors and tool
+arguments. They record requests, admission, outcome and model restoration
+separately. A settled model run is not proof that the user's task completed.
 
 ## Compatibility evidence
 
-- Verified: `2026-11-05` UTC.
-- Repository runtime: OMO `5.1.60`, Senpi `2026.11.2-3`, mise Bun `1.3.14`.
-  The global runtime and installed host configuration remain unchanged.
-- OMO evidence: [exact release pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/packages/omo-native/package.json).
-- Senpi evidence: [native guard](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/builtin/ttsr/index.ts),
-  [one native correction](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/builtin/ttsr/follow-up-limit.ts),
-  [turn admission](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-session.ts),
-  [committed selection attribution](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/loader.ts),
-  [abort payload construction](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-abort-provenance.ts),
-  and [deadline persistence](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/turn-deadline.ts).
-- Local proof: `bun test --timeout 30000 ./extensions/repetition-recovery/test`
-  exercises the actual loader, built-in TTSR detector, session lifecycle, and an
-  in-process deterministic provider. The admitted and recurring collapse paths
-  call primary, primary, fallback. Cap refusal calls primary, primary. Both
-  restore primary. The native `repetitive-turns` scenario seeds prior prose and
-  uses one fixture wake to exercise the cross-turn correction budget. It calls
-  primary, primary, primary, fallback, then restores primary.
-- A real maximum-runtime deadline terminates a stalled provider with zero
-  fallback calls. Subscriber metadata contains the deadline while the extension
-  event omits it, confirming the documented upstream limit.
-- A compaction-enabled SDK scenario proves that an uncommitted fallback is
-  cancelled with zero continuation requests. Journal permission failures during
-  ownership recording, request recording, and terminal outcome recording still
-  restore the original model. These regressions failed before the cleanup fix.
-- CLI proof uses an isolated agent directory and the pinned OMO package under
-  mise Node `24.18.0` with `OMO_RUNTIME=node`. Its launcher requires Bun
-  `>=1.4.0`, while repository checks retain mise Bun `1.3.14`. RPC verifies package
-  discovery, flag acceptance, and enabled/disabled notifications without a
-  provider request or host activation.
-- Revalidate after either runtime upgrade, native event/admission changes, or
-  changes to committed model attribution. Synthetic results establish bounds
-  and lifecycle behavior, not a production recovery rate.
+- Verified: `2026-11-06` UTC. Repository OMO `5.1.60`, Senpi `2026.11.2-3`,
+  mise Bun `1.3.14`. Previously inspected host OMO `5.1.62` / Senpi
+  `2026.11.5-1` is not this change's end-to-end recovery proof.
+- Re-fetched immutable [OMO pairing](https://github.com/code-yeongyu/oh-my-openagent/blob/9cfa9cc7f7c86f972b9b6513d526ca9d427e4109/packages/omo-native/package.json)
+  and [Senpi TTSR implementation](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/builtin/ttsr/index.ts).
+  Public contracts: [extension API](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/types.ts),
+  [admission](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/agent-session.ts),
+  [native correction limit](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/builtin/ttsr/follow-up-limit.ts).
+- Local proof: `bun test --timeout 30000 ./extensions/repetition-recovery/test`.
+  Real pinned loader/TTSR/provider fixtures verify primary, primary, primary
+  recovery without another user message, incident path in the provider context,
+  pre-sanitization output and blocked tool arguments, non-repetition TTSR logging,
+  explicit overrides, recurring failure, cancellation, deadlines and unchanged
+  engine cap refusal. Recorder checks cover redaction, truncation, private file
+  permissions, retention, deduplication and session reset.
+- CLI RPC tests prove discovery, default activation, override and opt-out using
+  isolated agent directories and mise Node `24.18.0` with `OMO_RUNTIME=node`.
+- No global runtime/configuration changes or runtime patches. Live-provider
+  recovery and whether a model actually reads or learns from an incident remain
+  unverified. Revalidate after OMO/Senpi upgrades or stream, activation,
+  admission, deadline and model-selection lifecycle changes.
