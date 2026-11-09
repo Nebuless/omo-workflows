@@ -29,6 +29,16 @@
 - **Revalidation:** OMO/Senpi lifecycle or provider-composition changes, worker
   catalog schema changes, or model-limit changes.
 
+## 2026-11-06T22:15:00Z - Rule stops discard triggering output and stall unattended work
+
+- **Observed:** Repetition stops required intervention. Sanitized transcripts omit the generated content that caused detection. User requested single-message evidence and automatic continuation without downgrading the model.
+- **Affected runtime:** Repository OMO `5.1.60`, Senpi `2026.11.2-3`. Host pairing previously inspected at OMO `5.1.62`, Senpi `2026.11.5-1`; live-provider recovery is unverified.
+- **Resolution:** Capture bounded assistant stream deltas and persist only those associated with fresh TTSR activations, with common-secret redaction, private permissions and twenty-file retention. Default recovery uses the live current model, sends an incident path with an untrusted-data warning and preserves native cancellation, deadlines and admission limits. Explicit overrides remain supported. This supersedes automatic Luna selection below.
+- **Limits:** Existing-session continuation, not a fresh session. Only supported repetition exhaustion authorizes one extra attempt. Other TTSR rules are logged, not overridden. Route/network/authentication errors and the separate tool-loop guard remain unsupported. Detector reasons/offsets are not exposed. Redaction is best-effort.
+- **Validation:** Pinned real-engine fixtures verify no-user-message same-model continuation, path in provider context, pre-sanitization output, blocked streamed tool arguments, another native TTSR rule, bounded recurring failure and unchanged cap/cancellation/deadline behavior. Recorder tests cover size, retention, redaction, permissions and session reset. See the extension evidence record for commands and final verification.
+- **Upstream:** No matching upstream issue identified. Local extension uses public lifecycle hooks and [native TTSR activation records](https://github.com/code-yeongyu/senpi/blob/92314cc4be884337a2547f66b788fd2b6acc94e1/packages/coding-agent/src/core/extensions/builtin/ttsr/index.ts), without a runtime patch.
+- **Revalidation:** Either runtime upgrade, stream/activation ordering or admission changes.
+
 ## 2026-11-06T20:51:15Z - Installed recovery extension inactive without fallback selector
 
 - **Observed:** Local herdr-app terminal `t10`, session `01a1b297-9fcb-76ec-b7a3-2e6d8f84543f`, stopped after native `collapse-repetition` detection and its one corrective retry. No tool call or extension fallback followed.

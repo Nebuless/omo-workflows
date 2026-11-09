@@ -1,8 +1,8 @@
 import {
   journal,
-  selectionActorDigest,
   type ModelRef,
   type RecoveryRecord,
+  selectionActorDigest,
 } from "./journal.ts";
 
 interface Entry {
@@ -45,7 +45,7 @@ function rules(value: unknown): readonly unknown[] {
 
 export function createRecovery<M extends ModelRef>(
   host: RecoveryHost<M>,
-  selector: string,
+  selector?: string,
 ) {
   // allow: SIZE_OK — one at-most-once lifecycle state machine owns eligibility, interruption, and restoration.
   // Mutable state belongs to this lifecycle adapter; durable claims survive its replacement.
@@ -468,20 +468,14 @@ export function createRecovery<M extends ModelRef>(
         cleaning: false,
         before: ctx.entries.map((entry) => entry.id),
       };
-      const fallback = ctx.models.find(
-        (model) => `${model.provider}/${model.id}` === selector,
-      );
-      if (
-        !fallback ||
-        (fallback.provider === ctx.model.provider &&
-          fallback.id === ctx.model.id) ||
-        ctx.pending
-      ) {
-        const outcome = ctx.pending
-          ? "pending-input"
-          : fallback
-            ? "fallback-invalid"
-            : "fallback-unavailable";
+      const fallback =
+        selector === undefined
+          ? ctx.model
+          : ctx.models.find(
+              (model) => `${model.provider}/${model.id}` === selector,
+            );
+      if (!fallback || ctx.pending) {
+        const outcome = ctx.pending ? "pending-input" : "fallback-unavailable";
         record(active, "outcome", {
           outcome,
           restoration: "restored",
@@ -489,9 +483,7 @@ export function createRecovery<M extends ModelRef>(
         host.notify(
           ctx.pending
             ? "Repetition recovery held: another message is pending."
-            : fallback
-              ? "Repetition recovery held: fallback is the current model."
-              : "Repetition recovery held: selected fallback is unavailable or unauthenticated.",
+            : "Repetition recovery held: selected fallback is unavailable or unauthenticated.",
         );
         active = undefined;
         return;
@@ -505,13 +497,15 @@ export function createRecovery<M extends ModelRef>(
       attempt.switching = true;
       let selected = false;
       try {
-        selected = await host.select(fallback);
+        selected =
+          sameModel(fallback, ctx.model) || (await host.select(fallback));
       } catch (error) {
         if (!(error instanceof Error)) throw error;
         attempt.outcome = "model-selection-failed";
       } finally {
         attempt.switching = false;
-        attempt.selectionSucceeded = selected;
+        attempt.selectionSucceeded =
+          selected && !sameModel(fallback, initial.original);
       }
       try {
         const fresh = live(attempt);
@@ -519,7 +513,8 @@ export function createRecovery<M extends ModelRef>(
         record(attempt, "recovery_action", { restoration: "pending" });
         if (
           !selected ||
-          !attempt.record.selectionId ||
+          (!sameModel(fallback, initial.original) &&
+            !attempt.record.selectionId) ||
           attempt.cancelled ||
           !eligible(fresh, evidence) ||
           explicitChoice(fresh, attempt)

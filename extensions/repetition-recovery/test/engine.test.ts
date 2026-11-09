@@ -12,19 +12,19 @@ import { join } from "node:path";
 import {
   createAgentSession,
   DefaultResourceLoader,
+  type ExtensionContext,
   ModelRegistry,
   ModelRuntime,
   SessionManager,
   SettingsManager,
-  type ExtensionContext,
 } from "@code-yeongyu/senpi";
 import {
-  createAssistantMessageEventStream,
   type AssistantMessage,
+  createAssistantMessageEventStream,
 } from "@earendil-works/pi-ai";
 import repetitionRecovery from "../src/index.ts";
-import { createRecovery } from "../src/recovery.ts";
 import { journal } from "../src/journal.ts";
+import { createRecovery } from "../src/recovery.ts";
 
 test("an uncommitted native fallback switch is cancelled without requesting a turn", async () => {
   const directory = mkdtempSync(join(tmpdir(), "recovery-pending-"));
@@ -165,6 +165,9 @@ test("an uncommitted native fallback switch is cancelled without requesting a tu
 
 test.each([
   "admitted",
+  "same-model",
+  "tool-stream",
+  "other-rule",
   "capped",
   "repeated",
   "user-abort",
@@ -178,6 +181,7 @@ test.each([
     const capped = mode === "capped";
     const directory = mkdtempSync(join(tmpdir(), "recovery-engine-"));
     const calls: string[] = [];
+    const recoveryContexts: string[] = [];
     const stopBranches: ReturnType<SessionManager["getBranch"]>[] = [];
     const stopEvents: unknown[] = [];
     const notices: string[] = [];
@@ -240,23 +244,32 @@ test.each([
         contextWindow: 100000,
         maxTokens: 1000,
       })),
-      streamSimple: (model, _context, options) => {
+      streamSimple: (model, providerContext, options) => {
         calls.push(model.id);
+        if (calls.length > 6)
+          throw new Error("Fixture exceeded bounded provider calls");
+        if (calls.length === 3)
+          recoveryContexts.push(JSON.stringify(providerContext.messages));
         const stream = createAssistantMessageEventStream();
         const text =
-          mode === "cross-turn"
-            ? model.id === "fallback"
-              ? "Recovered with a distinct useful answer."
-              : calls.length === 1
-                ? firstTurn
-                : secondTurn
-            : (model.id === "primary" &&
-                  !(mode === "native-corrected" && calls.length === 2)) ||
-                mode === "repeated"
-              ? "This is a deterministic repetitive fixture line with sufficient distinct characters.\n".repeat(
-                  20,
-                )
-              : "Recovered with a distinct useful answer.";
+          mode === "other-rule"
+            ? calls.length === 1
+              ? "<unavailable-tool-call name=edit>fabricated call</unavailable-tool-call>"
+              : "Continued with real available tools."
+            : mode === "cross-turn"
+              ? model.id === "fallback"
+                ? "Recovered with a distinct useful answer."
+                : calls.length === 1
+                  ? firstTurn
+                  : secondTurn
+              : (model.id === "primary" &&
+                    !(mode === "same-model" && calls.length === 3) &&
+                    !(mode === "native-corrected" && calls.length === 2)) ||
+                  mode === "repeated"
+                ? "This is a deterministic repetitive fixture line with sufficient distinct characters.\n".repeat(
+                    20,
+                  )
+                : "Recovered with a distinct useful answer.";
         const message: AssistantMessage = {
           role: "assistant",
           api: model.api,
@@ -294,6 +307,31 @@ test.each([
             throw new Error("Native deadline fixture requires cancellation");
           if (options.signal.aborted) finish();
           else options.signal.addEventListener("abort", finish, { once: true });
+          return stream;
+        }
+        if (mode === "tool-stream" && model.id === "primary") {
+          message.content = [
+            {
+              type: "toolCall",
+              id: "blocked-call",
+              name: "bash",
+              arguments: { command: text },
+            },
+          ];
+          stream.push({ type: "start", partial: message });
+          stream.push({
+            type: "toolcall_start",
+            contentIndex: 0,
+            partial: message,
+          });
+          stream.push({
+            type: "toolcall_delta",
+            contentIndex: 0,
+            delta: text,
+            partial: message,
+          });
+          stream.push({ type: "done", reason: "toolUse", message });
+          stream.end(message);
           return stream;
         }
         stream.push({ type: "start", partial: message });
@@ -380,7 +418,7 @@ test.each([
       | undefined;
     try {
       await loader.reload();
-      if (mode !== "admitted")
+      if (mode !== "same-model")
         loader
           .getExtensions()
           .runtime.flagValues.set(
@@ -448,7 +486,7 @@ test.each([
       });
       await session.prompt("Run the fixture.");
       await idle;
-      if (mode === "native-corrected") {
+      if (mode === "native-corrected" || mode === "other-rule") {
         expect(calls).toEqual(["primary", "primary"]);
         expect(stopEvents).toEqual([]);
         expect(
@@ -465,8 +503,19 @@ test.each([
                 entry.customType === "ttsr-injection",
             ),
         ).toHaveLength(1);
-        expect(readdirSync(logs)).toEqual([]);
+        expect(
+          readdirSync(logs).filter((name) => name.endsWith(".jsonl")),
+        ).toEqual([]);
         expect(session.model?.id).toBe("primary");
+        if (mode === "other-rule") {
+          const files = readdirSync(join(logs, "incidents"));
+          expect(files).toHaveLength(1);
+          const incident = JSON.parse(
+            readFileSync(join(logs, "incidents", files[0]), "utf8"),
+          );
+          expect(incident.rules).toEqual(["fabricated-unavailable-tool-call"]);
+          expect(JSON.stringify(incident)).toContain("fabricated call");
+        }
         return;
       }
       if (mode === "native-deadline") {
@@ -488,7 +537,9 @@ test.each([
                 entry.type === "custom" && entry.customType === "deadline-stop",
             ),
         ).toHaveLength(1);
-        expect(readdirSync(logs)).toEqual([]);
+        expect(
+          readdirSync(logs).filter((name) => name.endsWith(".jsonl")),
+        ).toEqual([]);
         expect(session.model?.id).toBe("primary");
         return;
       }
@@ -500,18 +551,24 @@ test.each([
           ),
         ).toBe(true);
         expect(session.model?.id).toBe("primary");
-        expect(readdirSync(logs)).toEqual([]);
+        expect(
+          readdirSync(logs).filter((name) => name.endsWith(".jsonl")),
+        ).toEqual([]);
         expect(stopEvents).toHaveLength(mode === "user-abort" ? 0 : 1);
         return;
       }
-      await restored;
+      if (mode !== "same-model") await restored;
       await outcomeRecorded;
       expect(calls).toEqual(
         capped
           ? ["primary", "primary"]
           : mode === "cross-turn"
             ? ["primary", "primary", "primary", "fallback"]
-            : ["primary", "primary", "fallback"],
+            : [
+                "primary",
+                "primary",
+                mode === "same-model" ? "primary" : "fallback",
+              ],
       );
       expect(session.model?.id).toBe("primary");
       expect(stopEvents).toEqual(
@@ -540,7 +597,34 @@ test.each([
               entry.customType === "ttsr-injection",
           ),
       ).toHaveLength(1);
-      const text = readFileSync(join(logs, readdirSync(logs)[0]), "utf8");
+      const incidentDirectory = join(logs, "incidents");
+      const incidents = readdirSync(incidentDirectory).map((name) =>
+        JSON.parse(readFileSync(join(incidentDirectory, name), "utf8")),
+      );
+      expect(incidents.length).toBeGreaterThanOrEqual(2);
+      if (mode === "tool-stream")
+        expect(incidents[0].message.tools).toEqual([
+          { id: "blocked-call", name: "bash", executed: false },
+        ]);
+      expect(
+        incidents.some((incident) =>
+          JSON.stringify(incident).includes(
+            mode === "cross-turn"
+              ? secondTurn
+              : "deterministic repetitive fixture",
+          ),
+        ),
+      ).toBe(true);
+      expect(JSON.stringify(incidents)).not.toContain(
+        "Run deterministic fixture",
+      );
+      if (mode === "same-model")
+        expect(recoveryContexts[0]).toContain("Failure incident:");
+      const journalName = readdirSync(logs).find((name) =>
+        name.endsWith(".jsonl"),
+      );
+      if (!journalName) throw new Error("Recovery journal missing");
+      const text = readFileSync(join(logs, journalName), "utf8");
       expect(text).not.toContain("fake-local-key");
       expect(text).not.toContain(directory);
       expect(text).not.toContain("Fixture.");

@@ -114,7 +114,7 @@ interactive OMO. See [extension authoring and verification](docs/authoring-exten
 - [`extensions/herdr`](extensions/herdr/README.md): current desktop/core and legacy CLI lifecycle integration, bounded inspection, and orchestration skills.
 - [`extensions/model-routing-advisor`](extensions/model-routing-advisor/README.md): explicit read-only route availability reports before native work. No routing or task control.
 - [`extensions/trim`](extensions/trim/AGENTS.md): native compaction governor.
-- [`extensions/repetition-recovery`](extensions/repetition-recovery/README.md): automatic fallback continuation after native repetition correction fails, with persisted claims and private metadata-only logs.
+- [`extensions/repetition-recovery`](extensions/repetition-recovery/README.md): automatic same-model continuation after native repetition correction fails, with bounded private TTSR incident logs and explicit model overrides.
 
 Workflow scheduling and graph presentation use native OMO. The duplicate
 `workflow-graph` extension and its runtime repairs are removed.
